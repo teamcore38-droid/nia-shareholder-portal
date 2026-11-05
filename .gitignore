@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+dist/
+client/dist/
+build/
+
+# Environment variables & secrets (Never commit credentials)
+.env
+.env.*
+!.env.example
+client/.env
+client/.env.*
+server/.env
+server/.env.*
+
+# Local runtime storage & uploads
+server/data/
+server/uploads/
+
+# Vercel local cache
+.vercel/
+client/.vercel/
+server/.vercel/
+
+# Logs & OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

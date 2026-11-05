@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "buildCommand": "npm --prefix server install && npm --prefix client install && npm --prefix client run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/((?!api/|uploads/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "apex-link-shareholder-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Apex Link Shareholder Portal Web Application for NIA Group of Company (MERN + Cloudinary)",
+  "scripts": {
+    "server": "npm --prefix server start",
+    "client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build"
+  }
+}
