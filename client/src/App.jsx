@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
 import Layout from './components/Layout';
 
@@ -9,6 +10,19 @@ const AdminWorkspace = lazy(() => import('./pages/admin/AdminWorkspace'));
 function PortalRouter() {
   const { user, loading } = useAuth();
   const isStaff = user && ['Administrator', 'Data officer', 'Approver'].includes(user.role);
+
+  // Unauthenticated view: 'home' | 'auth'
+  const [authView, setAuthView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash === '#signin' || hash === '#login' || search.includes('login=true')) {
+        return 'auth';
+      }
+    }
+    return 'home';
+  });
+  const [authInitialMode, setAuthInitialMode] = useState('signin');
 
   const [workspaceMode, setWorkspaceMode] = useState('shareholder');
   const [activeTab, setActiveTab] = useState('overview');
@@ -21,10 +35,24 @@ function PortalRouter() {
   const [previewShareholderId, setPreviewShareholderId] = useState('');
 
   useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#signin' || hash === '#login') {
+        setAuthView('auth');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
     if (user) {
       const staffRole = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
       setWorkspaceMode(staffRole ? 'admin' : 'shareholder');
       setActiveTab('overview');
+    } else {
+      // Return to home upon logout
+      setAuthView('home');
     }
   }, [user]);
 
@@ -58,7 +86,28 @@ function PortalRouter() {
   }
 
   if (!user) {
-    return <AuthPage />;
+    if (authView === 'auth') {
+      return (
+        <AuthPage
+          initialMode={authInitialMode}
+          onBackToHome={() => {
+            setAuthView('home');
+            if (typeof window !== 'undefined' && window.location.hash) {
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          }}
+        />
+      );
+    }
+    return (
+      <HomePage
+        onNavigateToAuth={(targetMode = 'signin') => {
+          setAuthInitialMode(targetMode);
+          setAuthView('auth');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
+    );
   }
 
   return (

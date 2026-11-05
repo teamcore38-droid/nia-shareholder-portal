@@ -17,12 +17,12 @@ import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
 import { ApexBrandLogo } from '../components/ApexBrandLogo';
 
-export default function AuthPage() {
+export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
   const { company, bootstrapStatus, applySession, notify } = useAuth();
 
   // Mode: 'signin' | 'verify-staff' | 'activate' | 'forgot' | 'setup-admin'
   const [mode, setMode] = useState(
-    !bootstrapStatus.initialized ? 'setup-admin' : 'signin'
+    !bootstrapStatus.initialized ? 'setup-admin' : initialMode
   );
 
   // Sign-In state
@@ -220,17 +220,39 @@ export default function AuthPage() {
 
       {/* Top Navigation Bar with APEX Software Solutions Logo */}
       <header className="relative z-20 max-w-7xl w-full mx-auto px-6 sm:px-10 pt-6 sm:pt-8 flex items-center justify-between">
-        <ApexBrandLogo size="lg" subtitle="Software Solutions" lightText />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ApexBrandLogo size="lg" subtitle="Software Solutions" lightText />
+          {onBackToHome && (
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-slate-200 hover:text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer shadow-sm"
+            >
+              <span>← Back to Home</span>
+            </button>
+          )}
+        </div>
 
-        {!bootstrapStatus.initialized && mode !== 'setup-admin' && (
-          <button
-            type="button"
-            onClick={() => setMode('setup-admin')}
-            className="px-3.5 py-1.5 rounded-full bg-amber-400 text-slate-950 text-xs font-extrabold shadow-md cursor-pointer"
-          >
-            First-Run Setup
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {onBackToHome && (
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="sm:hidden px-3 py-1.5 rounded-lg bg-white/10 text-slate-200 text-xs font-semibold cursor-pointer"
+            >
+              ← Home
+            </button>
+          )}
+          {!bootstrapStatus.initialized && mode !== 'setup-admin' && (
+            <button
+              type="button"
+              onClick={() => setMode('setup-admin')}
+              className="px-3.5 py-1.5 rounded-full bg-amber-400 text-slate-950 text-xs font-extrabold shadow-md cursor-pointer"
+            >
+              First-Run Setup
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Split Content */}
@@ -377,6 +399,18 @@ export default function AuthPage() {
                 <BadgeCheck className="w-4 h-4 text-[#6D28D9]" />
                 <span>Sign in with Company SSO / Activate Invite</span>
               </button>
+
+              {onBackToHome && (
+                <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+                  <button
+                    type="button"
+                    onClick={onBackToHome}
+                    className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <span>← Return to Portal Home</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
