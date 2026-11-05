@@ -127,6 +127,16 @@ const authLimiter = rateLimit({
   message: { message: 'Too many authentication requests, please try again shortly.' }
 });
 
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Apex Link Shareholder Portal API',
+    proposalRef: 'ALG-SP-2026-16',
+    healthEndpoint: '/api/health',
+    databaseMode: dbState.mode
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
