@@ -120,14 +120,19 @@ export default function HomePage({ onNavigateToAuth }) {
   return (
     <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-hidden">
       {/* ========================================================= */}
-      {/* ARCHITECTURAL NIA GROUP BUILDING BACKDROP & GOLD GLOWS    */}
+      {/* ARCHITECTURAL NIA CAMPUS HERO BACKDROP & GOLD GLOWS        */}
+      {/* Responsive: Desktop (16:9 landscape) / Mobile (9:16 portrait) */}
       {/* ========================================================= */}
-      <div
-        className="absolute top-0 inset-x-0 h-[1200px] bg-cover bg-center lg:bg-top bg-no-repeat opacity-40 pointer-events-none z-0"
-        style={{
-          backgroundImage: 'url("/nia-building.jpg")'
-        }}
-      />
+      <picture className="absolute top-0 inset-x-0 h-[1200px] pointer-events-none z-0 overflow-hidden block">
+        <source media="(min-width: 768px)" srcSet="/nia-campus-desktop.webp" />
+        <img
+          src="/nia-campus-mobile.webp"
+          alt="NIA Corporate Campus Hero Backdrop"
+          className="w-full h-full object-cover object-top lg:object-center opacity-40 select-none"
+          loading="eager"
+          fetchPriority="high"
+        />
+      </picture>
       {/* Deep Obsidian & Imperial Gold Gradient Overlays */}
       <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/88 to-[#0B101E]/80 pointer-events-none z-0" />
       <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-b from-[#060911]/60 via-transparent to-[#080C16] pointer-events-none z-0" />
@@ -1151,10 +1156,16 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ========================================================= */}
       <section id="contact" className="relative z-10 py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-gradient-to-r from-[#12192B] via-[#0E1525] to-[#161F33] border-2 border-[#D4AF37]/50 p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
-            style={{ backgroundImage: 'url("/nia-building.jpg")' }}
-          />
+          {/* Responsive Campus Backdrop in CTA Card */}
+          <picture className="absolute inset-0 pointer-events-none overflow-hidden block">
+            <source media="(min-width: 768px)" srcSet="/nia-campus-desktop.webp" />
+            <img
+              src="/nia-campus-mobile.webp"
+              alt="NIA Corporate Campus"
+              className="w-full h-full object-cover object-center opacity-25 select-none"
+              loading="lazy"
+            />
+          </picture>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-7 space-y-4 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] uppercase text-[#FDE047]">

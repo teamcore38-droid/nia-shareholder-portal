@@ -179,13 +179,18 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
   return (
     <div className="min-h-screen relative flex flex-col justify-between overflow-hidden bg-[#080C16] text-white selection:bg-[#D4AF37] selection:text-slate-950">
-      {/* Official NIA Group Headquarters Building Backdrop */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-45 pointer-events-none"
-        style={{
-          backgroundImage: 'url("/nia-building.jpg")'
-        }}
-      />
+      {/* Official NIA Group Corporate Campus Responsive Backdrop */}
+      {/* Responsive: Desktop (16:9 landscape) / Mobile (9:16 portrait) */}
+      <picture className="absolute inset-0 pointer-events-none overflow-hidden block">
+        <source media="(min-width: 768px)" srcSet="/nia-campus-desktop.webp" />
+        <img
+          src="/nia-campus-mobile.webp"
+          alt="NIA Corporate Campus"
+          className="w-full h-full object-cover object-top lg:object-center opacity-45 select-none"
+          loading="eager"
+          fetchPriority="high"
+        />
+      </picture>
       {/* Deep Obsidian & Imperial Gold Overlays */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/85 to-[#0B101E]/78 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-transparent to-[#060911]/65 pointer-events-none" />
