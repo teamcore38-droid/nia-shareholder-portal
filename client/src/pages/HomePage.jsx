@@ -123,19 +123,19 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ARCHITECTURAL NIA CAMPUS HERO BACKDROP & GOLD GLOWS        */}
       {/* Responsive: Desktop (16:9 landscape) / Mobile (9:16 portrait) */}
       {/* ========================================================= */}
-      <picture className="absolute top-0 inset-x-0 h-[1200px] pointer-events-none z-0 overflow-hidden block">
+      <picture className="absolute top-0 inset-x-0 h-[1050px] lg:h-[1150px] pointer-events-none z-0 overflow-hidden block">
         <source media="(min-width: 768px)" srcSet="/nia-campus-desktop.webp" />
         <img
           src="/nia-campus-mobile.webp"
           alt="NIA Corporate Campus Hero Backdrop"
-          className="w-full h-full object-cover object-top lg:object-center opacity-40 select-none"
+          className="w-full h-full object-cover object-top lg:object-center opacity-85 select-none"
           loading="eager"
           fetchPriority="high"
         />
       </picture>
-      {/* Deep Obsidian & Imperial Gold Gradient Overlays */}
-      <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/88 to-[#0B101E]/80 pointer-events-none z-0" />
-      <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-b from-[#060911]/60 via-transparent to-[#080C16] pointer-events-none z-0" />
+      {/* Balanced Cinematic Overlays: lets campus architecture & blue sky remain clearly visible while keeping text crisp */}
+      <div className="absolute top-0 inset-x-0 h-[1050px] lg:h-[1150px] bg-gradient-to-b from-[#080C16]/80 via-[#080C16]/30 to-[#080C16] pointer-events-none z-0" />
+      <div className="hidden lg:block absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-r from-[#080C16]/85 via-[#080C16]/40 to-transparent pointer-events-none z-0" />
 
       {/* Ambient Gold Spotlight Glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none overflow-hidden z-0">
@@ -309,45 +309,44 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* 2. HERO SECTION (NIA GROUP MOTTO, CREST & LIVE PORTAL)    */}
       {/* ========================================================= */}
       <section className="relative z-10 pt-10 sm:pt-14 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-14">
+        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
           {/* Left Column: NIA Group Identity, Motto & CTAs */}
-          <div className="w-full lg:w-6/12 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#121827]/90 border border-[#D4AF37]/40 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-[0_0_25px_rgba(212,175,55,0.18)]">
+          <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/80 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg">
               <Sparkles className="w-3.5 h-3.5 text-[#FDE047]" />
               <span className="tracking-wider uppercase">
                 Nexus International Alliance • E-STD 2022
               </span>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs sm:text-sm font-extrabold tracking-[0.28em] uppercase text-[#D4AF37]">
+            <div className="space-y-1.5">
+              <p className="text-xs sm:text-sm font-extrabold tracking-[0.25em] uppercase text-[#D4AF37] drop-shadow-md">
                 — Building A Better Tomorrow Together —
               </p>
               <h1
-                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]"
+                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)]"
                 style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
                 NIA GROUP
                 <br />
-                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
                   SHAREHOLDER PORTAL
                 </span>
               </h1>
             </div>
 
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              The official institutional equity and shareholder registry gateway for{' '}
-              <strong className="text-[#F3E5AB]">NIA Group of Company</strong> across Real Estate,
-              Construction, Investment, Trading, Consultancy, and Services. Monitor real-time
-              holdings, board-approved valuations, and certified share statements.
+            {/* Reduced, crisp, punchy text */}
+            <p className="text-sm sm:text-base text-slate-100 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              Official institutional equity registry and shareholder governance gateway for{' '}
+              <strong className="text-[#FDE047] font-bold">NIA Group of Company</strong>.
             </p>
 
             {/* CTAs */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="pt-1 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
-                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-sm shadow-[0_12px_35px_rgba(212,175,55,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 <span>Enter Shareholder Portal</span>
                 <ArrowRight className="w-4 h-4" />
@@ -356,46 +355,31 @@ export default function HomePage({ onNavigateToAuth }) {
               <button
                 type="button"
                 onClick={() => scrollToSection('simulator')}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-[#111827]/90 hover:bg-[#182235] border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-sm backdrop-blur-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#080C16]/80 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
               >
                 <PieChart className="w-4 h-4 text-[#FDE047]" />
                 <span>Simulate Holdings</span>
               </button>
             </div>
 
-            {/* 4 Gold-Accented Trust Indicators */}
-            <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto lg:mx-0 text-left">
-              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
-                <div className="flex items-center gap-1.5 text-[#FDE047] text-xs font-bold mb-0.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>256-Bit TLS</span>
-                </div>
-                <p className="text-[11px] text-slate-400">Bank-grade vault</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
-                <div className="flex items-center gap-1.5 text-[#D4AF37] text-xs font-bold mb-0.5">
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Stepped Value</span>
-                </div>
-                <p className="text-[11px] text-slate-400">Board resolutions</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
-                <div className="flex items-center gap-1.5 text-amber-300 text-xs font-bold mb-0.5">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Certified PDF</span>
-                </div>
-                <p className="text-[11px] text-slate-400">Official extracts</p>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
-                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold mb-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Dual Control</span>
-                </div>
-                <p className="text-[11px] text-slate-400">Maker-checker flow</p>
-              </div>
+            {/* Compact Sleek Trust Badges */}
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 max-w-lg mx-auto lg:mx-0">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#FDE047] text-xs font-semibold backdrop-blur-md shadow">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>256-Bit TLS</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#D4AF37] text-xs font-semibold backdrop-blur-md shadow">
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Stepped Value</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-amber-300 text-xs font-semibold backdrop-blur-md shadow">
+                <FileText className="w-3.5 h-3.5" />
+                <span>Certified PDF</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-emerald-400 text-xs font-semibold backdrop-blur-md shadow">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Dual Control</span>
+              </span>
             </div>
           </div>
 

@@ -10,7 +10,11 @@ import {
   FileText,
   BarChart3,
   Bell,
-  BadgeCheck
+  BadgeCheck,
+  Key,
+  Copy,
+  Check,
+  X
 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +28,54 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
   const [mode, setMode] = useState(
     !bootstrapStatus.initialized ? 'setup-admin' : initialMode
   );
+
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState('');
+
+  const DEMO_ACCOUNTS = [
+    {
+      role: 'Administrator',
+      fullName: 'Company Administrator',
+      email: 'admin@niagroup.com',
+      password: 'Admin@2026',
+      description: 'Full portal governance & approvals'
+    },
+    {
+      role: 'Data officer',
+      fullName: 'Kamal Senanayake',
+      email: 'dataofficer@niagroup.com',
+      password: 'Officer@2026',
+      description: 'Enters draft movements & valuations'
+    },
+    {
+      role: 'Approver',
+      fullName: 'Dharshini Gunawardena',
+      email: 'approver@niagroup.com',
+      password: 'Approver@2026',
+      description: 'Maker-Checker review & formal publishing'
+    },
+    {
+      role: 'Shareholder',
+      fullName: 'Dr. Keerthi Wickramasinghe',
+      email: 'shareholder1@niagroup.com',
+      password: 'Shareholder@2026',
+      description: 'SH-001 (325,000 Ordinary shares)'
+    },
+    {
+      role: 'Shareholder',
+      fullName: 'Apex Horizon Holdings',
+      email: 'shareholder2@niagroup.com',
+      password: 'Shareholder@2026',
+      description: 'SH-002 (250,000 Ordinary shares)'
+    }
+  ];
+
+  const handleSelectDemoAccount = (acc) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    setShowDemoModal(false);
+    notify(`Selected demo account: ${acc.fullName} (${acc.role})`);
+  };
 
   // Sign-In state
   const [email, setEmail] = useState('');
@@ -186,14 +238,14 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
         <img
           src="/nia-campus-mobile.webp"
           alt="NIA Corporate Campus"
-          className="w-full h-full object-cover object-top lg:object-center opacity-45 select-none"
+          className="w-full h-full object-cover object-top lg:object-center opacity-80 select-none"
           loading="eager"
           fetchPriority="high"
         />
       </picture>
-      {/* Deep Obsidian & Imperial Gold Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/85 to-[#0B101E]/78 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-transparent to-[#060911]/65 pointer-events-none" />
+      {/* Balanced Vignette Overlays: ensures building & sky remain clearly visible while keeping forms legible */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#080C16]/90 via-[#080C16]/40 to-[#080C16]/75 pointer-events-none" />
+      <div className="hidden lg:block absolute inset-0 bg-gradient-to-r from-[#080C16]/80 via-[#080C16]/40 to-[#080C16]/80 pointer-events-none" />
 
       {/* Decorative Golden Wave Curves at Bottom */}
       <svg
@@ -422,6 +474,15 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
               >
                 <BadgeCheck className="w-4 h-4 text-[#B8860B]" />
                 <span>Sign in with Company SSO / Activate Invite</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDemoModal(true)}
+                className="mt-2.5 w-full py-2.5 px-3 rounded-xl border border-dashed border-[#D4AF37]/60 bg-amber-50/30 hover:bg-amber-50 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Key className="w-3.5 h-3.5 text-[#B8860B]" />
+                <span>Quick Fill Demo Credentials (Admin / Staff / Shareholder)</span>
               </button>
 
               {onBackToHome && (
@@ -787,6 +848,84 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
         </div>
         <div className="text-[#F3E5AB]">119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</div>
       </footer>
+
+      {/* QUICK FILL DEMO CREDENTIALS MODAL */}
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border-2 border-[#D4AF37] max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Quick-Fill Demo Credentials
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Click any role below to automatically fill the login form.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDemoModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2.5">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <div
+                  key={acc.email}
+                  className="p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-amber-50/40 transition-all flex items-center justify-between gap-3 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900">{acc.fullName}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          acc.role === 'Administrator'
+                            ? 'bg-purple-100 text-purple-800'
+                            : acc.role === 'Approver'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : acc.role === 'Data officer'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {acc.role}
+                      </span>
+                    </div>
+                    <div className="text-slate-500 font-mono-num text-[11px] mt-0.5">{acc.email}</div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectDemoAccount(acc)}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0B101E] to-[#1E293B] hover:brightness-125 border border-[#D4AF37]/50 text-[#FDE047] text-xs font-extrabold shrink-0 shadow-xs cursor-pointer"
+                  >
+                    Select & Fill
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+              <span>Staff 2FA Verification code is: <strong className="font-mono-num text-slate-800">246810</strong></span>
+              <button
+                type="button"
+                onClick={() => setShowDemoModal(false)}
+                className="font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

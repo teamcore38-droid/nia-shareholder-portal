@@ -29,6 +29,13 @@ const {
 } = require('../config/cloudinary');
 const { dbState } = require('../config/db');
 const { generateAdminReportPDF } = require('../utils/pdfGenerator');
+const {
+  getSeedStatus,
+  toggleSeedBlock,
+  clearSeedData,
+  insertSeedData,
+  DEMO_ACCOUNTS
+} = require('../utils/seedData');
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -199,7 +206,8 @@ router.get('/overview', authenticate, requireStaff, async (req, res) => {
         hasNegativeBalances: registerState.hasNegativeBalances,
         isReconciled: registerState.isReconciled
       },
-      publishedValueHistory: valuationState.publishedHistory
+      publishedValueHistory: valuationState.publishedHistory,
+      seedStatus: await getSeedStatus()
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -1864,7 +1872,8 @@ router.get('/settings', authenticate, requireStaff, async (req, res) => {
     res.json({
       settings,
       cloudinaryStatus: getCloudinaryStatus(),
-      databaseStatus: dbState
+      databaseStatus: dbState,
+      seedStatus: await getSeedStatus()
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -1931,6 +1940,55 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
       message: 'Permitted company settings saved.',
       settings,
       cloudinaryStatus: getCloudinaryStatus()
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ============================================================================
+// SEED DATA GOVERNANCE & 1-CLICK OPERATIONS (Admin Only)
+// ============================================================================
+
+router.get('/seed-data/status', authenticate, requireStaff, async (req, res) => {
+  try {
+    const status = await getSeedStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/seed-data/insert', authenticate, requireRoles('Administrator'), async (req, res) => {
+  try {
+    const result = await insertSeedData(req.user, req.body);
+    res.json(result);
+  } catch (err) {
+    const code = err.statusCode || 500;
+    res.status(code).json({
+      message: err.message,
+      blocked: Boolean(err.blocked)
+    });
+  }
+});
+
+router.post('/seed-data/clear', authenticate, requireRoles('Administrator'), async (req, res) => {
+  try {
+    const result = await clearSeedData(req.user);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/seed-data/toggle-block', authenticate, requireRoles('Administrator'), async (req, res) => {
+  try {
+    const status = await toggleSeedBlock(req.user, req.body.blocked, req.body.reason);
+    res.json({
+      message: req.body.blocked
+        ? 'Seed data generation has been permanently blocked by Administrator.'
+        : 'Seed data generation has been unlocked.',
+      status
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

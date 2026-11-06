@@ -13,13 +13,63 @@ import {
   Layers,
   Coins,
   Calendar,
-  X
+  X,
+  Database,
+  Trash2,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  ShieldCheck,
+  Key,
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import SteppedValuationChart from '../../components/SteppedValuationChart';
 import PasswordInput from '../../components/PasswordInput';
+
+const DEMO_ACCOUNTS = [
+  {
+    role: 'Administrator',
+    fullName: 'Company Administrator',
+    email: 'admin@niagroup.com',
+    password: 'Admin@2026',
+    description: 'Full portal governance, security settings, and approvals'
+  },
+  {
+    role: 'Data officer',
+    fullName: 'Kamal Senanayake',
+    email: 'dataofficer@niagroup.com',
+    password: 'Officer@2026',
+    description: 'Enters draft movements, draft valuations, and shareholder registrations'
+  },
+  {
+    role: 'Approver',
+    fullName: 'Dharshini Gunawardena',
+    email: 'approver@niagroup.com',
+    password: 'Approver@2026',
+    description: 'Independent Maker-Checker review and formal registry publishing'
+  },
+  {
+    role: 'Shareholder',
+    fullName: 'Dr. Keerthi Wickramasinghe',
+    email: 'shareholder1@niagroup.com',
+    shareholderId: 'SH-001',
+    password: 'Shareholder@2026',
+    description: 'Founding Individual Shareholder (325,000 Ordinary shares)'
+  },
+  {
+    role: 'Shareholder',
+    fullName: 'Apex Horizon Holdings (Pvt) Ltd',
+    email: 'shareholder2@niagroup.com',
+    shareholderId: 'SH-002',
+    password: 'Shareholder@2026',
+    description: 'Institutional Corporate Shareholder (250,000 Ordinary shares)'
+  }
+];
 
 export default function AdminCoreTabs({
   activeTab,
@@ -34,6 +84,14 @@ export default function AdminCoreTabs({
 }) {
   const { user, company, notify } = useAuth();
   const currency = company?.baseCurrency || 'LKR';
+  const isAdmin = user?.role === 'Administrator';
+
+  // Seed Data Governance & Testing State
+  const [showClearSeedConfirm, setShowClearSeedConfirm] = useState(false);
+  const [showDemoAccountsModal, setShowDemoAccountsModal] = useState(false);
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
+  const [seedActionLoading, setSeedActionLoading] = useState(false);
+  const [copiedAccountEmail, setCopiedAccountEmail] = useState('');
 
   // ============================================================================
   // STATE FOR SHAREHOLDERS (INTERFACES 09 & 10)
@@ -281,6 +339,59 @@ export default function AdminCoreTabs({
     }
   };
 
+  // Seed Data Handlers
+  const handleClearSeedData = async () => {
+    setSeedActionLoading(true);
+    try {
+      const res = await api.post('/admin/seed-data/clear');
+      notify(res.data.message || 'All demo seed data has been removed in one click.');
+      setShowClearSeedConfirm(false);
+      onRefresh();
+    } catch (err) {
+      notify(err.response?.data?.message || 'Failed to clear seed data.', 'error');
+    } finally {
+      setSeedActionLoading(false);
+    }
+  };
+
+  const handleInsertSeedData = async (forceAdminOverride = false) => {
+    setSeedActionLoading(true);
+    try {
+      const res = await api.post('/admin/seed-data/insert', { forceAdminOverride });
+      notify(res.data.message || 'Comprehensive demo seed data successfully populated.');
+      setShowOverrideConfirm(false);
+      onRefresh();
+    } catch (err) {
+      if (err.response?.data?.blocked) {
+        setShowOverrideConfirm(true);
+      } else {
+        notify(err.response?.data?.message || 'Failed to insert seed data.', 'error');
+      }
+    } finally {
+      setSeedActionLoading(false);
+    }
+  };
+
+  const handleToggleSeedBlock = async (blocked) => {
+    setSeedActionLoading(true);
+    try {
+      const res = await api.post('/admin/seed-data/toggle-block', { blocked });
+      notify(res.data.message);
+      onRefresh();
+    } catch (err) {
+      notify(err.response?.data?.message || 'Failed to update seed policy.', 'error');
+    } finally {
+      setSeedActionLoading(false);
+    }
+  };
+
+  const handleCopyCredentials = (text, email) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedAccountEmail(email);
+    setTimeout(() => setCopiedAccountEmail(''), 2500);
+    notify('Copied demo credentials to clipboard.');
+  };
+
   // ============================================================================
   // TAB 1: DASHBOARD / COMPANY OVERVIEW (Interface 08 & Mobile M05)
   // ============================================================================
@@ -326,6 +437,177 @@ export default function AdminCoreTabs({
             </button>
           </div>
         </div>
+
+        {/* SEED DATA & REGISTRY SAFEGUARD BANNER */}
+        {(() => {
+          const seed = overviewData?.seedStatus || {};
+          const isBlocked = seed.seedDataBlocked || seed.seedDataBlockedPermanently;
+          const hasData = seed.hasSeedData;
+          const totalRecords = seed.counts?.total || 0;
+
+          if (hasData) {
+            return (
+              <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-amber-500/10 via-[#FAF7EE] to-amber-500/5 border border-[#D4AF37]/50 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B101E] to-[#1E293B] border border-[#D4AF37]/50 flex items-center justify-center text-[#FDE047] shrink-0 mt-0.5">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-sm">
+                        Demo Seed Data Active
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D4AF37]/20 text-[#856404] border border-[#D4AF37]/40">
+                        {totalRecords} Sample Records Loaded
+                      </span>
+                      {isBlocked ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Lock className="w-3 h-3" />
+                          Blocked by Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <Unlock className="w-3 h-3" />
+                          Seeding Unlocked
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      Current ledger holding: <strong>7 Shareholders</strong> • <strong>1,000,000 Ordinary Shares</strong> • <strong>5 Valuations (225.00 LKR)</strong> • 5 Publications • 3 Support Queries • 4 Demo Accounts.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowDemoAccountsModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    Demo Credentials
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSeedBlock(!isBlocked)}
+                      disabled={seedActionLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      title={isBlocked ? 'Unlock seed data insertion' : 'Permanently block seed data insertion'}
+                    >
+                      {isBlocked ? (
+                        <>
+                          <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Unlock Seeding</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Block Permanently</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setShowClearSeedConfirm(true)}
+                      disabled={seedActionLoading}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-sm shadow-rose-600/20 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove Seed Data (1-Click)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Case when NO seed data exists:
+          return (
+            <div
+              className={`rounded-2xl p-4 sm:p-5 border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                isBlocked ? 'bg-red-50/40 border-red-200/80' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    isBlocked
+                      ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                      : 'bg-slate-200 text-slate-700 border border-slate-300'
+                  }`}
+                >
+                  {isBlocked ? <ShieldAlert className="w-5 h-5" /> : <Database className="w-5 h-5" />}
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-extrabold text-slate-900 text-sm">
+                      {isBlocked ? 'Seed Data Blocked by Administrator' : 'Clean Database (0 Seed Records)'}
+                    </span>
+                    {isBlocked ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                        <Lock className="w-3 h-3" />
+                        Permanently Blocked
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
+                        Clean Production State
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    {isBlocked
+                      ? `Accidental seed data generation is permanently blocked${seed.seedDataBlockedBy ? ` by ${seed.seedDataBlockedBy}` : ''}. Only the Administrator can override or unlock to insert demo data.`
+                      : 'No demo records loaded. You can populate realistic seed data anytime or permanently lock insertion to prevent accidental demo data generation.'}
+                  </p>
+                </div>
+              </div>
+
+              {isAdmin && (
+                <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSeedBlock(!isBlocked)}
+                    disabled={seedActionLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {isBlocked ? (
+                      <>
+                        <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Unlock Seeding</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Block Permanently</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isBlocked) {
+                        setShowOverrideConfirm(true);
+                      } else {
+                        handleInsertSeedData(false);
+                      }
+                    }}
+                    disabled={seedActionLoading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{isBlocked ? 'Admin Override & Insert' : 'Load Demo Seed Data (1-Click)'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 4 NIA Group Obsidian & Gold KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2012,6 +2294,188 @@ export default function AdminCoreTabs({
           </div>
         );
       })()}
+
+      {/* 1. MODAL: Clear Seed Data Confirmation */}
+      {showClearSeedConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-rose-300 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">
+              Remove All Seed Data in 1 Click?
+            </h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              This action will permanently purge all <strong>31 sample seed records</strong>:
+            </p>
+            <ul className="text-xs text-slate-600 mt-2 space-y-1 list-disc pl-5">
+              <li>7 Sample Shareholders (SH-001 through SH-007)</li>
+              <li>7 Published Share Movements (1,000,000 shares)</li>
+              <li>5 Historical Share Valuations</li>
+              <li>5 Publications & Announcements</li>
+              <li>3 Sample Support Queries</li>
+              <li>4 Demo Testing User Accounts</li>
+            </ul>
+            <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+              <strong>Safe Guarantee:</strong> Your Administrator account (<strong>{user?.email}</strong>) and company configuration will remain completely safe. The register issued shares will reset to 0.
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowClearSeedConfirm(false)}
+                disabled={seedActionLoading}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSeedData}
+                disabled={seedActionLoading}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md shadow-rose-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{seedActionLoading ? 'Removing...' : 'Yes, Purge Seed Data (1-Click)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. MODAL: Demo Testing Accounts */}
+      {showDemoAccountsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 border-2 border-[#D4AF37]/50 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Predefined Demo Testing Credentials
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Use these accounts to test dual-control Maker-Checker approvals and shareholder portal access.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDemoAccountsModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <div
+                  key={acc.email}
+                  className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-amber-50/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-sm">{acc.fullName}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          acc.role === 'Administrator'
+                            ? 'bg-purple-100 text-purple-800'
+                            : acc.role === 'Approver'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : acc.role === 'Data officer'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {acc.role}
+                      </span>
+                    </div>
+                    <div className="text-slate-500 font-mono-num">{acc.email}</div>
+                    <div className="text-[11px] text-slate-400">{acc.description}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-mono-num font-bold text-slate-800 text-[11px]">
+                      {acc.password}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCredentials(`${acc.email} | ${acc.password}`, acc.email)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#FDE047] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedAccountEmail === acc.email ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span>
+                Staff 2FA code: <strong className="font-mono-num text-slate-800">246810</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDemoAccountsModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. MODAL: Admin Override Insertion when Blocked */}
+      {showOverrideConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-[#D4AF37]/60 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-[#B8860B] flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">
+              Seed Data is Permanently Blocked
+            </h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Permanent administrator policy is currently active to safeguard the production share register from accidental demo seeding.
+            </p>
+            <p className="text-xs text-slate-600 mt-2">
+              As an authenticated <strong>Administrator</strong>, would you like to execute an <strong>Administrator Override</strong> to insert the comprehensive seed data anyway?
+            </p>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowOverrideConfirm(false)}
+                disabled={seedActionLoading}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsertSeedData(true)}
+                disabled={seedActionLoading}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{seedActionLoading ? 'Populating...' : 'Confirm Admin Override & Insert'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

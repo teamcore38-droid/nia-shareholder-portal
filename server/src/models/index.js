@@ -26,6 +26,11 @@ const companySettingsSchema = new mongoose.Schema(
     supportPhone: { type: String, default: '+94 11 234 5678' },
     materialValuationChangeThresholdPercent: { type: Number, default: 10 },
     cloudinaryCloudName: { type: String, default: '' },
+    seedDataBlocked: { type: Boolean, default: false },
+    seedDataBlockedPermanently: { type: Boolean, default: false },
+    seedDataBlockedBy: { type: String, default: null },
+    seedDataBlockedAt: { type: Date, default: null },
+    hasSeedData: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -59,6 +64,7 @@ const userSchema = new mongoose.Schema(
     sessionVersion: { type: Number, default: 1 },
     avatarUrl: { type: String, default: '' },
     lastLoginAt: { type: Date, default: null },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -138,6 +144,7 @@ const shareholderSchema = new mongoose.Schema(
     reviewedBy: { type: String, default: '' },
     reviewerComment: { type: String, default: '' },
     pendingProfileUpdate: { type: Object, default: null },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -181,6 +188,7 @@ const shareMovementSchema = new mongoose.Schema(
     submittedAt: { type: Date, default: null },
     approvedAt: { type: Date, default: null },
     publishedAt: { type: Date, default: null },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -214,6 +222,7 @@ const shareValuationSchema = new mongoose.Schema(
     submittedAt: { type: Date, default: null },
     approvedAt: { type: Date, default: null },
     publishedAt: { type: Date, default: null },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -257,6 +266,7 @@ const publicationSchema = new mongoose.Schema(
     reviewedBy: { type: String, default: '' },
     reviewerComment: { type: String, default: '' },
     publishedDate: { type: String, default: '' },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -296,6 +306,7 @@ const supportRequestSchema = new mongoose.Schema(
       ],
       default: []
     },
+    isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
@@ -314,7 +325,8 @@ const auditLogSchema = new mongoose.Schema(
     previousValue: { type: String, default: '' },
     newValue: { type: String, default: '' },
     details: { type: String, default: '' },
-    reason: { type: String, default: '' }
+    reason: { type: String, default: '' },
+    isSeed: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
@@ -345,7 +357,12 @@ module.exports = {
     issuedSharesTotal: 0,
     supportEmail: 'support@niagroup.com',
     supportPhone: '+94 11 234 5678',
-    materialValuationChangeThresholdPercent: 10
+    materialValuationChangeThresholdPercent: 10,
+    seedDataBlocked: false,
+    seedDataBlockedPermanently: false,
+    seedDataBlockedBy: null,
+    seedDataBlockedAt: null,
+    hasSeedData: false
   }),
   User: createHybridModel('users', UserModel, {
     status: 'Active',
@@ -353,7 +370,8 @@ module.exports = {
     verificationEnabled: true,
     verificationCode: '246810',
     recoveryCode: 'APEX-RECOVERY-2026',
-    sessionVersion: 1
+    sessionVersion: 1,
+    isSeed: false
   }),
   RolePermission: createHybridModel('rolePermissions', RolePermissionModel, {
     scope: 'NIA Group of Company'
@@ -363,7 +381,8 @@ module.exports = {
     shareClass: 'Ordinary',
     shareholderType: 'Individual',
     accountStatus: 'Draft',
-    votingRights: 'Per company rules'
+    votingRights: 'Per company rules',
+    isSeed: false
   }),
   ShareMovement: createHybridModel('shareMovements', ShareMovementModel, {
     companyId: 'COMP-NIA-01',
@@ -371,26 +390,32 @@ module.exports = {
     status: 'Draft',
     affectsIssuedTotal: false,
     snapshotBefore: {},
-    snapshotAfter: {}
+    snapshotAfter: {},
+    isSeed: false
   }),
   ShareValuation: createHybridModel('shareValuations', ShareValuationModel, {
     companyId: 'COMP-NIA-01',
     shareClass: 'Ordinary',
     currency: 'LKR',
-    status: 'Draft'
+    status: 'Draft',
+    isSeed: false
   }),
   Publication: createHybridModel('publications', PublicationModel, {
     companyId: 'COMP-NIA-01',
     audienceType: 'All shareholders',
     status: 'Draft',
-    readByShareholders: []
+    readByShareholders: [],
+    isSeed: false
   }),
   SupportRequest: createHybridModel('supportRequests', SupportRequestModel, {
     companyId: 'COMP-NIA-01',
     requestType: 'General query',
     owner: 'Shareholder support',
     status: 'Open',
-    replies: []
+    replies: [],
+    isSeed: false
   }),
-  AuditLog: createHybridModel('auditLogs', AuditLogModel, {})
+  AuditLog: createHybridModel('auditLogs', AuditLogModel, {
+    isSeed: false
+  })
 };
