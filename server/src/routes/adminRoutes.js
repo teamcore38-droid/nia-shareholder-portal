@@ -115,17 +115,353 @@ router.post('/upload', authenticate, requireStaff, (req, res, next) => {
   }
 });
 
+// Combined Single-Request Endpoint for Administration Workspace (reduces 10 HTTP requests & 140+ DB queries to 1 parallel round-trip)
+router.get('/workspace', authenticate, requireStaff, async (req, res) => {
+  try {
+    const [
+      settings,
+      allShareholders,
+      allMovements,
+      allValuations,
+      allPublications,
+      allSupportRequests,
+      allUsers,
+      rolePermissions,
+      auditLogs
+    ] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}).sort({ shareholderId: 1 }),
+      ShareMovement.find({}).sort({ createdAt: -1 }),
+      ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 }),
+      Publication.find({}).sort({ createdAt: -1 }),
+      SupportRequest.find({}).sort({ createdAt: -1 }),
+      User.find({}),
+      RolePermission.find({}),
+      AuditLog.find({}).sort({ createdAt: -1 })
+    ]);
+
+    const [registerState, valuationState, seedStatus] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), {
+        settings,
+        allMovements,
+        allShareholders
+      }),
+      getEffectiveValuationState(getTodayDateString(), {
+        settings,
+        allValuations
+      }),
+      getSeedStatus({
+        settings,
+        allShareholders,
+        allMovements,
+        allValuations,
+        allPublications,
+        allSupportRequests,
+        allUsers
+      })
+    ]);
+
+    const activeShareholders = allShareholders.filter((s) => s.accountStatus === 'Active').length;
+    const inactiveShareholders = allShareholders.filter((s) => s.accountStatus !== 'Active').length;
+    const openSupportCount = allSupportRequests.filter((r) => r.status !== 'Resolved').length;
+
+    // 1. Overview pending items
+    const pendingItems = [];
+    for (const v of allValuations.filter((x) => ['Draft', 'Submitted', 'Scheduled'].includes(x.status))) {
+      pendingItems.push({
+        id: v._id,
+        itemType: 'valuation',
+        reference: v.reference,
+        label: `${v.reference} | Value ${v.currency} ${Number(v.valuePerShare).toFixed(2)}`,
+        enteredBy: v.enteredByRole || v.enteredBy || 'Data officer',
+        enteredByEmail: v.enteredByEmail,
+        effectiveDate: v.effectiveDate,
+        status: v.status,
+        nextAction: v.status === 'Scheduled' ? 'Publish on effective date' : 'Review draft'
+      });
+    }
+
+    for (const m of allMovements.filter((x) => ['Draft', 'Submitted', 'Scheduled'].includes(x.status))) {
+      pendingItems.push({
+        id: m._id,
+        itemType: 'movement',
+        reference: m.reference,
+        label: `${m.reference} | ${m.movementType} ${Number(m.quantity).toLocaleString()} shares`,
+        enteredBy: m.enteredByRole || m.enteredBy || 'Data officer',
+        enteredByEmail: m.enteredByEmail,
+        effectiveDate: m.effectiveDate,
+        status: m.status,
+        nextAction: 'Review draft'
+      });
+    }
+
+    for (const sh of allShareholders.filter((x) => ['Draft', 'Submitted', 'Invited'].includes(x.accountStatus))) {
+      pendingItems.push({
+        id: sh._id,
+        itemType: 'shareholder',
+        reference: sh.shareholderId,
+        label: `${sh.shareholderId} | ${sh.fullName}`,
+        enteredBy: sh.enteredBy || 'Administrator',
+        enteredByEmail: sh.enteredByEmail,
+        effectiveDate: sh.accountStatus === 'Invited' ? 'Invitation pending' : 'Not yet active',
+        status: sh.accountStatus,
+        nextAction: 'Review profile'
+      });
+    }
+
+    for (const pub of allPublications.filter((x) => ['Draft', 'Submitted'].includes(x.status))) {
+      pendingItems.push({
+        id: pub._id,
+        itemType: 'publication',
+        reference: pub.reference,
+        label: `${pub.reference} | ${pub.title}`,
+        enteredBy: pub.enteredBy || 'Data officer',
+        effectiveDate: pub.periodOrDate || 'Upon approval',
+        status: pub.status,
+        nextAction: 'Review publication'
+      });
+    }
+
+    // 2. Shareholders enrichment (0 N+1 queries)
+    const issuedTotal = registerState.issuedSharesTotal || 0;
+    const valPerShare = valuationState.currentPublishedValuation
+      ? Number(valuationState.currentPublishedValuation.valuePerShare)
+      : 0;
+
+    const userByShareholderId = {};
+    for (const u of allUsers) {
+      if (u.shareholderId) userByShareholderId[u.shareholderId] = u;
+    }
+
+    const movementCountByShareholderId = {};
+    for (const m of allMovements) {
+      if (m.fromShareholderId) {
+        movementCountByShareholderId[m.fromShareholderId] =
+          (movementCountByShareholderId[m.fromShareholderId] || 0) + 1;
+      }
+      if (m.toShareholderId && m.toShareholderId !== m.fromShareholderId) {
+        movementCountByShareholderId[m.toShareholderId] =
+          (movementCountByShareholderId[m.toShareholderId] || 0) + 1;
+      }
+    }
+
+    let maxShNum = 0;
+    const enrichedShareholders = allShareholders.map((sh) => {
+      const obj = sh.toObject ? sh.toObject() : sh;
+      const match = String(sh.shareholderId || '').match(/SH-(\d+)/i);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (n > maxShNum) maxShNum = n;
+      }
+      const shares = registerState.holdingsByShareholder[sh.shareholderId] || 0;
+      const ownershipPercent =
+        issuedTotal > 0 ? Number(((shares / issuedTotal) * 100).toFixed(2)) : 0;
+      const holdingValue = Number((shares * valPerShare).toFixed(2));
+      const ledgerCount = (registerState.ledgerByShareholder[sh.shareholderId] || []).length;
+      const linkedMovementsCount = movementCountByShareholderId[sh.shareholderId] || 0;
+      const linkedUser = userByShareholderId[sh.shareholderId] || null;
+
+      return {
+        ...obj,
+        shares,
+        ownershipPercent,
+        holdingValue,
+        ledgerCount,
+        hasLinkedHistory: linkedMovementsCount > 0 || ledgerCount > 0,
+        inviteToken: linkedUser ? linkedUser.inviteToken : null,
+        userStatus: linkedUser ? linkedUser.status : obj.accountStatus
+      };
+    });
+    const nextShareholderId = `SH-${String(maxShNum + 1).padStart(3, '0')}`;
+
+    // 3. Valuations nextReference
+    let maxValNum = 0;
+    for (const v of allValuations) {
+      const m = String(v.reference || '').match(/VAL-(\d+)/i);
+      if (m && parseInt(m[1], 10) > maxValNum) maxValNum = parseInt(m[1], 10);
+    }
+    const nextValuationReference = `VAL-${String(maxValNum + 1).padStart(3, '0')}`;
+
+    // 4. Approvals queue enrichment
+    const approvalMovements = allMovements
+      .filter((m) => ['Submitted', 'Draft', 'Scheduled', 'Returned'].includes(m.status))
+      .map((m) => {
+        const obj = m.toObject ? m.toObject() : m;
+        const qty = Number(m.quantity) || 0;
+        const fromCurr = m.fromShareholderId
+          ? registerState.holdingsByShareholder[m.fromShareholderId] || 0
+          : null;
+        const toCurr = m.toShareholderId
+          ? registerState.holdingsByShareholder[m.toShareholderId] || 0
+          : null;
+        const issuedCurr = registerState.issuedSharesTotal;
+
+        const fromProposed = fromCurr !== null ? fromCurr - qty : null;
+        const toProposed = toCurr !== null ? toCurr + qty : null;
+        let issuedProposed = issuedCurr;
+        if (m.affectsIssuedTotal) {
+          if (['Opening', 'Allocation'].includes(m.movementType)) issuedProposed = issuedCurr + qty;
+          else if (m.movementType === 'Cancellation') issuedProposed = Math.max(0, issuedCurr - qty);
+        }
+
+        return {
+          ...obj,
+          liveComparison: {
+            fromShareholderId: m.fromShareholderId,
+            fromShareholderName: m.fromShareholderName,
+            fromCurrent: fromCurr,
+            fromProposed,
+            toShareholderId: m.toShareholderId,
+            toShareholderName: m.toShareholderName,
+            toCurrent: toCurr,
+            toProposed,
+            issuedCurrent: issuedCurr,
+            issuedProposed
+          }
+        };
+      });
+
+    const approvalValuations = allValuations.filter((v) =>
+      ['Submitted', 'Draft', 'Scheduled', 'Returned'].includes(v.status)
+    );
+    const approvalPublications = allPublications.filter((p) =>
+      ['Submitted', 'Draft'].includes(p.status)
+    );
+    const approvalShareholders = allShareholders.filter((s) =>
+      ['Submitted', 'Draft'].includes(s.accountStatus)
+    );
+
+    // 5. Staff members
+    const staffMembers = allUsers
+      .filter((u) => ['Administrator', 'Data officer', 'Approver'].includes(u.role))
+      .map((u) => ({
+        _id: u._id,
+        email: u.email,
+        fullName: u.fullName,
+        role: u.role,
+        status: u.status,
+        verificationEnabled: u.verificationEnabled !== false,
+        lastLoginAt: u.lastLoginAt,
+        createdAt: u.createdAt
+      }));
+
+    res.json({
+      overview: {
+        company: settings,
+        summary: {
+          issuedShares: registerState.issuedSharesTotal,
+          allocatedShares: registerState.allocatedSharesTotal,
+          totalShareholders: allShareholders.length,
+          activeShareholders,
+          inactiveShareholders,
+          publishedValuation: valuationState.currentPublishedValuation,
+          pendingReviewsCount: pendingItems.length,
+          openSupportCount
+        },
+        pendingItems,
+        registerChecks: {
+          allocatedShares: registerState.allocatedSharesTotal,
+          issuedShares: registerState.issuedSharesTotal,
+          difference: registerState.difference,
+          hasNegativeBalances: registerState.hasNegativeBalances,
+          isReconciled: registerState.isReconciled
+        },
+        publishedValueHistory: valuationState.publishedHistory,
+        seedStatus
+      },
+      shareholders: {
+        shareholders: enrichedShareholders,
+        nextShareholderId,
+        issuedSharesTotal: issuedTotal,
+        currency: settings.baseCurrency || 'LKR'
+      },
+      movements: {
+        movements: allMovements,
+        holdingsByShareholder: registerState.holdingsByShareholder,
+        issuedSharesTotal: registerState.issuedSharesTotal,
+        allocatedSharesTotal: registerState.allocatedSharesTotal,
+        isReconciled: registerState.isReconciled,
+        difference: registerState.difference
+      },
+      valuations: {
+        valuations: allValuations,
+        currentPublishedValuation: valuationState.currentPublishedValuation,
+        publishedHistory: valuationState.publishedHistory,
+        nextReference: nextValuationReference,
+        currency: valuationState.currency,
+        shareClass: valuationState.shareClass
+      },
+      approvals: {
+        company: settings,
+        currentPublishedValuation: valuationState.currentPublishedValuation,
+        movements: approvalMovements,
+        valuations: approvalValuations,
+        publications: approvalPublications,
+        shareholders: approvalShareholders
+      },
+      publications: {
+        publications: allPublications,
+        activeShareholdersCount: activeShareholders,
+        totalShareholdersCount: allShareholders.length
+      },
+      staff: {
+        staffMembers,
+        rolePermissions
+      },
+      supportRequests: {
+        supportRequests: allSupportRequests
+      },
+      auditLogs: {
+        auditLogs
+      },
+      settings: {
+        settings,
+        cloudinaryStatus: getCloudinaryStatus(),
+        databaseStatus: dbState,
+        seedStatus
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Desktop Interface 08 & Mobile M05: Company Overview
 router.get('/overview', authenticate, requireStaff, async (req, res) => {
   try {
-    const registerState = await calculateRegisterState();
-    const valuationState = await getEffectiveValuationState();
-    const allShareholders = await Shareholder.find({});
-    const allMovements = await ShareMovement.find({});
-    const allValuations = await ShareValuation.find({});
-    const allPublications = await Publication.find({});
-    const openSupportCount = await SupportRequest.countDocuments({ status: { $ne: 'Resolved' } });
+    const [
+      settings,
+      allShareholders,
+      allMovements,
+      allValuations,
+      allPublications,
+      allSupportRequests,
+      allUsers
+    ] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}),
+      ShareMovement.find({}),
+      ShareValuation.find({}),
+      Publication.find({}),
+      SupportRequest.find({}),
+      User.find({})
+    ]);
 
+    const [registerState, valuationState, seedStatus] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations }),
+      getSeedStatus({
+        settings,
+        allShareholders,
+        allMovements,
+        allValuations,
+        allPublications,
+        allSupportRequests,
+        allUsers
+      })
+    ]);
+
+    const openSupportCount = allSupportRequests.filter((r) => r.status !== 'Resolved').length;
     const activeShareholders = allShareholders.filter((s) => s.accountStatus === 'Active').length;
     const inactiveShareholders = allShareholders.filter((s) => s.accountStatus !== 'Active').length;
 
@@ -207,7 +543,7 @@ router.get('/overview', authenticate, requireStaff, async (req, res) => {
         isReconciled: registerState.isReconciled
       },
       publishedValueHistory: valuationState.publishedHistory,
-      seedStatus: await getSeedStatus()
+      seedStatus
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -218,9 +554,20 @@ router.get('/overview', authenticate, requireStaff, async (req, res) => {
 router.get('/shareholders', authenticate, requireStaff, async (req, res) => {
   try {
     const { search, status } = req.query;
-    const registerState = await calculateRegisterState();
-    const valuationState = await getEffectiveValuationState();
-    let shareholders = await Shareholder.find({}).sort({ shareholderId: 1 });
+    const [settings, allShareholders, allMovements, allValuations, allUsers] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}).sort({ shareholderId: 1 }),
+      ShareMovement.find({}),
+      ShareValuation.find({}),
+      User.find({})
+    ]);
+
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    ]);
+
+    let shareholders = [...allShareholders];
 
     if (status && status !== 'All') {
       shareholders = shareholders.filter((s) => s.accountStatus === status);
@@ -241,37 +588,49 @@ router.get('/shareholders', authenticate, requireStaff, async (req, res) => {
       ? Number(valuationState.currentPublishedValuation.valuePerShare)
       : 0;
 
-    // Enrich with live ledger shares & ownership %
-    const enriched = await Promise.all(
-      shareholders.map(async (sh) => {
-        const obj = sh.toObject ? sh.toObject() : sh;
-        const shares = registerState.holdingsByShareholder[sh.shareholderId] || 0;
-        const ownershipPercent =
-          issuedTotal > 0 ? Number(((shares / issuedTotal) * 100).toFixed(2)) : 0;
-        const holdingValue = Number((shares * valPerShare).toFixed(2));
-        const ledgerCount = (registerState.ledgerByShareholder[sh.shareholderId] || []).length;
-        const linkedMovementsCount = await ShareMovement.countDocuments({
-          $or: [{ fromShareholderId: sh.shareholderId }, { toShareholderId: sh.shareholderId }]
-        });
-        const linkedUser = await User.findOne({ shareholderId: sh.shareholderId });
+    const userByShareholderId = {};
+    for (const u of allUsers) {
+      if (u.shareholderId) userByShareholderId[u.shareholderId] = u;
+    }
 
-        return {
-          ...obj,
-          shares,
-          ownershipPercent,
-          holdingValue,
-          ledgerCount,
-          hasLinkedHistory: linkedMovementsCount > 0 || ledgerCount > 0,
-          inviteToken: linkedUser ? linkedUser.inviteToken : null,
-          userStatus: linkedUser ? linkedUser.status : obj.accountStatus
-        };
-      })
-    );
+    const movementCountByShareholderId = {};
+    for (const m of allMovements) {
+      if (m.fromShareholderId) {
+        movementCountByShareholderId[m.fromShareholderId] =
+          (movementCountByShareholderId[m.fromShareholderId] || 0) + 1;
+      }
+      if (m.toShareholderId && m.toShareholderId !== m.fromShareholderId) {
+        movementCountByShareholderId[m.toShareholderId] =
+          (movementCountByShareholderId[m.toShareholderId] || 0) + 1;
+      }
+    }
+
+    // Enrich with live ledger shares & ownership % in-memory (0 N+1 queries)
+    const enriched = shareholders.map((sh) => {
+      const obj = sh.toObject ? sh.toObject() : sh;
+      const shares = registerState.holdingsByShareholder[sh.shareholderId] || 0;
+      const ownershipPercent =
+        issuedTotal > 0 ? Number(((shares / issuedTotal) * 100).toFixed(2)) : 0;
+      const holdingValue = Number((shares * valPerShare).toFixed(2));
+      const ledgerCount = (registerState.ledgerByShareholder[sh.shareholderId] || []).length;
+      const linkedMovementsCount = movementCountByShareholderId[sh.shareholderId] || 0;
+      const linkedUser = userByShareholderId[sh.shareholderId] || null;
+
+      return {
+        ...obj,
+        shares,
+        ownershipPercent,
+        holdingValue,
+        ledgerCount,
+        hasLinkedHistory: linkedMovementsCount > 0 || ledgerCount > 0,
+        inviteToken: linkedUser ? linkedUser.inviteToken : null,
+        userStatus: linkedUser ? linkedUser.status : obj.accountStatus
+      };
+    });
 
     // Compute next suggested Shareholder ID (e.g. SH-001, SH-002...)
-    const allForNextId = await Shareholder.find({});
     let maxNum = 0;
-    for (const s of allForNextId) {
+    for (const s of allShareholders) {
       const match = String(s.shareholderId || '').match(/SH-(\d+)/i);
       if (match) {
         const n = parseInt(match[1], 10);
@@ -545,7 +904,9 @@ router.get('/movements', authenticate, requireStaff, async (req, res) => {
   try {
     const { status, movementType } = req.query;
     const registerState = await calculateRegisterState();
-    let movements = await ShareMovement.find({}).sort({ createdAt: -1 });
+    let movements = [...(registerState.allMovements || [])].sort((a, b) =>
+      String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
+    );
 
     if (status && status !== 'All') {
       movements = movements.filter((m) => m.status === status);
@@ -793,7 +1154,12 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
 router.get('/valuations', authenticate, requireStaff, async (req, res) => {
   try {
     const valuationState = await getEffectiveValuationState();
-    const allValuations = await ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 });
+    const allValuations = [...(valuationState.allValuations || [])].sort((a, b) => {
+      if (a.effectiveDate !== b.effectiveDate) {
+        return a.effectiveDate < b.effectiveDate ? 1 : -1;
+      }
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
 
     // Suggest next valuation reference (VAL-001, VAL-002...)
     let maxNum = 0;
@@ -914,24 +1280,32 @@ router.post('/valuations', authenticate, requireStaff, async (req, res) => {
 // Desktop Interface 14 & Mobile M07: Approvals Center
 router.get('/approvals', authenticate, requireStaff, async (req, res) => {
   try {
-    const registerState = await calculateRegisterState();
-    const valuationState = await getEffectiveValuationState();
+    const [settings, allShareholders, allMovements, allValuations, allPublications] =
+      await Promise.all([
+        ensureCoreSystemConfig(),
+        Shareholder.find({}).sort({ createdAt: -1 }),
+        ShareMovement.find({}).sort({ createdAt: -1 }),
+        ShareValuation.find({}).sort({ createdAt: -1 }),
+        Publication.find({}).sort({ createdAt: -1 })
+      ]);
 
-    const movements = await ShareMovement.find({
-      status: { $in: ['Submitted', 'Draft', 'Scheduled', 'Returned'] }
-    }).sort({ createdAt: -1 });
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    ]);
 
-    const valuations = await ShareValuation.find({
-      status: { $in: ['Submitted', 'Draft', 'Scheduled', 'Returned'] }
-    }).sort({ createdAt: -1 });
-
-    const publications = await Publication.find({
-      status: { $in: ['Submitted', 'Draft'] }
-    }).sort({ createdAt: -1 });
-
-    const shareholders = await Shareholder.find({
-      accountStatus: { $in: ['Submitted', 'Draft'] }
-    }).sort({ createdAt: -1 });
+    const movements = allMovements.filter((m) =>
+      ['Submitted', 'Draft', 'Scheduled', 'Returned'].includes(m.status)
+    );
+    const valuations = allValuations.filter((v) =>
+      ['Submitted', 'Draft', 'Scheduled', 'Returned'].includes(v.status)
+    );
+    const publications = allPublications.filter((p) =>
+      ['Submitted', 'Draft'].includes(p.status)
+    );
+    const shareholders = allShareholders.filter((s) =>
+      ['Submitted', 'Draft'].includes(s.accountStatus)
+    );
 
     // Enrich movements with live before/after balances for the Reviewer comparison table (Interface 14 & M07)
     const enrichedMovements = movements.map((m) => {
@@ -1309,7 +1683,10 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
 // Desktop Interfaces 15 & 19: Staff Accounts & Role Permissions Matrix
 router.get('/staff', authenticate, requireStaff, async (req, res) => {
   try {
-    const allUsers = await User.find({});
+    const [allUsers, rolePermissions] = await Promise.all([
+      User.find({}),
+      RolePermission.find({})
+    ]);
     // Never expose passwords, tokens, or verification codes of other users (Page 31 & 34)
     const staffMembers = allUsers
       .filter((u) => ['Administrator', 'Data officer', 'Approver'].includes(u.role))
@@ -1323,8 +1700,6 @@ router.get('/staff', authenticate, requireStaff, async (req, res) => {
         lastLoginAt: u.lastLoginAt,
         createdAt: u.createdAt
       }));
-
-    const rolePermissions = await RolePermission.find({});
 
     res.json({
       staffMembers,
@@ -1673,9 +2048,11 @@ router.get('/audit-logs', authenticate, requireStaff, async (req, res) => {
 // Desktop Interface 18: Publications (Documents & Announcements)
 router.get('/publications', authenticate, requireStaff, async (req, res) => {
   try {
-    const publications = await Publication.find({}).sort({ createdAt: -1 });
-    const activeShareholdersCount = await Shareholder.countDocuments({ accountStatus: 'Active' });
-    const totalShareholdersCount = await Shareholder.countDocuments({});
+    const [publications, activeShareholdersCount, totalShareholdersCount] = await Promise.all([
+      Publication.find({}).sort({ createdAt: -1 }),
+      Shareholder.countDocuments({ accountStatus: 'Active' }),
+      Shareholder.countDocuments({})
+    ]);
 
     res.json({
       publications,
@@ -1868,12 +2245,15 @@ router.put('/support-requests/:id', authenticate, requireStaff, async (req, res)
 // Desktop Interface 21: Settings & Infrastructure Status
 router.get('/settings', authenticate, requireStaff, async (req, res) => {
   try {
-    const settings = await ensureCoreSystemConfig();
+    const [settings, seedStatus] = await Promise.all([
+      ensureCoreSystemConfig(),
+      getSeedStatus()
+    ]);
     res.json({
       settings,
       cloudinaryStatus: getCloudinaryStatus(),
       databaseStatus: dbState,
-      seedStatus: await getSeedStatus()
+      seedStatus
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -1,6 +1,8 @@
 const express = require('express');
 const {
   Shareholder,
+  ShareMovement,
+  ShareValuation,
   Publication,
   SupportRequest
 } = require('../models');
@@ -27,18 +29,204 @@ function resolvePermittedShareholderId(req) {
   return req.query.shareholderId || req.user.shareholderId || null;
 }
 
+// Combined Single-Request Endpoint for Shareholder Workspace (reduces 5 HTTP requests & 110+ DB queries to 1 parallel round-trip)
+router.get('/workspace', authenticate, async (req, res) => {
+  try {
+    const shareholderId = resolvePermittedShareholderId(req);
+    const [
+      settings,
+      allShareholders,
+      allMovements,
+      allValuations,
+      allPubs,
+      mySupportRequests
+    ] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}),
+      ShareMovement.find({}),
+      ShareValuation.find({}),
+      Publication.find({ status: 'Published' }).sort({ createdAt: -1 }),
+      shareholderId
+        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 })
+        : Promise.resolve([])
+    ]);
+
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), {
+        settings,
+        allMovements,
+        allShareholders
+      }),
+      getEffectiveValuationState(getTodayDateString(), {
+        settings,
+        allValuations
+      })
+    ]);
+
+    const personalHistory = shareholderId
+      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+          registerState,
+          valuationState
+        })
+      : [];
+
+    const shareholder = shareholderId
+      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
+      : null;
+
+    const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
+    const issuedShares = registerState.issuedSharesTotal || 0;
+    const ownershipPercent =
+      issuedShares > 0 ? Number(((myShares / issuedShares) * 100).toFixed(2)) : null;
+
+    const currentValuation = valuationState.currentPublishedValuation;
+    const valuePerShare = currentValuation ? Number(currentValuation.valuePerShare) : 0;
+    const myHoldingValue = Number((myShares * valuePerShare).toFixed(2));
+    const myLedger = shareholderId ? registerState.ledgerByShareholder[shareholderId] || [] : [];
+
+    const myPubs = allPubs.filter(
+      (p) =>
+        p.audienceType === 'All shareholders' ||
+        (p.audienceType === 'Specific shareholder' && p.targetShareholderId === shareholderId)
+    );
+
+    const latestActivity = [];
+    if (currentValuation) {
+      const prevTxt =
+        currentValuation.previousValuePerShare !== null
+          ? `${settings.baseCurrency} ${Number(currentValuation.previousValuePerShare).toFixed(2)} -> `
+          : '';
+      latestActivity.push({
+        id: `val-${currentValuation.reference}`,
+        activity: 'Value update published',
+        effectiveDate: currentValuation.effectiveDate,
+        details: `${prevTxt}${settings.baseCurrency} ${Number(currentValuation.valuePerShare).toFixed(2)}`,
+        type: 'valuation',
+        reference: currentValuation.reference
+      });
+    }
+
+    if (myShares > 0) {
+      latestActivity.push({
+        id: 'stmt-latest',
+        activity: 'Statement available',
+        effectiveDate: currentValuation ? currentValuation.effectiveDate : getTodayDateString(),
+        details: 'Download dated holding statement (PDF)',
+        type: 'statement'
+      });
+    }
+
+    for (const mov of [...myLedger].reverse().slice(0, 4)) {
+      latestActivity.push({
+        id: `mov-${mov.reference}`,
+        activity: `${mov.movementType} (${mov.reference})`,
+        effectiveDate: mov.effectiveDate,
+        details: `${mov.movementDisplay} shares • Running balance: ${Number(mov.balanceAfter).toLocaleString()}`,
+        type: 'movement',
+        reference: mov.reference
+      });
+    }
+
+    const unreadAnnouncementsCount = myPubs.filter(
+      (p) =>
+        p.contentType === 'Announcement' &&
+        shareholderId &&
+        !(p.readByShareholders || []).includes(shareholderId)
+    ).length;
+
+    const supportingDocuments = myPubs.filter((p) => p.contentType === 'Document');
+    const permittedAnnouncements = myPubs
+      .filter((p) => p.contentType === 'Announcement')
+      .map((a) => {
+        const obj = a.toObject ? a.toObject() : a;
+        return {
+          ...obj,
+          isRead: shareholderId ? (obj.readByShareholders || []).includes(shareholderId) : false
+        };
+      });
+
+    res.json({
+      overview: {
+        shareholder,
+        company: settings,
+        summary: {
+          myShares,
+          issuedCompanyShares: issuedShares,
+          ownershipPercent,
+          currency: settings.baseCurrency || 'LKR',
+          shareClass: settings.shareClass || 'Ordinary',
+          valuePerShare,
+          valuationEffectiveDate: currentValuation ? currentValuation.effectiveDate : null,
+          valuationReference: currentValuation ? currentValuation.reference : null,
+          myHoldingValue,
+          hasPublishedHoldings: myShares > 0 || myLedger.length > 0
+        },
+        publishedValueHistory: valuationState.publishedHistory,
+        personalHistory,
+        latestActivity,
+        unreadAnnouncementsCount
+      },
+      holdings: {
+        shareholder,
+        company: settings,
+        summary: {
+          ordinaryShares: myShares,
+          issuedCompanyShares: issuedShares,
+          ownershipPercent,
+          latestValuationDate: currentValuation ? currentValuation.effectiveDate : null,
+          latestValuePerShare: currentValuation ? Number(currentValuation.valuePerShare) : 0,
+          currency: settings.baseCurrency || 'LKR',
+          shareClass: settings.shareClass || 'Ordinary',
+          votingRights:
+            (shareholder && shareholder.votingRights) ||
+            settings.votingRights ||
+            'Per company rules'
+        },
+        ledger: myLedger,
+        supportingDocuments
+      },
+      history: {
+        company: settings,
+        shareClass: settings.shareClass || 'Ordinary',
+        currency: settings.baseCurrency || 'LKR',
+        valueHistory: valuationState.publishedHistory,
+        personalHistory
+      },
+      documents: {
+        company: settings,
+        shareholderId,
+        documents: supportingDocuments
+      },
+      announcements: {
+        announcements: permittedAnnouncements,
+        supportRequests: mySupportRequests
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Desktop Interface 02 & Mobile M01/M04: Shareholder Overview
 router.get('/overview', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const settings = await ensureCoreSystemConfig();
-    const registerState = await calculateRegisterState();
-    const valuationState = await getEffectiveValuationState();
+    const [settings, allShareholders, allMovements, allValuations, allPubs] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}),
+      ShareMovement.find({}),
+      ShareValuation.find({}),
+      Publication.find({ status: 'Published' })
+    ]);
 
-    let shareholder = null;
-    if (shareholderId) {
-      shareholder = await Shareholder.findOne({ shareholderId });
-    }
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    ]);
+
+    const shareholder = shareholderId
+      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
+      : null;
 
     const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
     const issuedShares = registerState.issuedSharesTotal || 0;
@@ -52,7 +240,6 @@ router.get('/overview', authenticate, async (req, res) => {
     const myLedger = shareholderId ? registerState.ledgerByShareholder[shareholderId] || [] : [];
 
     // Permitted publications (Documents + Announcements)
-    const allPubs = await Publication.find({ status: 'Published' });
     const myPubs = allPubs.filter(
       (p) =>
         p.audienceType === 'All shareholders' ||
@@ -98,7 +285,10 @@ router.get('/overview', authenticate, async (req, res) => {
     }
 
     const personalHistory = shareholderId
-      ? await getShareholderPersonalHistory(shareholderId)
+      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+          registerState,
+          valuationState
+        })
       : [];
 
     const unreadAnnouncementsCount = myPubs.filter(
@@ -137,11 +327,22 @@ router.get('/overview', authenticate, async (req, res) => {
 router.get('/holdings', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const settings = await ensureCoreSystemConfig();
-    const registerState = await calculateRegisterState();
-    const valuationState = await getEffectiveValuationState();
+    const [settings, allShareholders, allMovements, allValuations, allPubs] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}),
+      ShareMovement.find({}),
+      ShareValuation.find({}),
+      Publication.find({ status: 'Published', contentType: 'Document' })
+    ]);
 
-    const shareholder = shareholderId ? await Shareholder.findOne({ shareholderId }) : null;
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    ]);
+
+    const shareholder = shareholderId
+      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
+      : null;
     const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
     const issuedShares = registerState.issuedSharesTotal || 0;
     const ownershipPercent =
@@ -150,7 +351,6 @@ router.get('/holdings', authenticate, async (req, res) => {
     const ledger = shareholderId ? registerState.ledgerByShareholder[shareholderId] || [] : [];
 
     // Permitted supporting documents assigned to this shareholder
-    const allPubs = await Publication.find({ status: 'Published', contentType: 'Document' });
     const supportingDocuments = allPubs.filter(
       (p) =>
         p.audienceType === 'All shareholders' ||
@@ -183,10 +383,23 @@ router.get('/history', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
     const { fromDate, toDate } = req.query;
-    const settings = await ensureCoreSystemConfig();
-    const valuationState = await getEffectiveValuationState();
+    const [settings, allShareholders, allMovements, allValuations] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Shareholder.find({}),
+      ShareMovement.find({}),
+      ShareValuation.find({})
+    ]);
+
+    const [registerState, valuationState] = await Promise.all([
+      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
+      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    ]);
+
     const personalHistory = shareholderId
-      ? await getShareholderPersonalHistory(shareholderId)
+      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+          registerState,
+          valuationState
+        })
       : [];
 
     let valueHistory = [...valuationState.publishedHistory];
@@ -213,10 +426,12 @@ router.get('/history', authenticate, async (req, res) => {
 router.get('/documents', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const settings = await ensureCoreSystemConfig();
-    const allDocs = await Publication.find({ status: 'Published', contentType: 'Document' }).sort({
-      createdAt: -1
-    });
+    const [settings, allDocs] = await Promise.all([
+      ensureCoreSystemConfig(),
+      Publication.find({ status: 'Published', contentType: 'Document' }).sort({
+        createdAt: -1
+      })
+    ]);
 
     // Strict privacy check: only documents for All shareholders or explicitly assigned to this shareholderId
     const permittedDocs = allDocs.filter(
@@ -291,10 +506,15 @@ router.get('/statement-pdf', authenticate, async (req, res) => {
 router.get('/announcements', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const allAnnouncements = await Publication.find({
-      status: 'Published',
-      contentType: 'Announcement'
-    }).sort({ createdAt: -1 });
+    const [allAnnouncements, mySupportRequests] = await Promise.all([
+      Publication.find({
+        status: 'Published',
+        contentType: 'Announcement'
+      }).sort({ createdAt: -1 }),
+      shareholderId
+        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 })
+        : Promise.resolve([])
+    ]);
 
     const permitted = allAnnouncements
       .filter(
@@ -309,11 +529,6 @@ router.get('/announcements', authenticate, async (req, res) => {
           isRead: shareholderId ? (obj.readByShareholders || []).includes(shareholderId) : false
         };
       });
-
-    // Also fetch this shareholder's support requests
-    const mySupportRequests = shareholderId
-      ? await SupportRequest.find({ shareholderId }).sort({ createdAt: -1 })
-      : [];
 
     res.json({
       announcements: permitted,

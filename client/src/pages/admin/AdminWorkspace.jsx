@@ -4,6 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import AdminCoreTabs from './AdminCoreTabs';
 import AdminGovernanceTabs from './AdminGovernanceTabs';
 
+// In-memory cache so switching between Admin Workspace and Shareholder Portal renders in 0ms
+let cachedAdminWorkspace = null;
+
+export function clearAdminWorkspaceCache() {
+  cachedAdminWorkspace = null;
+}
+
 export default function AdminWorkspace({
   activeTab,
   setActiveTab,
@@ -13,63 +20,59 @@ export default function AdminWorkspace({
 }) {
   const { notify } = useAuth();
 
-  const [overviewData, setOverviewData] = useState(null);
-  const [shareholdersData, setShareholdersData] = useState(null);
-  const [movementsData, setMovementsData] = useState(null);
-  const [valuationsData, setValuationsData] = useState(null);
-  const [approvalsData, setApprovalsData] = useState(null);
-  const [publicationsData, setPublicationsData] = useState(null);
-  const [staffData, setStaffData] = useState(null);
-  const [supportData, setSupportData] = useState(null);
-  const [auditLogsData, setAuditLogsData] = useState(null);
-  const [settingsData, setSettingsData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [overviewData, setOverviewData] = useState(() => cachedAdminWorkspace?.overview || null);
+  const [shareholdersData, setShareholdersData] = useState(
+    () => cachedAdminWorkspace?.shareholders || null
+  );
+  const [movementsData, setMovementsData] = useState(
+    () => cachedAdminWorkspace?.movements || null
+  );
+  const [valuationsData, setValuationsData] = useState(
+    () => cachedAdminWorkspace?.valuations || null
+  );
+  const [approvalsData, setApprovalsData] = useState(
+    () => cachedAdminWorkspace?.approvals || null
+  );
+  const [publicationsData, setPublicationsData] = useState(
+    () => cachedAdminWorkspace?.publications || null
+  );
+  const [staffData, setStaffData] = useState(() => cachedAdminWorkspace?.staff || null);
+  const [supportData, setSupportData] = useState(
+    () => cachedAdminWorkspace?.supportRequests || null
+  );
+  const [auditLogsData, setAuditLogsData] = useState(
+    () => cachedAdminWorkspace?.auditLogs || null
+  );
+  const [settingsData, setSettingsData] = useState(
+    () => cachedAdminWorkspace?.settings || null
+  );
+  const [loading, setLoading] = useState(() => !cachedAdminWorkspace);
 
   const loadAdminData = useCallback(async () => {
     try {
-      const [
-        ovRes,
-        shRes,
-        movRes,
-        valRes,
-        appRes,
-        pubRes,
-        stRes,
-        supRes,
-        audRes,
-        setRes
-      ] = await Promise.all([
-        api.get('/admin/overview'),
-        api.get('/admin/shareholders'),
-        api.get('/admin/movements'),
-        api.get('/admin/valuations'),
-        api.get('/admin/approvals'),
-        api.get('/admin/publications'),
-        api.get('/admin/staff'),
-        api.get('/admin/support-requests'),
-        api.get('/admin/audit-logs'),
-        api.get('/admin/settings')
-      ]);
+      const res = await api.get('/admin/workspace');
+      const data = res.data;
+      cachedAdminWorkspace = data;
 
-      setOverviewData(ovRes.data);
-      setShareholdersData(shRes.data);
-      setMovementsData(movRes.data);
-      setValuationsData(valRes.data);
-      setApprovalsData(appRes.data);
-      setPublicationsData(pubRes.data);
-      setStaffData(stRes.data);
-      setSupportData(supRes.data);
-      setAuditLogsData(audRes.data);
-      setSettingsData(setRes.data);
+      setOverviewData(data.overview);
+      setShareholdersData(data.shareholders);
+      setMovementsData(data.movements);
+      setValuationsData(data.valuations);
+      setApprovalsData(data.approvals);
+      setPublicationsData(data.publications);
+      setStaffData(data.staff);
+      setSupportData(data.supportRequests);
+      setAuditLogsData(data.auditLogs);
+      setSettingsData(data.settings);
 
       if (onShareholdersLoaded) {
-        onShareholdersLoaded(shRes.data.shareholders || []);
+        onShareholdersLoaded(data.shareholders?.shareholders || []);
       }
 
       if (onBadgesUpdate) {
         onBadgesUpdate({
-          pendingApprovals: ovRes.data.summary?.pendingReviewsCount || 0,
-          openSupport: ovRes.data.summary?.openSupportCount || 0
+          pendingApprovals: data.overview?.summary?.pendingReviewsCount || 0,
+          openSupport: data.overview?.summary?.openSupportCount || 0
         });
       }
     } catch (err) {

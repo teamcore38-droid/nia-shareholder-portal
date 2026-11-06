@@ -58,8 +58,23 @@ const DEFAULT_ROLE_PERMISSIONS = [
   }
 ];
 
-async function ensureCoreSystemConfig() {
-  let settings = await CompanySettings.findOne({ companyId: 'COMP-NIA-01' });
+let rolePermissionsInitialized = false;
+
+async function ensureCoreSystemConfig(preloadedSettings = null) {
+  let settings = preloadedSettings;
+  let existingRoles = null;
+
+  if (!settings && !rolePermissionsInitialized) {
+    [settings, existingRoles] = await Promise.all([
+      CompanySettings.findOne({ companyId: 'COMP-NIA-01' }),
+      RolePermission.find({})
+    ]);
+  } else if (!settings) {
+    settings = await CompanySettings.findOne({ companyId: 'COMP-NIA-01' });
+  } else if (!rolePermissionsInitialized) {
+    existingRoles = await RolePermission.find({});
+  }
+
   if (!settings) {
     settings = await CompanySettings.create({
       companyId: 'COMP-NIA-01',
@@ -80,11 +95,13 @@ async function ensureCoreSystemConfig() {
     });
   }
 
-  for (const rp of DEFAULT_ROLE_PERMISSIONS) {
-    const existing = await RolePermission.findOne({ role: rp.role });
-    if (!existing) {
-      await RolePermission.create(rp);
+  if (!rolePermissionsInitialized && existingRoles) {
+    const existingSet = new Set(existingRoles.map((r) => r.role));
+    const missing = DEFAULT_ROLE_PERMISSIONS.filter((rp) => !existingSet.has(rp.role));
+    if (missing.length > 0) {
+      await Promise.all(missing.map((rp) => RolePermission.create(rp)));
     }
+    rolePermissionsInitialized = true;
   }
 
   return settings;
@@ -140,10 +157,12 @@ async function logAuditEvent({
  * Computes shareholder holdings, running ledger, and company reconciliation as at an optional date.
  * Only movements with status === 'Published' and effectiveDate <= asAtDate are included.
  */
-async function calculateRegisterState(asAtDate = null) {
-  const settings = await ensureCoreSystemConfig();
-  const allMovements = await ShareMovement.find({});
-  const allShareholders = await Shareholder.find({});
+async function calculateRegisterState(asAtDate = null, preloaded = {}) {
+  const [settings, allMovements, allShareholders] = await Promise.all([
+    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(),
+    preloaded.allMovements ? Promise.resolve(preloaded.allMovements) : ShareMovement.find({}),
+    preloaded.allShareholders ? Promise.resolve(preloaded.allShareholders) : Shareholder.find({})
+  ]);
 
   const publishedMovements = allMovements
     .filter((m) => {
@@ -323,7 +342,9 @@ async function calculateRegisterState(asAtDate = null) {
     difference,
     hasNegativeBalances,
     isReconciled,
-    publishedMovements
+    publishedMovements,
+    allMovements,
+    allShareholders
   };
 }
 
@@ -331,9 +352,11 @@ async function calculateRegisterState(asAtDate = null) {
  * Returns the effective published valuation as at `asAtDate` (defaults to today, or latest published if none specified),
  * and the full chronological series of published valuations with step-change percentages.
  */
-async function getEffectiveValuationState(asAtDate = null) {
-  const settings = await ensureCoreSystemConfig();
-  const allValuations = await ShareValuation.find({});
+async function getEffectiveValuationState(asAtDate = null, preloaded = {}) {
+  const [settings, allValuations] = await Promise.all([
+    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(),
+    preloaded.allValuations ? Promise.resolve(preloaded.allValuations) : ShareValuation.find({})
+  ]);
   const cutoffDate = asAtDate || getTodayDateString();
 
   // Published valuations that are effective on or before cutoffDate
@@ -379,9 +402,15 @@ async function getEffectiveValuationState(asAtDate = null) {
  * Computes personal holding history for a specific shareholder, combining discrete valuation dates
  * and share balance changes without presenting share allocations as investment profit (Page 4).
  */
-async function getShareholderPersonalHistory(shareholderId, asAtDate = null) {
-  const registerState = await calculateRegisterState(asAtDate);
-  const valuationState = await getEffectiveValuationState(asAtDate);
+async function getShareholderPersonalHistory(shareholderId, asAtDate = null, preloaded = {}) {
+  const [registerState, valuationState] = await Promise.all([
+    preloaded.registerState
+      ? Promise.resolve(preloaded.registerState)
+      : calculateRegisterState(asAtDate, preloaded),
+    preloaded.valuationState
+      ? Promise.resolve(preloaded.valuationState)
+      : getEffectiveValuationState(asAtDate, preloaded)
+  ]);
   const ledger = registerState.ledgerByShareholder[shareholderId] || [];
   const publishedVals = valuationState.publishedHistory || [];
 

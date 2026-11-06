@@ -45,9 +45,9 @@ const DEMO_ACCOUNTS = [
   }
 ];
 
-async function getSeedStatus() {
-  const settings = await ensureCoreSystemConfig();
+async function getSeedStatus(preloaded = {}) {
   const [
+    settings,
     shareholders,
     movements,
     valuations,
@@ -55,12 +55,25 @@ async function getSeedStatus() {
     supportRequests,
     users
   ] = await Promise.all([
-    Shareholder.countDocuments({ isSeed: true }),
-    ShareMovement.countDocuments({ isSeed: true }),
-    ShareValuation.countDocuments({ isSeed: true }),
-    Publication.countDocuments({ isSeed: true }),
-    SupportRequest.countDocuments({ isSeed: true }),
-    User.countDocuments({ isSeed: true })
+    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(),
+    preloaded.allShareholders
+      ? Promise.resolve(preloaded.allShareholders.filter((x) => x.isSeed).length)
+      : Shareholder.countDocuments({ isSeed: true }),
+    preloaded.allMovements
+      ? Promise.resolve(preloaded.allMovements.filter((x) => x.isSeed).length)
+      : ShareMovement.countDocuments({ isSeed: true }),
+    preloaded.allValuations
+      ? Promise.resolve(preloaded.allValuations.filter((x) => x.isSeed).length)
+      : ShareValuation.countDocuments({ isSeed: true }),
+    preloaded.allPublications
+      ? Promise.resolve(preloaded.allPublications.filter((x) => x.isSeed).length)
+      : Publication.countDocuments({ isSeed: true }),
+    preloaded.allSupportRequests
+      ? Promise.resolve(preloaded.allSupportRequests.filter((x) => x.isSeed).length)
+      : SupportRequest.countDocuments({ isSeed: true }),
+    preloaded.allUsers
+      ? Promise.resolve(preloaded.allUsers.filter((x) => x.isSeed).length)
+      : User.countDocuments({ isSeed: true })
   ]);
 
   const total = shareholders + movements + valuations + publications + supportRequests + users;
@@ -297,9 +310,7 @@ async function insertSeedData(actorUser, options = {}) {
     }
   ];
 
-  for (const sh of seedShareholders) {
-    await Shareholder.create(sh);
-  }
+  await Promise.all(seedShareholders.map((sh) => Shareholder.create(sh)));
 
   // 2. Seed Share Movements (Published ledger transactions totaling 1,000,000 Ordinary shares)
   const seedMovements = [
@@ -426,9 +437,7 @@ async function insertSeedData(actorUser, options = {}) {
     }
   ];
 
-  for (const mov of seedMovements) {
-    await ShareMovement.create(mov);
-  }
+  await Promise.all(seedMovements.map((mov) => ShareMovement.create(mov)));
 
   // 3. Seed Share Valuations (Stepped progression 125.00 -> 145.00 -> 170.00 -> 195.00 -> 225.00 LKR)
   const seedValuations = [
@@ -514,9 +523,7 @@ async function insertSeedData(actorUser, options = {}) {
     }
   ];
 
-  for (const val of seedValuations) {
-    await ShareValuation.create(val);
-  }
+  await Promise.all(seedValuations.map((val) => ShareValuation.create(val)));
 
   // 4. Seed Publications (Corporate Announcements and Official Financial Documents)
   const seedPublications = [
@@ -609,9 +616,7 @@ async function insertSeedData(actorUser, options = {}) {
     }
   ];
 
-  for (const pub of seedPublications) {
-    await Publication.create(pub);
-  }
+  await Promise.all(seedPublications.map((pub) => Publication.create(pub)));
 
   // 5. Seed Support Requests (Shareholder communication tickets)
   const seedSupportRequests = [
@@ -677,29 +682,27 @@ async function insertSeedData(actorUser, options = {}) {
     }
   ];
 
-  for (const sup of seedSupportRequests) {
-    await SupportRequest.create(sup);
-  }
-
-  // 6. Seed Demo Users for easy cross-role testing
-  for (const acc of DEMO_ACCOUNTS) {
-    const existing = await User.findOne({ email: acc.email.toLowerCase() });
-    if (!existing) {
-      const passwordHash = await bcrypt.hash(acc.password, 10);
-      await User.create({
-        email: acc.email.toLowerCase(),
-        passwordHash,
-        fullName: acc.fullName,
-        role: acc.role,
-        shareholderId: acc.shareholderId || null,
-        status: 'Active',
-        verificationEnabled: true,
-        verificationCode: '246810',
-        recoveryCode: 'APEX-RECOVERY-2026',
-        isSeed: true
-      });
-    }
-  }
+  await Promise.all([
+    ...seedSupportRequests.map((sup) => SupportRequest.create(sup)),
+    ...DEMO_ACCOUNTS.map(async (acc) => {
+      const existing = await User.findOne({ email: acc.email.toLowerCase() });
+      if (!existing) {
+        const passwordHash = await bcrypt.hash(acc.password, 10);
+        await User.create({
+          email: acc.email.toLowerCase(),
+          passwordHash,
+          fullName: acc.fullName,
+          role: acc.role,
+          shareholderId: acc.shareholderId || null,
+          status: 'Active',
+          verificationEnabled: true,
+          verificationCode: '246810',
+          recoveryCode: 'APEX-RECOVERY-2026',
+          isSeed: true
+        });
+      }
+    })
+  ]);
 
   // 7. Recalculate Register State & Update Company Issued Shares
   const registerState = await calculateRegisterState();

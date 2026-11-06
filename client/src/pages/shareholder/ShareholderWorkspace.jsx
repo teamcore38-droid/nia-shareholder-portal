@@ -193,6 +193,13 @@ function CumulativeHoldingBarChart({ ledger = [], currentShares = 0 }) {
   );
 }
 
+// In-memory cache keyed by shareholderId so toggling workspaces or switching holders renders in 0ms
+const cachedShareholderWorkspaceByHolder = new Map();
+
+export function clearShareholderWorkspaceCache() {
+  cachedShareholderWorkspaceByHolder.clear();
+}
+
 export default function ShareholderWorkspace({
   activeTab,
   setActiveTab,
@@ -200,13 +207,17 @@ export default function ShareholderWorkspace({
   onBadgesUpdate
 }) {
   const { user, company, notify, applySession } = useAuth();
+  const cacheKey = previewShareholderId || user?.shareholderId || 'self';
+  const initialCached = cachedShareholderWorkspaceByHolder.get(cacheKey);
 
-  const [overviewData, setOverviewData] = useState(null);
-  const [holdingsData, setHoldingsData] = useState(null);
-  const [historyData, setHistoryData] = useState(null);
-  const [documentsData, setDocumentsData] = useState(null);
-  const [announcementsData, setAnnouncementsData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [overviewData, setOverviewData] = useState(() => initialCached?.overview || null);
+  const [holdingsData, setHoldingsData] = useState(() => initialCached?.holdings || null);
+  const [historyData, setHistoryData] = useState(() => initialCached?.history || null);
+  const [documentsData, setDocumentsData] = useState(() => initialCached?.documents || null);
+  const [announcementsData, setAnnouncementsData] = useState(
+    () => initialCached?.announcements || null
+  );
+  const [loading, setLoading] = useState(() => !initialCached);
 
   // My Holdings Sub-tab ('overview' | 'movements' | 'valueHistory') matching Reference Image Middle-Left
   const [holdingsSubTab, setHoldingsSubTab] = useState('overview');
@@ -247,23 +258,30 @@ export default function ShareholderWorkspace({
     : '';
 
   const loadWorkspaceData = useCallback(async () => {
-    setLoading(true);
+    const existingCache = cachedShareholderWorkspaceByHolder.get(cacheKey);
+    if (existingCache) {
+      setOverviewData(existingCache.overview);
+      setHoldingsData(existingCache.holdings);
+      setHistoryData(existingCache.history);
+      setDocumentsData(existingCache.documents);
+      setAnnouncementsData(existingCache.announcements);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const [ovRes, holdRes, histRes, docRes, annRes] = await Promise.all([
-        api.get(`/portal/overview${queryParam}`),
-        api.get(`/portal/holdings${queryParam}`),
-        api.get(`/portal/history${queryParam}`),
-        api.get(`/portal/documents${queryParam}`),
-        api.get(`/portal/announcements${queryParam}`)
-      ]);
+      const res = await api.get(`/portal/workspace${queryParam}`);
+      const data = res.data;
+      cachedShareholderWorkspaceByHolder.set(cacheKey, data);
 
-      setOverviewData(ovRes.data);
-      setHoldingsData(holdRes.data);
-      setHistoryData(histRes.data);
-      setDocumentsData(docRes.data);
-      setAnnouncementsData(annRes.data);
+      setOverviewData(data.overview);
+      setHoldingsData(data.holdings);
+      setHistoryData(data.history);
+      setDocumentsData(data.documents);
+      setAnnouncementsData(data.announcements);
 
-      const sh = ovRes.data.shareholder;
+      const sh = data.overview?.shareholder;
       if (sh) {
         setProfileForm({
           fullName: sh.fullName || '',
@@ -284,7 +302,7 @@ export default function ShareholderWorkspace({
 
       if (onBadgesUpdate) {
         onBadgesUpdate({
-          unreadAnnouncements: ovRes.data.unreadAnnouncementsCount || 0
+          unreadAnnouncements: data.overview?.unreadAnnouncementsCount || 0
         });
       }
     } catch (err) {
@@ -292,7 +310,7 @@ export default function ShareholderWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [queryParam, user, notify, onBadgesUpdate]);
+  }, [cacheKey, queryParam, user, notify, onBadgesUpdate]);
 
   useEffect(() => {
     loadWorkspaceData();

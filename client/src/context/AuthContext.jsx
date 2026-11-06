@@ -4,19 +4,42 @@ import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
 
 const AuthContext = createContext(null);
 
+const SESSION_CACHE_KEY = 'apex_portal_cached_session';
+const COMPANY_CACHE_KEY = 'apex_portal_cached_company';
+
+function readCachedJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [company, setCompany] = useState({
+  const initialToken =
+    typeof window !== 'undefined' ? localStorage.getItem('apex_portal_token') : null;
+  const cachedSession = initialToken ? readCachedJson(SESSION_CACHE_KEY) : null;
+  const cachedCompany = readCachedJson(COMPANY_CACHE_KEY);
+
+  const [user, setUser] = useState(() => cachedSession?.user || null);
+  const [company, setCompany] = useState(() => ({
     companyDisplayName: 'NIA Group of Company',
     legalName: 'NIA Group of Company Ltd',
     baseCurrency: 'LKR',
     shareClass: 'Ordinary',
-    businessTimezone: 'Asia/Colombo'
-  });
-  const [permissions, setPermissions] = useState(null);
-  const [shareholderProfile, setShareholderProfile] = useState(null);
+    businessTimezone: 'Asia/Colombo',
+    ...(cachedCompany || {}),
+    ...(cachedSession?.company || {})
+  }));
+  const [permissions, setPermissions] = useState(() => cachedSession?.permissions || null);
+  const [shareholderProfile, setShareholderProfile] = useState(
+    () => cachedSession?.shareholderProfile || null
+  );
   const [bootstrapStatus, setBootstrapStatus] = useState({ initialized: true, userCount: 1 });
-  const [loading, setLoading] = useState(true);
+  // Only block initial render if a token exists in localStorage but we have no cached user session yet.
+  // Unauthenticated visitors entering Home Page or returning users with cached session render in 0ms!
+  const [loading, setLoading] = useState(() => Boolean(initialToken && !cachedSession?.user));
   const [toasts, setToasts] = useState([]);
 
   const notify = useCallback((message, type = 'success') => {
@@ -33,23 +56,53 @@ export function AuthProvider({ children }) {
 
   const fetchBootstrapAndSession = useCallback(async () => {
     try {
-      const bootRes = await api.get('/auth/bootstrap-status');
-      setBootstrapStatus(bootRes.data);
-      if (bootRes.data.company) {
-        setCompany((prev) => ({ ...prev, ...bootRes.data.company }));
+      const token = localStorage.getItem('apex_portal_token');
+      const [bootRes, meRes] = await Promise.all([
+        api.get('/auth/bootstrap-status').catch(() => null),
+        token ? api.get('/auth/me') : Promise.resolve(null)
+      ]);
+
+      if (bootRes?.data) {
+        setBootstrapStatus(bootRes.data);
+        if (bootRes.data.company) {
+          setCompany((prev) => {
+            const merged = { ...prev, ...bootRes.data.company };
+            try {
+              localStorage.setItem(COMPANY_CACHE_KEY, JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
       }
 
-      const token = localStorage.getItem('apex_portal_token');
-      if (token) {
-        const meRes = await api.get('/auth/me');
+      if (token && meRes?.data) {
         setUser(meRes.data.user);
         setPermissions(meRes.data.permissions);
         setShareholderProfile(meRes.data.shareholderProfile || null);
-        if (meRes.data.company) setCompany(meRes.data.company);
+        if (meRes.data.company) {
+          setCompany(meRes.data.company);
+          try {
+            localStorage.setItem(COMPANY_CACHE_KEY, JSON.stringify(meRes.data.company));
+          } catch {}
+        }
+        try {
+          localStorage.setItem(
+            SESSION_CACHE_KEY,
+            JSON.stringify({
+              user: meRes.data.user,
+              permissions: meRes.data.permissions || null,
+              shareholderProfile: meRes.data.shareholderProfile || null,
+              company: meRes.data.company || null
+            })
+          );
+        } catch {}
       }
     } catch (err) {
       localStorage.removeItem('apex_portal_token');
+      localStorage.removeItem(SESSION_CACHE_KEY);
       setUser(null);
+      setPermissions(null);
+      setShareholderProfile(null);
     } finally {
       setLoading(false);
     }
@@ -65,13 +118,32 @@ export function AuthProvider({ children }) {
     }
     if (data.user) setUser(data.user);
     if (data.permissions) setPermissions(data.permissions);
-    if (data.company) setCompany(data.company);
+    if (data.company) {
+      setCompany(data.company);
+      try {
+        localStorage.setItem(COMPANY_CACHE_KEY, JSON.stringify(data.company));
+      } catch {}
+    }
+    if (data.user) {
+      try {
+        localStorage.setItem(
+          SESSION_CACHE_KEY,
+          JSON.stringify({
+            user: data.user,
+            permissions: data.permissions || permissions || null,
+            shareholderProfile: data.shareholderProfile || shareholderProfile || null,
+            company: data.company || company || null
+          })
+        );
+      } catch {}
+    }
     setBootstrapStatus((prev) => ({ ...prev, initialized: true }));
   };
 
   const logout = () => {
     api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('apex_portal_token');
+    localStorage.removeItem(SESSION_CACHE_KEY);
     setUser(null);
     setPermissions(null);
     setShareholderProfile(null);

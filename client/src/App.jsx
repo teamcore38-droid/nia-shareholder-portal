@@ -4,8 +4,11 @@ import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
 import Layout from './components/Layout';
 
-const ShareholderWorkspace = lazy(() => import('./pages/shareholder/ShareholderWorkspace'));
-const AdminWorkspace = lazy(() => import('./pages/admin/AdminWorkspace'));
+const loadShareholderWorkspace = () => import('./pages/shareholder/ShareholderWorkspace');
+const loadAdminWorkspace = () => import('./pages/admin/AdminWorkspace');
+
+const ShareholderWorkspace = lazy(loadShareholderWorkspace);
+const AdminWorkspace = lazy(loadAdminWorkspace);
 
 function PortalRouter() {
   const { user, loading } = useAuth();
@@ -46,12 +49,25 @@ function PortalRouter() {
   }, []);
 
   useEffect(() => {
+    // Preload workspace chunks in the background right after initial paint so entering or toggling is instant
+    const timer = setTimeout(() => {
+      loadShareholderWorkspace();
+      loadAdminWorkspace();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (user) {
       const staffRole = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
       setWorkspaceMode(staffRole ? 'admin' : 'shareholder');
       setActiveTab('overview');
     } else {
-      // Return to home upon logout
+      // Clear cached workspace data and return to home upon logout
+      loadAdminWorkspace().then((m) => m.clearAdminWorkspaceCache && m.clearAdminWorkspaceCache());
+      loadShareholderWorkspace().then(
+        (m) => m.clearShareholderWorkspaceCache && m.clearShareholderWorkspaceCache()
+      );
       setAuthView('home');
     }
   }, [user]);
@@ -121,14 +137,7 @@ function PortalRouter() {
       setPreviewShareholderId={setPreviewShareholderId}
       shareholdersList={shareholdersList}
     >
-      <Suspense
-        fallback={
-          <div className="py-16 flex flex-col items-center justify-center text-slate-500">
-            <div className="w-9 h-9 rounded-full border-3 border-[#D4AF37] border-t-transparent animate-spin mb-2" />
-            <p className="text-xs font-medium">Loading workspace...</p>
-          </div>
-        }
-      >
+      <Suspense fallback={null}>
         {isStaff && workspaceMode === 'admin' ? (
           <AdminWorkspace
             activeTab={activeTab}

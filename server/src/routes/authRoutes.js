@@ -37,8 +37,10 @@ function validatePasswordPolicy(password) {
 // Check system bootstrap status & public company identity for Sign-In page
 router.get('/bootstrap-status', async (req, res) => {
   try {
-    const settings = await ensureCoreSystemConfig();
-    const userCount = await User.countDocuments({});
+    const [settings, userCount] = await Promise.all([
+      ensureCoreSystemConfig(),
+      User.countDocuments({})
+    ]);
     res.json({
       initialized: userCount > 0,
       userCount,
@@ -131,10 +133,16 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
     }
 
     const cleanInput = email.trim();
-    let user = await User.findOne({ email: cleanInput.toLowerCase() });
-    if (!user) {
-      user = await User.findOne({ shareholderId: cleanInput.toUpperCase() });
-    }
+    const user = await User.findOne(
+      cleanInput.includes('@')
+        ? { email: cleanInput.toLowerCase() }
+        : {
+            $or: [
+              { email: cleanInput.toLowerCase() },
+              { shareholderId: cleanInput.toUpperCase() }
+            ]
+          }
+    );
     const cleanEmail = user ? user.email : cleanInput.toLowerCase();
     if (!user) {
       await logAuditEvent({
@@ -210,22 +218,23 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
     }
 
     user.lastLoginAt = new Date().toISOString();
-    await user.save();
 
-    const settings = await ensureCoreSystemConfig();
-    const rolePerm = await RolePermission.findOne({ role: user.role });
+    const [, settings, rolePerm] = await Promise.all([
+      user.save(),
+      ensureCoreSystemConfig(),
+      RolePermission.findOne({ role: user.role }),
+      logAuditEvent({
+        actor: user.fullName,
+        actorEmail: user.email,
+        actorRole: user.role,
+        action: 'Signed in to portal',
+        reference: user.shareholderId || 'AUTH',
+        entityType: 'Session',
+        newValue: `${user.role} workspace`
+      })
+    ]);
     const token = signAuthToken(user, true);
     setAuthCookie(res, token);
-
-    await logAuditEvent({
-      actor: user.fullName,
-      actorEmail: user.email,
-      actorRole: user.role,
-      action: 'Signed in to portal',
-      reference: user.shareholderId || 'AUTH',
-      entityType: 'Session',
-      newValue: `${user.role} workspace`
-    });
 
     res.json({
       token,
@@ -299,22 +308,23 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
     }
 
     user.lastLoginAt = new Date().toISOString();
-    await user.save();
 
-    const settings = await ensureCoreSystemConfig();
-    const rolePerm = await RolePermission.findOne({ role: user.role });
+    const [, settings, rolePerm] = await Promise.all([
+      user.save(),
+      ensureCoreSystemConfig(),
+      RolePermission.findOne({ role: user.role }),
+      logAuditEvent({
+        actor: user.fullName,
+        actorEmail: user.email,
+        actorRole: user.role,
+        action: 'Verified staff multi-factor sign-in',
+        reference: 'AUTH-2FA',
+        entityType: 'Session',
+        newValue: cleanRecovery ? 'Recovery code verified' : '6-digit verification code verified'
+      })
+    ]);
     const token = signAuthToken(user, true);
     setAuthCookie(res, token);
-
-    await logAuditEvent({
-      actor: user.fullName,
-      actorEmail: user.email,
-      actorRole: user.role,
-      action: 'Verified staff multi-factor sign-in',
-      reference: 'AUTH-2FA',
-      entityType: 'Session',
-      newValue: cleanRecovery ? 'Recovery code verified' : '6-digit verification code verified'
-    });
 
     res.json({
       token,
@@ -521,13 +531,14 @@ router.post('/logout', authenticate, async (req, res) => {
 // Get Current User Session (Secrets excluded)
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    const settings = await ensureCoreSystemConfig();
-    const rolePerm = await RolePermission.findOne({ role: user.role });
-    let shareholderProfile = null;
-    if (user.shareholderId) {
-      shareholderProfile = await Shareholder.findOne({ shareholderId: user.shareholderId });
-    }
+    const user = req.user;
+    const [settings, rolePerm, shareholderProfile] = await Promise.all([
+      ensureCoreSystemConfig(),
+      RolePermission.findOne({ role: user.role }),
+      user.shareholderId
+        ? Shareholder.findOne({ shareholderId: user.shareholderId })
+        : Promise.resolve(null)
+    ]);
 
     res.json({
       user: {
