@@ -49,7 +49,7 @@ export default function PasswordInput({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full ${showLockIcon ? 'pl-10' : 'pl-3.5'} pr-10 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7C3AED] transition-shadow ${inputClassName}`}
+          className={`w-full ${showLockIcon ? 'pl-10' : 'pl-3.5'} pr-10 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-shadow ${inputClassName}`}
         />
         <button
           type="button"

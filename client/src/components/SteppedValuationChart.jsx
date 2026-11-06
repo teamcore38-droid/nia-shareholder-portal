@@ -31,8 +31,8 @@ export default function SteppedValuationChart({
             <Info className="w-4 h-4 text-slate-400" />
           </div>
         </div>
-        <div className="flex-1 min-h-[190px] rounded-2xl bg-[#F8F7FF] border border-dashed border-purple-200 flex flex-col items-center justify-center text-center px-6 py-8">
-          <div className="w-11 h-11 rounded-2xl bg-purple-100 text-[#6D28D9] flex items-center justify-center mb-3">
+        <div className="flex-1 min-h-[190px] rounded-2xl bg-[#FBF9F2] border border-dashed border-[#D4AF37]/40 flex flex-col items-center justify-center text-center px-6 py-8">
+          <div className="w-11 h-11 rounded-2xl bg-[#D4AF37]/15 text-[#9A7B2C] flex items-center justify-center mb-3">
             <TrendingUp className="w-5 h-5" />
           </div>
           <p className="text-sm font-bold text-slate-800">No published valuation points yet</p>
@@ -151,7 +151,7 @@ export default function SteppedValuationChart({
             <button
               type="button"
               onClick={() => setCurveMode(curveMode === 'smooth' ? 'stepped' : 'smooth')}
-              className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-50 text-[#6D28D9] border border-purple-200/70 hover:bg-purple-100 transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/35 hover:bg-[#D4AF37]/25 transition-colors cursor-pointer"
             >
               {curveMode === 'smooth' ? 'Smooth View' : 'Stepped View'}
             </button>
@@ -162,7 +162,7 @@ export default function SteppedValuationChart({
               onClick={() => setViewMode('chart')}
               className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                 viewMode === 'chart'
-                  ? 'bg-white text-[#6D28D9] shadow-2xs'
+                  ? 'bg-white text-[#9A7B2C] shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
               title="Chart View"
@@ -174,7 +174,7 @@ export default function SteppedValuationChart({
               onClick={() => setViewMode('table')}
               className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-white text-[#6D28D9] shadow-2xs'
+                  ? 'bg-white text-[#9A7B2C] shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
               title="Tabular View"
@@ -195,9 +195,9 @@ export default function SteppedValuationChart({
           >
             <defs>
               <linearGradient id="purpleAreaFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.28" />
-                <stop offset="85%" stopColor="#A78BFA" stopOpacity="0.06" />
-                <stop offset="100%" stopColor="#DDD6FE" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.32" />
+                <stop offset="85%" stopColor="#FDE047" stopOpacity="0.08" />
+                <stop offset="100%" stopColor="#FEF08A" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -223,14 +223,14 @@ export default function SteppedValuationChart({
               </g>
             ))}
 
-            {/* Soft Lavender Area Fill */}
+            {/* Soft Imperial Gold Area Fill */}
             <path d={areaPath} fill="url(#purpleAreaFill)" />
 
-            {/* Vibrant Purple Line */}
+            {/* Imperial Gold Line */}
             <path
               d={linePath}
               fill="none"
-              stroke="#7C3AED"
+              stroke="#B8860B"
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -243,13 +243,13 @@ export default function SteppedValuationChart({
                 y1={inspectedPoint.y}
                 x2={inspectedPoint.x}
                 y2={padTop + plotH}
-                stroke="#A78BFA"
+                stroke="#D4AF37"
                 strokeWidth="1.5"
                 strokeDasharray="3 3"
               />
             )}
 
-            {/* Data Points & Floating Callout Box (Matches Reference Image Callout) */}
+            {/* Data Points & Floating Callout Box */}
             {points.map((pt, idx) => {
               const isSelected = idx === inspectedIndex;
               return (
@@ -265,8 +265,8 @@ export default function SteppedValuationChart({
                       cx={pt.x}
                       cy={pt.y}
                       r="8"
-                      fill="#EDE9FE"
-                      stroke="#7C3AED"
+                      fill="#FEF3C7"
+                      stroke="#B8860B"
                       strokeWidth="1.5"
                     />
                   )}
@@ -275,7 +275,7 @@ export default function SteppedValuationChart({
                     cy={pt.y}
                     r={isSelected ? '5' : '4'}
                     fill="#FFFFFF"
-                    stroke="#7C3AED"
+                    stroke="#B8860B"
                     strokeWidth="2.5"
                   />
                   {/* X-axis Month Label */}
@@ -349,7 +349,7 @@ export default function SteppedValuationChart({
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {[...filteredData].reverse().map((row, i) => (
-                <tr key={i} className="hover:bg-purple-50/40">
+                <tr key={i} className="hover:bg-amber-50/40">
                   <td className="py-2.5 px-3 font-mono-num font-semibold text-slate-900">
                     {row.effectiveDate}
                   </td>

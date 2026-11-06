@@ -308,9 +308,9 @@ export default function AdminCoreTabs({
                 setActiveTab('shareholders');
                 openCreateShareholder();
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-purple-300 text-slate-800 text-xs font-bold shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#D4AF37] text-slate-800 text-xs font-bold shadow-2xs cursor-pointer"
             >
-              <UserPlus className="w-4 h-4 text-[#6D28D9]" />
+              <UserPlus className="w-4 h-4 text-[#B8860B]" />
               Add Shareholder
             </button>
             <button
@@ -319,7 +319,7 @@ export default function AdminCoreTabs({
                 setActiveTab('register');
                 setShowMovForm(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               New Share Movement
@@ -327,16 +327,16 @@ export default function AdminCoreTabs({
           </div>
         </div>
 
-        {/* 4 Pastel-Tinted KPI Cards */}
+        {/* 4 NIA Group Obsidian & Gold KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl bg-gradient-to-br from-white via-[#F5F3FF] to-[#EDE9FE] border border-purple-200/70 p-5 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-300/50 flex items-center justify-center text-[#6D28D9]">
+          <div className="rounded-2xl bg-gradient-to-br from-[#080C16] via-[#0B101E] to-[#131C31] border border-[#D4AF37]/40 p-5 shadow-md text-white">
+            <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047]">
               <Layers className="w-5 h-5" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 font-mono-num mt-3">
+            <div className="text-2xl font-extrabold text-white font-mono-num mt-3">
               {Number(sum.issuedShares || 0).toLocaleString()}
             </div>
-            <div className="text-xs font-semibold text-slate-500 mt-0.5">
+            <div className="text-xs font-semibold text-[#F3E5AB]/80 mt-0.5">
               Issued {company?.shareClass || 'Ordinary'} Shares
             </div>
           </div>
@@ -369,15 +369,15 @@ export default function AdminCoreTabs({
 
           <div
             onClick={() => setActiveTab('approvals')}
-            className="rounded-2xl bg-gradient-to-br from-[#6D28D9] via-[#7C3AED] to-[#4F46E5] text-white p-5 shadow-lg shadow-purple-700/25 cursor-pointer hover:scale-[1.01] transition-transform"
+            className="rounded-2xl bg-gradient-to-br from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 p-5 shadow-lg shadow-[#D4AF37]/25 cursor-pointer hover:scale-[1.01] transition-transform"
           >
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-slate-950/15 border border-slate-950/20 flex items-center justify-center text-slate-950">
               <CheckSquare className="w-5 h-5" />
             </div>
-            <div className="text-2xl font-extrabold text-white font-mono-num mt-3">
+            <div className="text-2xl font-extrabold text-slate-950 font-mono-num mt-3">
               {sum.pendingReviewsCount || 0}
             </div>
-            <div className="text-xs font-semibold text-purple-100 mt-0.5">
+            <div className="text-xs font-extrabold text-slate-900/80 mt-0.5">
               Pending Approvals →
             </div>
           </div>
@@ -397,7 +397,7 @@ export default function AdminCoreTabs({
             <button
               type="button"
               onClick={() => setActiveTab('approvals')}
-              className="text-xs font-bold text-[#6D28D9] hover:text-[#5B21B6] cursor-pointer"
+              className="text-xs font-bold text-[#9A7B2C] hover:text-[#785E1E] cursor-pointer"
             >
               Open Approvals →
             </button>
@@ -421,7 +421,7 @@ export default function AdminCoreTabs({
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {pendingItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-purple-50/30">
+                    <tr key={item.id} className="hover:bg-amber-50/30">
                       <td className="py-3.5 px-6 font-bold text-slate-900 font-mono-num">
                         {item.label}
                       </td>
@@ -430,7 +430,7 @@ export default function AdminCoreTabs({
                         {item.effectiveDate}
                       </td>
                       <td className="py-3.5 px-6">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-[#6D28D9] border border-purple-200">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30">
                           {item.status}
                         </span>
                       </td>
@@ -440,7 +440,7 @@ export default function AdminCoreTabs({
                           onClick={() =>
                             setActiveTab(item.itemType === 'shareholder' ? 'shareholders' : 'approvals')
                           }
-                          className="px-3.5 py-1.5 rounded-lg border border-[#7C3AED] text-[#6D28D9] hover:bg-[#6D28D9] hover:text-white font-bold text-xs transition-colors cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-lg border border-[#D4AF37] text-[#9A7B2C] hover:bg-[#080C16] hover:text-[#FDE047] font-bold text-xs transition-colors cursor-pointer"
                         >
                           Review
                         </button>
@@ -533,7 +533,7 @@ export default function AdminCoreTabs({
             <button
               type="button"
               onClick={openCreateShareholder}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               Add Shareholder
@@ -596,7 +596,7 @@ export default function AdminCoreTabs({
                   placeholder="e.g. Anura Perera"
                   value={shForm.fullName}
                   onChange={(e) => setShForm({ ...shForm, fullName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
 
@@ -610,7 +610,7 @@ export default function AdminCoreTabs({
                   placeholder="new.holder@example.com"
                   value={shForm.email}
                   onChange={(e) => setShForm({ ...shForm, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
 
@@ -623,7 +623,7 @@ export default function AdminCoreTabs({
                   placeholder="+94 77 123 4567"
                   value={shForm.phone}
                   onChange={(e) => setShForm({ ...shForm, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
 
@@ -653,7 +653,7 @@ export default function AdminCoreTabs({
                 placeholder="Enter verified address"
                 value={shForm.postalAddress}
                 onChange={(e) => setShForm({ ...shForm, postalAddress: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
 
@@ -697,14 +697,14 @@ export default function AdminCoreTabs({
                 onClick={() =>
                   handleSaveShareholder(shForm.initialPassword ? 'active' : 'invite')
                 }
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
               >
                 {shForm.initialPassword ? 'Save & Activate' : 'Save & Invite'}
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveShareholder('draft')}
-                className="px-5 py-2.5 rounded-xl bg-[#0D1127] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
               >
                 Save Draft
               </button>
@@ -721,7 +721,7 @@ export default function AdminCoreTabs({
                   placeholder="Search by name, Shareholder ID or email..."
                   value={shSearch}
                   onChange={(e) => setShSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
               <div className="flex items-center gap-1.5">
@@ -732,7 +732,7 @@ export default function AdminCoreTabs({
                     onClick={() => setShStatusFilter(st)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                       shStatusFilter === st
-                        ? 'bg-[#6D28D9] text-white'
+                        ? 'bg-[#080C16] text-[#FDE047] border border-[#D4AF37]/40'
                         : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -769,13 +769,13 @@ export default function AdminCoreTabs({
                         <tr
                           key={sh._id}
                           onClick={() => setSelectedShForActions(sh)}
-                          className={`hover:bg-purple-50/30 cursor-pointer transition-colors ${
-                            selectedShForActions?._id === sh._id ? 'bg-purple-50/60' : ''
+                          className={`hover:bg-amber-50/30 cursor-pointer transition-colors ${
+                            selectedShForActions?._id === sh._id ? 'bg-amber-50/60' : ''
                           }`}
                         >
                           <td className="py-3.5 px-6">
                             <div className="flex items-center gap-2.5">
-                              <span className="font-mono-num font-bold text-[#6D28D9] bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                              <span className="font-mono-num font-bold text-[#FDE047] bg-[#080C16] px-2.5 py-1 rounded-lg border border-[#D4AF37]/40">
                                 {sh.shareholderId}
                               </span>
                               <div>
@@ -796,7 +796,7 @@ export default function AdminCoreTabs({
                                 sh.accountStatus === 'Active'
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : sh.accountStatus === 'Invited'
-                                  ? 'bg-purple-50 text-[#6D28D9] border border-purple-200'
+                                  ? 'bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30'
                                   : sh.accountStatus === 'Suspended'
                                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                   : 'bg-amber-50 text-amber-800 border border-amber-200'
@@ -817,7 +817,7 @@ export default function AdminCoreTabs({
                                 e.stopPropagation();
                                 openEditShareholder(sh);
                               }}
-                              className="px-3 py-1 rounded-lg border border-[#7C3AED] text-[#6D28D9] hover:bg-[#6D28D9] hover:text-white font-bold transition-colors cursor-pointer"
+                              className="px-3 py-1 rounded-lg border border-[#D4AF37] text-[#9A7B2C] hover:bg-[#080C16] hover:text-[#FDE047] font-bold transition-colors cursor-pointer"
                             >
                               Edit
                             </button>
@@ -858,7 +858,7 @@ export default function AdminCoreTabs({
                     onClick={() =>
                       handleShareholderAccountAction(selectedShForActions, 'reset-invite')
                     }
-                    className="px-3 py-1.5 rounded-lg bg-purple-50 text-[#6D28D9] hover:bg-purple-100 cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-[#D4AF37]/15 text-[#9A7B2C] hover:bg-[#D4AF37]/25 cursor-pointer"
                   >
                     Reset Invitation
                   </button>
@@ -932,7 +932,7 @@ export default function AdminCoreTabs({
             <button
               type="button"
               onClick={() => setShowMovForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               New Movement
@@ -1108,7 +1108,7 @@ export default function AdminCoreTabs({
               className={`mt-5 p-4 rounded-xl border text-xs font-semibold ${
                 hasBalanceError
                   ? 'bg-rose-50 border-rose-300 text-rose-800'
-                  : 'bg-[#F6F5FF] border-purple-200 text-purple-950'
+                  : 'bg-[#FBF9F2] border-[#D4AF37]/40 text-slate-900'
               }`}
             >
               {hasBalanceError ? (
@@ -1121,7 +1121,7 @@ export default function AdminCoreTabs({
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono-num">
-                  <span className="font-bold text-[#6D28D9]">Impact Preview:</span>
+                  <span className="font-bold text-[#9A7B2C]">Impact Preview:</span>
                   {movForm.fromShareholderId && (
                     <span>
                       {movForm.fromShareholderId}: {Number(fromCurr).toLocaleString()} →{' '}
@@ -1152,7 +1152,7 @@ export default function AdminCoreTabs({
                 type="button"
                 disabled={hasBalanceError}
                 onClick={() => handleSaveMovement(true)}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer disabled:opacity-50"
               >
                 Submit for Approval
               </button>
@@ -1160,7 +1160,7 @@ export default function AdminCoreTabs({
                 type="button"
                 disabled={hasBalanceError}
                 onClick={() => handleSaveMovement(false)}
-                className="px-5 py-2.5 rounded-xl bg-[#0D1127] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
               >
                 Save Draft
               </button>
@@ -1170,7 +1170,7 @@ export default function AdminCoreTabs({
           <>
             <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3 py-1.5 rounded-lg bg-purple-50 font-bold text-[#6D28D9]">
+                <span className="px-3 py-1.5 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 font-bold text-[#9A7B2C]">
                   Class: {company?.shareClass || 'Ordinary'}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -1231,7 +1231,7 @@ export default function AdminCoreTabs({
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
                       {movements.map((m) => (
-                        <tr key={m._id} className="hover:bg-purple-50/30">
+                        <tr key={m._id} className="hover:bg-amber-50/30">
                           <td className="py-3.5 px-6">
                             <div className="font-mono-num font-bold text-slate-900">
                               {m.reference} • {m.movementType}
@@ -1259,7 +1259,7 @@ export default function AdminCoreTabs({
                                 m.status === 'Published'
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : m.status === 'Submitted'
-                                  ? 'bg-purple-50 text-[#6D28D9] border border-purple-200'
+                                  ? 'bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30'
                                   : 'bg-amber-50 text-amber-800 border border-amber-200'
                               }`}
                             >
@@ -1334,7 +1334,7 @@ export default function AdminCoreTabs({
                     <span
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold transition-all ${
                         isActive
-                          ? 'bg-[#6D28D9] text-white shadow-md shadow-purple-500/30'
+                          ? 'bg-gradient-to-br from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 shadow-md shadow-[#D4AF37]/30'
                           : isCompleted
                           ? 'bg-emerald-500 text-white'
                           : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
@@ -1345,7 +1345,7 @@ export default function AdminCoreTabs({
                     <span
                       className={
                         isActive
-                          ? 'text-[#6D28D9] font-extrabold'
+                          ? 'text-[#9A7B2C] font-extrabold'
                           : 'text-slate-500 group-hover:text-slate-800'
                       }
                     >
@@ -1355,7 +1355,7 @@ export default function AdminCoreTabs({
                   {idx < 2 && (
                     <div
                       className={`flex-1 h-0.5 mx-3 sm:mx-5 rounded-full ${
-                        valStep > item.step ? 'bg-[#6D28D9]' : 'bg-slate-200'
+                        valStep > item.step ? 'bg-[#D4AF37]' : 'bg-slate-200'
                       }`}
                     />
                   )}
@@ -1378,7 +1378,7 @@ export default function AdminCoreTabs({
                       type="date"
                       value={valForm.effectiveDate}
                       onChange={(e) => setValForm({ ...valForm, effectiveDate: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                   </div>
                 </div>
@@ -1394,7 +1394,7 @@ export default function AdminCoreTabs({
                     placeholder="125.00"
                     value={valForm.valuePerShare}
                     onChange={(e) => setValForm({ ...valForm, valuePerShare: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                 </div>
               </div>
@@ -1408,7 +1408,7 @@ export default function AdminCoreTabs({
                   placeholder="Updated based on the latest board-approved valuation."
                   value={valForm.basis}
                   onChange={(e) => setValForm({ ...valForm, basis: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
 
@@ -1433,12 +1433,12 @@ export default function AdminCoreTabs({
               </div>
             </div>
 
-            {/* Right Column: "Impact (Illustrative)" Summary Card (Matches Reference Image Bottom-Right) */}
+            {/* Right Column: "Impact (Illustrative)" Summary Card */}
             <div className="lg:col-span-5 flex flex-col justify-between space-y-5">
-              <div className="rounded-2xl bg-[#F6F5FF] border border-purple-200/80 p-5 space-y-4">
+              <div className="rounded-2xl bg-[#FBF9F2] border border-[#D4AF37]/40 p-5 space-y-4">
                 <h3 className="text-sm font-extrabold text-slate-900">Impact (Illustrative)</h3>
 
-                <div className="space-y-3 text-xs sm:text-sm divide-y divide-purple-200/50">
+                <div className="space-y-3 text-xs sm:text-sm divide-y divide-[#D4AF37]/25">
                   <div className="flex items-center justify-between pb-2.5">
                     <span className="text-slate-600 font-medium">Issued Ordinary Shares</span>
                     <span className="font-mono-num font-extrabold text-slate-900">
@@ -1461,7 +1461,7 @@ export default function AdminCoreTabs({
                     <span className="text-slate-600 font-medium">
                       {sampleShareholder.shareholderId} Holding ({sampleShares.toLocaleString()})
                     </span>
-                    <span className="font-mono-num font-extrabold text-[#6D28D9]">
+                    <span className="font-mono-num font-extrabold text-[#9A7B2C]">
                       {currency}{' '}
                       {sampleHoldingValue.toLocaleString(undefined, {
                         minimumFractionDigits: 0,
@@ -1484,7 +1484,7 @@ export default function AdminCoreTabs({
                 <button
                   type="button"
                   onClick={() => handleSaveValuation(true)}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] hover:from-[#5B21B6] hover:to-[#4F46E5] text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-600/25 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 transition-all cursor-pointer"
                 >
                   <span>Continue & Submit</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1526,7 +1526,7 @@ export default function AdminCoreTabs({
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {allValuations.map((v) => (
-                    <tr key={v._id} className="hover:bg-purple-50/30">
+                    <tr key={v._id} className="hover:bg-amber-50/30">
                       <td className="py-3.5 px-6 font-mono-num font-bold text-slate-900">
                         {v.reference}
                       </td>
@@ -1546,7 +1546,7 @@ export default function AdminCoreTabs({
                             v.status === 'Published'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : v.status === 'Submitted'
-                              ? 'bg-purple-50 text-[#6D28D9] border border-purple-200'
+                              ? 'bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30'
                               : 'bg-amber-50 text-amber-800 border border-amber-200'
                           }`}
                         >
@@ -1696,7 +1696,7 @@ export default function AdminCoreTabs({
         </p>
       </div>
 
-      {/* Main Approvals Card (Matches Middle-Right Mockup) */}
+      {/* Main Approvals Card */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         {/* Sub-Tabs Bar: Pending (N) | Approved | Rejected | History */}
         <div className="px-6 pt-4 border-b border-slate-200/80 flex items-center gap-6 overflow-x-auto">
@@ -1716,12 +1716,12 @@ export default function AdminCoreTabs({
                   setSelectedApprovalItem(null);
                 }}
                 className={`pb-3.5 text-xs sm:text-sm font-bold whitespace-nowrap relative transition-colors cursor-pointer ${
-                  active ? 'text-[#6D28D9]' : 'text-slate-500 hover:text-slate-800'
+                  active ? 'text-[#9A7B2C]' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {tab.label}
                 {active && (
-                  <span className="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-[#6D28D9]" />
+                  <span className="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-[#D4AF37]" />
                 )}
               </button>
             );
@@ -1747,7 +1747,7 @@ export default function AdminCoreTabs({
                       <input
                         type="checkbox"
                         aria-label="Select all"
-                        className="w-4 h-4 rounded border-slate-300 text-[#6D28D9]"
+                        className="w-4 h-4 rounded border-slate-300 text-[#B8860B]"
                       />
                     </th>
                     <th className="py-3.5 px-4">Reference</th>
@@ -1764,8 +1764,8 @@ export default function AdminCoreTabs({
                     return (
                       <tr
                         key={row.id}
-                        className={`hover:bg-purple-50/30 transition-colors ${
-                          isSelected ? 'bg-purple-50/60' : ''
+                        className={`hover:bg-amber-50/30 transition-colors ${
+                          isSelected ? 'bg-amber-50/60' : ''
                         }`}
                       >
                         <td className="py-4 pl-6 pr-2">
@@ -1775,7 +1775,7 @@ export default function AdminCoreTabs({
                             onChange={() =>
                               setSelectedApprovalItem(isSelected ? null : row)
                             }
-                            className="w-4 h-4 rounded border-slate-300 text-[#6D28D9]"
+                            className="w-4 h-4 rounded border-slate-300 text-[#B8860B]"
                           />
                         </td>
                         <td className="py-4 px-4 font-mono-num font-extrabold text-slate-900">
@@ -1797,8 +1797,8 @@ export default function AdminCoreTabs({
                             }
                             className={`px-4 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-[#6D28D9] border-[#6D28D9] text-white shadow-sm'
-                                : 'border-[#7C3AED] text-[#6D28D9] hover:bg-[#6D28D9] hover:text-white'
+                                ? 'bg-[#080C16] border-[#D4AF37] text-[#FDE047] shadow-sm'
+                                : 'border-[#D4AF37] text-[#9A7B2C] hover:bg-[#080C16] hover:text-[#FDE047]'
                             }`}
                           >
                             {isSelected ? 'Reviewing' : 'Review'}
@@ -1866,10 +1866,10 @@ export default function AdminCoreTabs({
         const cmp = raw.liveComparison || {};
 
         return (
-          <div className="bg-white rounded-2xl border-2 border-[#7C3AED]/40 p-6 sm:p-7 shadow-lg space-y-4">
+          <div className="bg-white rounded-2xl border-2 border-[#D4AF37]/50 p-6 sm:p-7 shadow-lg space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-purple-50 text-[#6D28D9] text-[11px] font-bold mb-1.5">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30 text-[11px] font-bold mb-1.5">
                   Before & After Approval Inspection
                 </div>
                 <h3 className="text-lg font-extrabold text-slate-900">
@@ -1947,7 +1947,7 @@ export default function AdminCoreTabs({
 
             {/* Valuation Comparison Summary */}
             {target.itemType === 'valuation' && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#F6F5FF] border border-purple-200 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FBF9F2] border border-[#D4AF37]/40 text-xs">
                 <div>
                   <span className="text-slate-500">Current Published Value:</span>
                   <div className="font-mono-num font-bold text-slate-900 text-sm mt-0.5">
@@ -1960,7 +1960,7 @@ export default function AdminCoreTabs({
                 </div>
                 <div>
                   <span className="text-slate-500">Proposed Value per Share:</span>
-                  <div className="font-mono-num font-extrabold text-[#6D28D9] text-sm mt-0.5">
+                  <div className="font-mono-num font-extrabold text-[#9A7B2C] text-sm mt-0.5">
                     {raw.currency} {Number(raw.valuePerShare).toFixed(2)}
                   </div>
                 </div>
@@ -1982,7 +1982,7 @@ export default function AdminCoreTabs({
                 onChange={(e) =>
                   setReviewerComments({ ...reviewerComments, [target.id]: e.target.value })
                 }
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
 
@@ -1990,14 +1990,14 @@ export default function AdminCoreTabs({
               <button
                 type="button"
                 onClick={() => handleApprovalDecision(target.itemType, target.id, 'approve', true)}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
               >
                 Approve & Publish
               </button>
               <button
                 type="button"
                 onClick={() => handleApprovalDecision(target.itemType, target.id, 'return')}
-                className="px-4 py-2.5 rounded-xl bg-[#0D1127] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
               >
                 Return for Correction
               </button>

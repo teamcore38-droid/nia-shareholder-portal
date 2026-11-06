@@ -143,16 +143,16 @@ export default function Layout({
     : navItems;
 
   return (
-    <div className="min-h-screen flex bg-[#F4F5FB] text-slate-900">
-      {/* Persistent Desktop Sidebar (Matches Reference Image Deep Indigo Sidebar) */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-gradient-to-b from-[#0D1127] via-[#111736] to-[#0B0F24] text-white shadow-2xl z-30 overflow-hidden">
-        {/* APEX Software Solutions Brand Header */}
-        <div className="px-6 pt-6 pb-5">
-          <ApexBrandLogo size="md" subtitle="Software Solutions" lightText />
+    <div className="min-h-screen flex bg-[#F8F7F4] text-slate-900">
+      {/* Persistent Desktop Sidebar (NIA Group Obsidian & Gold Architectural Pillar) */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-gradient-to-b from-[#080C16] via-[#0D1322] to-[#080C16] border-r border-[#D4AF37]/30 text-white shadow-2xl z-30 overflow-hidden">
+        {/* NIA Group of Company Brand Header */}
+        <div className="px-5 pt-6 pb-5 border-b border-[#D4AF37]/20">
+          <ApexBrandLogo size="md" subtitle="GROUP OF COMPANY" lightText showAllianceTag />
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 px-3.5 py-2 space-y-1 overflow-y-auto relative z-10">
+        <nav className="flex-1 px-3.5 py-3 space-y-1 overflow-y-auto relative z-10">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -161,26 +161,26 @@ export default function Layout({
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectTab(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all cursor-pointer group ${
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer group ${
                   active
-                    ? 'bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white shadow-lg shadow-purple-950/50'
-                    : 'text-slate-300/85 hover:bg-white/8 hover:text-white'
+                    ? 'bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 shadow-lg shadow-amber-950/40'
+                    : 'text-slate-300/90 hover:bg-[#D4AF37]/12 hover:text-[#FDE047]'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={`w-4 h-4 transition-colors ${
-                      active ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                      active ? 'text-slate-950' : 'text-[#D4AF37] group-hover:text-[#FDE047]'
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge > 0 && (
                   <span
-                    className={`px-2 py-0.5 text-[11px] font-bold rounded-full font-mono-num ${
+                    className={`px-2 py-0.5 text-[11px] font-extrabold rounded-full font-mono-num ${
                       active
-                        ? 'bg-white/25 text-white'
-                        : 'bg-[#7C3AED] text-white shadow-xs'
+                        ? 'bg-slate-950 text-[#FDE047]'
+                        : 'bg-[#D4AF37] text-slate-950 shadow-xs'
                     }`}
                   >
                     {item.badge}
@@ -194,10 +194,10 @@ export default function Layout({
         {/* Bottom Wave Mesh & Sign Out */}
         <div className="relative mt-auto">
           <SidebarWaveDecoration />
-          <div className="px-4 pb-4 pt-1 relative z-10 flex items-center justify-between border-t border-white/10">
+          <div className="px-4 pb-4 pt-2 relative z-10 flex items-center justify-between border-t border-[#D4AF37]/25">
             <div className="min-w-0 pr-2">
               <div className="text-xs font-bold text-white truncate">{user?.fullName}</div>
-              <div className="text-[11px] text-purple-300/90 truncate">
+              <div className="text-[11px] text-[#FDE047] font-semibold truncate">
                 {user?.shareholderId || user?.role}
               </div>
             </div>
@@ -213,30 +213,32 @@ export default function Layout({
         </div>
       </aside>
 
-      {/* Mobile Clean Contextual Header (Matches Phone Mockups in Reference Image) */}
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
+      {/* Mobile Clean Contextual Header */}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 bg-[#080C16]/95 text-white backdrop-blur-md border-b border-[#D4AF37]/30 shadow-md">
         <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             {activeTab !== 'overview' ? (
               <button
                 type="button"
                 onClick={() => handleSelectTab('overview')}
-                className="p-1.5 -ml-1 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 -ml-1 rounded-xl text-[#FDE047] hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Back to Dashboard"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
             ) : (
-              <div className="w-7 h-7 rounded-lg bg-[#0D1127] flex items-center justify-center shrink-0">
-                <span className="text-[11px] font-extrabold text-sky-400">A</span>
-              </div>
+              <img
+                src="/nia-logo.png"
+                alt="NIA Crest"
+                className="w-8 h-8 rounded-full border border-[#D4AF37] bg-black shrink-0"
+              />
             )}
             <div className="min-w-0">
-              <div className="text-sm font-extrabold text-slate-900 truncate">
+              <div className="text-sm font-extrabold text-[#FDE047] truncate">
                 {activeNavObj?.label || 'Dashboard'}
               </div>
-              <div className="text-[10px] font-medium text-slate-500 truncate">
-                {company?.companyDisplayName || 'NIA Group of company'}
+              <div className="text-[10px] font-medium text-slate-300 truncate">
+                {company?.companyDisplayName || 'NIA Group of Company'}
               </div>
             </div>
           </div>
@@ -248,12 +250,12 @@ export default function Layout({
               onClick={() =>
                 handleSelectTab(workspaceMode === 'admin' ? 'approvals' : 'announcements')
               }
-              className="relative w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"
+              className="relative w-8 h-8 rounded-full bg-white/10 border border-[#D4AF37]/30 flex items-center justify-center text-[#FDE047]"
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4" />
               {(badges.unreadAnnouncements > 0 || badges.pendingApprovals > 0) && (
-                <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
+                <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C16]" />
               )}
             </button>
 
@@ -261,28 +263,28 @@ export default function Layout({
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-bold text-slate-800"
+              className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-white/10 border border-[#D4AF37]/40 text-xs font-bold text-white"
             >
-              <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#6D28D9] to-[#4F46E5] text-white text-[10px] font-extrabold flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#B8860B] to-[#FDE047] text-slate-950 text-[10px] font-extrabold flex items-center justify-center">
                 {avatarInitials}
               </span>
-              {mobileMenuOpen ? <X className="w-3.5 h-3.5" /> : <Menu className="w-3.5 h-3.5" />}
+              {mobileMenuOpen ? <X className="w-3.5 h-3.5 text-[#FDE047]" /> : <Menu className="w-3.5 h-3.5 text-[#FDE047]" />}
             </button>
           </div>
         </div>
 
         {/* Slide-Down Mobile Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="bg-[#0D1127] text-white border-b border-slate-800 px-4 py-4 space-y-2 max-h-[82vh] overflow-y-auto shadow-2xl">
-            <div className="pb-3 mb-2 border-b border-white/10 flex items-center justify-between">
-              <ApexBrandLogo size="sm" subtitle="Software Solutions" lightText />
-              <span className="text-xs font-mono-num px-2.5 py-1 rounded-full bg-white/10 text-purple-200">
+          <div className="bg-[#080C16] text-white border-b border-[#D4AF37]/30 px-4 py-4 space-y-2 max-h-[82vh] overflow-y-auto shadow-2xl">
+            <div className="pb-3 mb-2 border-b border-[#D4AF37]/20 flex items-center justify-between">
+              <ApexBrandLogo size="sm" subtitle="GROUP OF COMPANY" lightText />
+              <span className="text-xs font-mono-num px-2.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] font-bold">
                 {primaryBadgeLabel}
               </span>
             </div>
 
             {isStaff && (
-              <div className="pb-3 mb-2 border-b border-white/10 space-y-2">
+              <div className="pb-3 mb-2 border-b border-[#D4AF37]/20 space-y-2">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -291,9 +293,9 @@ export default function Layout({
                       setActiveTab('overview');
                       setMobileMenuOpen(false);
                     }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold ${
+                    className={`flex-1 py-2 rounded-xl text-xs font-extrabold ${
                       workspaceMode === 'admin'
-                        ? 'bg-[#7C3AED] text-white'
+                        ? 'bg-gradient-to-r from-[#B8860B] to-[#D4AF37] text-slate-950'
                         : 'bg-white/10 text-slate-300'
                     }`}
                   >
@@ -306,9 +308,9 @@ export default function Layout({
                       setActiveTab('overview');
                       setMobileMenuOpen(false);
                     }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold ${
+                    className={`flex-1 py-2 rounded-xl text-xs font-extrabold ${
                       workspaceMode === 'shareholder'
-                        ? 'bg-[#7C3AED] text-white'
+                        ? 'bg-gradient-to-r from-[#B8860B] to-[#D4AF37] text-slate-950'
                         : 'bg-white/10 text-slate-300'
                     }`}
                   >
@@ -317,8 +319,8 @@ export default function Layout({
                 </div>
 
                 {workspaceMode === 'shareholder' && shareholdersList.length > 0 && (
-                  <div className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2 text-xs">
-                    <span className="text-purple-200 font-semibold">Inspecting:</span>
+                  <div className="flex items-center justify-between bg-white/10 border border-[#D4AF37]/30 rounded-xl px-3 py-2 text-xs">
+                    <span className="text-[#FDE047] font-semibold">Inspecting:</span>
                     <select
                       value={previewShareholderId || ''}
                       onChange={(e) => setPreviewShareholderId(e.target.value)}
@@ -344,9 +346,9 @@ export default function Layout({
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold ${
                       active
-                        ? 'bg-gradient-to-r from-[#6D28D9] to-[#6366F1] text-white'
+                        ? 'bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950'
                         : 'text-slate-300 hover:bg-white/10'
                     }`}
                   >
@@ -355,7 +357,7 @@ export default function Layout({
                       {item.label}
                     </span>
                     {item.badge > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-white/20 text-white font-bold">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-slate-950 text-[#FDE047] font-bold">
                         {item.badge}
                       </span>
                     )}
@@ -364,7 +366,7 @@ export default function Layout({
               })}
             </div>
 
-            <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between">
+            <div className="pt-3 mt-2 border-t border-[#D4AF37]/20 flex items-center justify-between">
               <div className="text-xs text-slate-300">
                 <div className="font-bold text-white">{user?.fullName}</div>
                 <div className="text-[11px] text-slate-400">{user?.email}</div>
@@ -384,15 +386,24 @@ export default function Layout({
 
       {/* Main Content Area */}
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pt-14 lg:pt-0 pb-20 lg:pb-0">
-        {/* Desktop Header Bar (Matches Reference Image Top Header) */}
-        <header className="hidden lg:flex bg-white/85 backdrop-blur-md border-b border-slate-200/70 sticky top-0 z-20 px-8 py-3.5 items-center justify-between gap-4">
+        {/* Desktop Header Bar */}
+        <header className="hidden lg:flex bg-white/95 backdrop-blur-md border-b border-[#D4AF37]/30 sticky top-0 z-20 px-8 py-3.5 items-center justify-between gap-4 shadow-2xs">
           {/* Left: Company Name & Portal Subtitle */}
-          <div>
-            <div className="text-base font-extrabold text-slate-900 leading-tight">
-              {company?.companyDisplayName || 'NIA Group of company'}
-            </div>
-            <div className="text-xs font-medium text-slate-500">
-              {workspaceMode === 'admin' ? 'Administration Workspace' : 'Shareholder Portal'}
+          <div className="flex items-center gap-3">
+            <img
+              src="/nia-logo.png"
+              alt="NIA Group Seal"
+              className="w-9 h-9 rounded-full border border-[#D4AF37] bg-black"
+            />
+            <div>
+              <div className="text-base font-extrabold text-slate-900 leading-tight uppercase tracking-wide">
+                {company?.companyDisplayName || 'NIA Group of Company'}
+              </div>
+              <div className="text-xs font-semibold text-[#9A7B2C]">
+                {workspaceMode === 'admin'
+                  ? 'Nexus International Alliance • Administration Workspace'
+                  : 'Nexus International Alliance • Shareholder Portal'}
+              </div>
             </div>
           </div>
 
@@ -402,13 +413,13 @@ export default function Layout({
             {isStaff && (
               <div className="flex items-center gap-2 mr-1">
                 {workspaceMode === 'shareholder' && shareholdersList.length > 0 && (
-                  <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200/80 rounded-xl px-3 py-1.5">
-                    <Eye className="w-3.5 h-3.5 text-[#6D28D9]" />
-                    <span className="text-[11px] font-semibold text-purple-900">Holder:</span>
+                  <div className="flex items-center gap-1.5 bg-amber-50/80 border border-[#D4AF37]/40 rounded-xl px-3 py-1.5">
+                    <Eye className="w-3.5 h-3.5 text-[#9A7B2C]" />
+                    <span className="text-[11px] font-bold text-slate-700">Holder:</span>
                     <select
                       value={previewShareholderId || ''}
                       onChange={(e) => setPreviewShareholderId(e.target.value)}
-                      className="text-xs font-bold text-purple-950 bg-transparent focus:outline-none font-mono-num cursor-pointer"
+                      className="text-xs font-extrabold text-slate-950 bg-transparent focus:outline-none font-mono-num cursor-pointer"
                     >
                       {shareholdersList.map((s) => (
                         <option key={s.shareholderId} value={s.shareholderId}>
@@ -419,16 +430,16 @@ export default function Layout({
                   </div>
                 )}
 
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-[#D4AF37]/30">
                   <button
                     type="button"
                     onClick={() => {
                       setWorkspaceMode('admin');
                       setActiveTab('overview');
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                       workspaceMode === 'admin'
-                        ? 'bg-[#0D1127] text-white shadow-2xs'
+                        ? 'bg-[#080C16] text-[#FDE047] shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -440,9 +451,9 @@ export default function Layout({
                       setWorkspaceMode('shareholder');
                       setActiveTab('overview');
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                       workspaceMode === 'shareholder'
-                        ? 'bg-[#6D28D9] text-white shadow-2xs'
+                        ? 'bg-gradient-to-r from-[#B8860B] to-[#D4AF37] text-slate-950 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -457,21 +468,21 @@ export default function Layout({
               <button
                 type="button"
                 onClick={() => setQuickSearchOpen(!quickSearchOpen)}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/70 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-amber-50 border border-slate-200/80 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                 title="Quick jump to section"
               >
                 <Search className="w-4 h-4" />
               </button>
 
               {quickSearchOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200/90 p-2.5 z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#D4AF37]/40 p-2.5 z-50">
                   <input
                     type="text"
                     autoFocus
                     placeholder="Jump to section..."
                     value={quickSearchQuery}
                     onChange={(e) => setQuickSearchQuery(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                   <div className="mt-1.5 max-h-48 overflow-y-auto space-y-0.5">
                     {filteredNavItems.map((n) => {
@@ -481,7 +492,7 @@ export default function Layout({
                           key={n.id}
                           type="button"
                           onClick={() => handleSelectTab(n.id)}
-                          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-amber-50 hover:text-[#9A7B2C] cursor-pointer"
                         >
                           <Icon className="w-3.5 h-3.5" />
                           <span>{n.label}</span>
@@ -493,13 +504,13 @@ export default function Layout({
               )}
             </div>
 
-            {/* Notification Bell Icon Button with Red Badge Dot */}
+            {/* Notification Bell Icon Button */}
             <button
               type="button"
               onClick={() =>
                 handleSelectTab(workspaceMode === 'admin' ? 'approvals' : 'announcements')
               }
-              className="relative w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/70 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+              className="relative w-9 h-9 rounded-full bg-slate-100 hover:bg-amber-50 border border-slate-200/80 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
               title="Notifications & Updates"
             >
               <Bell className="w-4 h-4" />
@@ -508,29 +519,29 @@ export default function Layout({
               )}
             </button>
 
-            {/* User Profile Pill (Matches Reference Image: Purple Avatar + SH-001 / Shareholder + Chevron) */}
+            {/* User Profile Pill */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-colors cursor-pointer"
+                className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full bg-[#080C16] hover:bg-[#111827] border border-[#D4AF37]/50 text-white transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#4F46E5] text-white text-xs font-extrabold flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold flex items-center justify-center shadow-xs">
                   {avatarInitials}
                 </div>
                 <div className="text-left leading-tight">
-                  <div className="text-xs font-extrabold text-slate-900 font-mono-num">
+                  <div className="text-xs font-extrabold text-[#FDE047] font-mono-num">
                     {primaryBadgeLabel}
                   </div>
-                  <div className="text-[11px] font-medium text-slate-500">
+                  <div className="text-[11px] font-medium text-slate-300">
                     {secondaryBadgeLabel}
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#D4AF37] ml-0.5" />
               </button>
 
               {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#D4AF37]/40 py-2 z-50">
                   <div className="px-4 py-2 border-b border-slate-100">
                     <div className="text-xs font-bold text-slate-900 truncate">{user?.fullName}</div>
                     <div className="text-[11px] text-slate-500 truncate">{user?.email}</div>
@@ -540,7 +551,7 @@ export default function Layout({
                     onClick={() =>
                       handleSelectTab(workspaceMode === 'admin' ? 'settings' : 'profile')
                     }
-                    className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] flex items-center gap-2 cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-amber-50 hover:text-[#9A7B2C] flex items-center gap-2 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Profile & Security
@@ -565,24 +576,25 @@ export default function Layout({
         </main>
 
         {/* Lightweight Footer */}
-        <footer className="px-4 sm:px-8 py-3.5 border-t border-slate-200/60 bg-white/50 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+        <footer className="px-4 sm:px-8 py-3.5 border-t border-[#D4AF37]/25 bg-white/75 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <span className="font-semibold text-slate-700">
-              {company?.companyDisplayName || 'NIA Group of company'}
+            <span className="font-bold text-slate-900">
+              {company?.companyDisplayName || 'NIA Group of Company'}
             </span>{' '}
-            • Shareholder & Equity Registry Portal • Base Currency:{' '}
-            <span className="font-mono-num font-semibold text-slate-700">
+            • Nexus International Alliance (E-STD 2022) • Base Currency:{' '}
+            <span className="font-mono-num font-bold text-[#9A7B2C]">
               {company?.baseCurrency || 'LKR'}
             </span>
           </div>
           <div>
-            Powered by <span className="font-semibold text-[#6D28D9]">APEX Software Solutions</span>
+            119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka •{' '}
+            <span className="font-bold text-[#9A7B2C]">www.niagc.com</span>
           </div>
         </footer>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Matches Phone Mockups in Reference Image) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-[#080C16]/95 backdrop-blur-md border-t border-[#D4AF37]/30 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.25)]">
         {mobileBottomItems.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.id;
@@ -592,13 +604,13 @@ export default function Layout({
               type="button"
               onClick={() => handleSelectTab(item.id)}
               className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors cursor-pointer ${
-                active ? 'text-[#6D28D9]' : 'text-slate-400 hover:text-slate-700'
+                active ? 'text-[#FDE047]' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Icon className={`w-4 h-4 ${active ? 'text-[#6D28D9]' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 ${active ? 'text-[#FDE047]' : 'text-slate-400'}`} />
               <span>{item.mobileLabel}</span>
               {active && (
-                <span className="w-5 h-1 rounded-full bg-[#6D28D9] mt-0.5" />
+                <span className="w-5 h-1 rounded-full bg-[#D4AF37] mt-0.5" />
               )}
             </button>
           );
@@ -607,7 +619,7 @@ export default function Layout({
           type="button"
           onClick={() => setMobileMenuOpen(true)}
           className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer ${
-            mobileMenuOpen ? 'text-[#6D28D9]' : 'text-slate-400 hover:text-slate-700'
+            mobileMenuOpen ? 'text-[#FDE047]' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <MoreHorizontal className="w-4 h-4" />

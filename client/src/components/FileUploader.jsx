@@ -51,16 +51,16 @@ export default function FileUploader({
           type="button"
           disabled={uploading}
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-[#6D28D9] border border-slate-200 hover:border-purple-300 transition-all cursor-pointer disabled:opacity-60"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-[#D4AF37]/15 text-slate-700 hover:text-[#9A7B2C] border border-slate-200 hover:border-[#D4AF37]/40 transition-all cursor-pointer disabled:opacity-60"
         >
           {uploading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-[#6D28D9]" />
+              <Loader2 className="w-4 h-4 animate-spin text-[#B8860B]" />
               Uploading to Cloudinary...
             </>
           ) : (
             <>
-              <UploadCloud className="w-4 h-4 text-[#6D28D9]" />
+              <UploadCloud className="w-4 h-4 text-[#B8860B]" />
               {label}
             </>
           )}

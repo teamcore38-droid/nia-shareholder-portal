@@ -76,9 +76,9 @@ function PortalRouter() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0D1127] flex flex-col items-center justify-center text-white">
-        <div className="w-10 h-10 rounded-full border-3 border-[#7C3AED] border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-semibold tracking-wide text-slate-300">
+      <div className="min-h-screen bg-[#080C16] flex flex-col items-center justify-center text-white">
+        <div className="w-10 h-10 rounded-full border-3 border-[#D4AF37] border-t-transparent animate-spin mb-3" />
+        <p className="text-xs font-semibold tracking-wide text-[#F3E5AB]">
           Loading NIA Group Shareholder Portal...
         </p>
       </div>
@@ -124,7 +124,7 @@ function PortalRouter() {
       <Suspense
         fallback={
           <div className="py-16 flex flex-col items-center justify-center text-slate-500">
-            <div className="w-9 h-9 rounded-full border-3 border-[#7C3AED] border-t-transparent animate-spin mb-2" />
+            <div className="w-9 h-9 rounded-full border-3 border-[#D4AF37] border-t-transparent animate-spin mb-2" />
             <p className="text-xs font-medium">Loading workspace...</p>
           </div>
         }

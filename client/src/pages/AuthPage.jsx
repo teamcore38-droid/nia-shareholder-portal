@@ -178,20 +178,19 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col justify-between overflow-hidden bg-[#0A1026] text-white">
-      {/* Architectural Glass Tower & Twilight Backdrop (Matches Reference Image Top-Left & Mobile Landing) */}
+    <div className="min-h-screen relative flex flex-col justify-between overflow-hidden bg-[#080C16] text-white selection:bg-[#D4AF37] selection:text-slate-950">
+      {/* Official NIA Group Headquarters Building Backdrop */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-45 pointer-events-none"
         style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=75")'
+          backgroundImage: 'url("/nia-building.jpg")'
         }}
       />
-      {/* Deep Twilight Indigo-to-Violet Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#090F26]/95 via-[#0E183B]/82 to-[#1B1447]/80 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#080C20] via-transparent to-[#090F26]/60 pointer-events-none" />
+      {/* Deep Obsidian & Imperial Gold Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/85 to-[#0B101E]/78 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-transparent to-[#060911]/65 pointer-events-none" />
 
-      {/* Decorative Glowing Wave Curves at Bottom */}
+      {/* Decorative Golden Wave Curves at Bottom */}
       <svg
         viewBox="0 0 1440 260"
         fill="none"
@@ -200,9 +199,9 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
       >
         <defs>
           <linearGradient id="authWave1" x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.4" />
-            <stop offset="50%" stopColor="#7C3AED" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.3" />
+            <stop offset="0%" stopColor="#9A7B2C" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#FDE047" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.3" />
           </linearGradient>
         </defs>
         <path
@@ -218,15 +217,15 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
         />
       </svg>
 
-      {/* Top Navigation Bar with APEX Software Solutions Logo */}
+      {/* Top Navigation Bar with NIA Group Crest Logo */}
       <header className="relative z-20 max-w-7xl w-full mx-auto px-6 sm:px-10 pt-6 sm:pt-8 flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-4">
-          <ApexBrandLogo size="lg" subtitle="Software Solutions" lightText />
+          <ApexBrandLogo size="lg" subtitle="GROUP OF COMPANY" lightText showAllianceTag />
           {onBackToHome && (
             <button
               type="button"
               onClick={onBackToHome}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-slate-200 hover:text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer shadow-sm"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-[#D4AF37]/35 text-[#F3E5AB] hover:text-[#FDE047] text-xs font-semibold backdrop-blur-md transition-all cursor-pointer shadow-sm"
             >
               <span>← Back to Home</span>
             </button>
@@ -238,7 +237,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
             <button
               type="button"
               onClick={onBackToHome}
-              className="sm:hidden px-3 py-1.5 rounded-lg bg-white/10 text-slate-200 text-xs font-semibold cursor-pointer"
+              className="sm:hidden px-3 py-1.5 rounded-lg bg-white/10 border border-[#D4AF37]/30 text-[#FDE047] text-xs font-semibold cursor-pointer"
             >
               ← Home
             </button>
@@ -247,7 +246,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
             <button
               type="button"
               onClick={() => setMode('setup-admin')}
-              className="px-3.5 py-1.5 rounded-full bg-amber-400 text-slate-950 text-xs font-extrabold shadow-md cursor-pointer"
+              className="px-3.5 py-1.5 rounded-full bg-[#D4AF37] text-slate-950 text-xs font-extrabold shadow-md cursor-pointer"
             >
               First-Run Setup
             </button>
@@ -257,44 +256,55 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
       {/* Main Split Content */}
       <main className="relative z-20 flex-1 max-w-7xl w-full mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
-        {/* Left Hero Column (Matches Reference Image Left Side) */}
+        {/* Left Hero Column */}
         <div className="w-full lg:w-6/12 space-y-6 text-center lg:text-left">
           <div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.14] text-white drop-shadow-xs">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121827]/90 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold mb-3 uppercase tracking-wider">
+              <span>Nexus International Alliance • E-STD 2022</span>
+            </div>
+            <h1
+              className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.14] text-white drop-shadow-xs uppercase"
+              style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+            >
               NIA Group
               <br />
-              Shareholder Portal
+              <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                Shareholder Portal
+              </span>
             </h1>
-            <p className="mt-4 text-sm sm:text-base text-slate-200/90 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              A secure, transparent and convenient way to view your shareholding, value, history and company updates.
+            <p className="mt-2 text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-[#D4AF37]">
+              — Building A Better Tomorrow Together —
+            </p>
+            <p className="mt-3 text-sm sm:text-base text-slate-200/90 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              A secure, transparent and convenient way to view your shareholding, value, history and company updates across Real Estate, Construction, Investment, Trading, Consultancy, and Services.
             </p>
           </div>
 
-          {/* 4 Feature Icon Rows from Reference Image */}
+          {/* 4 Feature Icon Rows in Imperial Gold */}
           <div className="pt-2 space-y-3.5 max-w-sm mx-auto lg:mx-0 text-left">
             <div className="flex items-center gap-3.5 text-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 text-sky-300 backdrop-blur-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 flex items-center justify-center shrink-0 text-[#FDE047] backdrop-blur-xs">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <span className="text-sm sm:text-base font-medium">Secure Access</span>
             </div>
 
             <div className="flex items-center gap-3.5 text-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 text-purple-300 backdrop-blur-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 flex items-center justify-center shrink-0 text-[#FDE047] backdrop-blur-xs">
                 <BarChart3 className="w-5 h-5" />
               </div>
               <span className="text-sm sm:text-base font-medium">Real-time Holdings</span>
             </div>
 
             <div className="flex items-center gap-3.5 text-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 text-indigo-300 backdrop-blur-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 flex items-center justify-center shrink-0 text-[#FDE047] backdrop-blur-xs">
                 <FileText className="w-5 h-5" />
               </div>
               <span className="text-sm sm:text-base font-medium">Official Documents</span>
             </div>
 
             <div className="flex items-center gap-3.5 text-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 text-amber-300 backdrop-blur-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 flex items-center justify-center shrink-0 text-[#FDE047] backdrop-blur-xs">
                 <Bell className="w-5 h-5" />
               </div>
               <span className="text-sm sm:text-base font-medium">Company Updates</span>
@@ -302,17 +312,26 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
           </div>
         </div>
 
-        {/* Right Floating White Authentication Card (Matches Reference Image Floating Card) */}
+        {/* Right Floating Authentication Card with Gold Border Accent */}
         <div className="w-full max-w-[430px] shrink-0">
           {/* CARD 1: Sign in to your account (Default) */}
           {mode === 'signin' && (
-            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] p-7 sm:p-9 border border-white/80">
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                Sign in to your account
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Access your shareholder dashboard
-              </p>
+            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Sign in to your account
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Access your NIA Group shareholder dashboard
+                  </p>
+                </div>
+                <img
+                  src="/nia-logo.png"
+                  alt="NIA Crest"
+                  className="w-11 h-11 rounded-full border border-[#D4AF37] bg-black shrink-0"
+                />
+              </div>
 
               {!bootstrapStatus.initialized && (
                 <div className="mt-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2">
@@ -320,7 +339,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                   <button
                     type="button"
                     onClick={() => setMode('setup-admin')}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold shrink-0 cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-[#D4AF37] text-slate-950 font-bold shrink-0 cursor-pointer"
                   >
                     Initialize Admin
                   </button>
@@ -336,7 +355,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     placeholder="Shareholder ID or Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#7C3AED] transition-all"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all"
                   />
                 </div>
 
@@ -348,7 +367,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    inputClassName="py-3 border-slate-200 bg-slate-50/60 focus:bg-white focus:ring-[#7C3AED]"
+                    inputClassName="py-3 border-slate-200 bg-slate-50/60 focus:bg-white focus:ring-[#D4AF37]"
                   />
                 </div>
 
@@ -358,7 +377,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-[#6D28D9] focus:ring-[#7C3AED]"
+                      className="w-4 h-4 rounded border-slate-300 text-[#B8860B] focus:ring-[#D4AF37]"
                     />
                     <span>Remember me</span>
                   </label>
@@ -369,7 +388,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       setResetEmail(email.includes('@') ? email : '');
                       setMode('forgot');
                     }}
-                    className="font-semibold text-[#6D28D9] hover:text-[#5B21B6] cursor-pointer"
+                    className="font-bold text-[#9A7B2C] hover:text-[#785E1E] cursor-pointer"
                   >
                     Forgot password?
                   </button>
@@ -378,10 +397,10 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] hover:from-[#5B21B6] hover:to-[#4F46E5] text-white font-bold text-sm shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#0B101E] via-[#131C31] to-[#0B101E] hover:from-[#151F38] hover:to-[#151F38] border border-[#D4AF37] text-[#FDE047] font-extrabold text-sm shadow-lg shadow-slate-900/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
                 >
                   <span>{submitting ? 'Signing in...' : 'Sign In'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-[#FDE047]" />
                 </button>
               </form>
 
@@ -394,9 +413,9 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
               <button
                 type="button"
                 onClick={() => setMode('activate')}
-                className="w-full py-3 px-4 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/40 text-slate-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-3 px-4 rounded-xl border border-[#D4AF37]/50 bg-amber-50/40 hover:bg-amber-50 text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <BadgeCheck className="w-4 h-4 text-[#6D28D9]" />
+                <BadgeCheck className="w-4 h-4 text-[#B8860B]" />
                 <span>Sign in with Company SSO / Activate Invite</span>
               </button>
 
@@ -405,7 +424,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                   <button
                     type="button"
                     onClick={onBackToHome}
-                    className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors cursor-pointer inline-flex items-center gap-1"
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer inline-flex items-center gap-1"
                   >
                     <span>← Return to Portal Home</span>
                   </button>
@@ -416,8 +435,8 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
           {/* CARD 2: First-Time Primary Administrator Setup */}
           {mode === 'setup-admin' && (
-            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] p-7 sm:p-9 border border-white/80">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-[#6D28D9] text-xs font-bold mb-3">
+            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-[#D4AF37]/40 text-[#9A7B2C] text-xs font-bold mb-3">
                 <Sparkles className="w-3.5 h-3.5" />
                 Clean Database • First-Time Setup
               </div>
@@ -440,7 +459,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       required
                       value={companyNameInput}
                       onChange={(e) => setCompanyNameInput(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                   </div>
                 </div>
@@ -454,7 +473,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     required
                     value={adminName}
                     onChange={(e) => setAdminName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                 </div>
 
@@ -467,7 +486,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     required
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                 </div>
 
@@ -489,7 +508,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white font-bold text-sm shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-3 px-4 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] font-extrabold text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   <span>{submitting ? 'Initializing...' : 'Initialize & Enter Portal'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -510,8 +529,8 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
           {/* CARD 3: Staff 2FA Verification (Interface M08) */}
           {mode === 'verify-staff' && (
-            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] p-7 sm:p-9 border border-white/80">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-[#6D28D9] text-xs font-bold mb-3">
+            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-[#D4AF37]/40 text-[#9A7B2C] text-xs font-bold mb-3">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Staff 2-Step Verification
               </div>
@@ -534,7 +553,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       placeholder="Enter 6-digit code"
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-mono-num font-bold tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-mono-num font-bold tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                     <p className="text-[11px] text-slate-400 mt-1.5 text-center">
                       Default staff verification code:{' '}
@@ -554,7 +573,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       placeholder="APEX-RECOVERY-2026"
                       value={recoveryCode}
                       onChange={(e) => setRecoveryCode(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono-num font-bold text-center focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono-num font-bold text-center focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                   </div>
                 )}
@@ -562,7 +581,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white font-bold text-sm shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] font-extrabold text-sm shadow-lg transition-all cursor-pointer"
                 >
                   {submitting ? 'Verifying...' : 'Verify & Continue'}
                 </button>
@@ -572,7 +591,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="button"
                   onClick={() => setUseRecoveryMode(!useRecoveryMode)}
-                  className="text-[#6D28D9] font-semibold hover:underline cursor-pointer"
+                  className="text-[#9A7B2C] font-bold hover:underline cursor-pointer"
                 >
                   {useRecoveryMode ? 'Use 6-digit code' : 'Use a recovery code'}
                 </button>
@@ -589,7 +608,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
           {/* CARD 4: Activate Invitation */}
           {mode === 'activate' && (
-            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] p-7 sm:p-9 border border-white/80">
+            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
               <h2 className="text-2xl font-extrabold text-slate-900">Activate your invitation</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Set your secure password to activate your invited Shareholder or Staff account.
@@ -608,7 +627,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       placeholder="holder@example.com"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                   </div>
                 </div>
@@ -622,7 +641,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     placeholder="Optional if pre-verified"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                 </div>
 
@@ -645,7 +664,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white font-bold text-sm shadow-lg shadow-purple-600/30 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] font-extrabold text-sm shadow-lg cursor-pointer"
                 >
                   {submitting ? 'Activating...' : 'Activate Account & Sign In'}
                 </button>
@@ -665,7 +684,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
 
           {/* CARD 5: Password Recovery */}
           {mode === 'forgot' && (
-            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.45)] p-7 sm:p-9 border border-white/80">
+            <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
               <h2 className="text-2xl font-extrabold text-slate-900">Password recovery</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Request a short-lived reset token to set a new account password.
@@ -683,12 +702,12 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       placeholder="shareholder@example.com"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                     <button
                       type="button"
                       onClick={handleRequestResetToken}
-                      className="px-3.5 py-2.5 rounded-xl bg-[#0D1127] hover:bg-slate-800 text-white text-xs font-bold shrink-0 cursor-pointer"
+                      className="px-3.5 py-2.5 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] text-xs font-bold shrink-0 cursor-pointer"
                     >
                       Get Token
                     </button>
@@ -696,7 +715,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 </div>
 
                 {generatedResetDemo && (
-                  <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900">
+                  <div className="p-3 rounded-xl bg-amber-50 border border-[#D4AF37]/40 text-xs text-amber-950">
                     Reset token generated:{' '}
                     <strong className="font-mono-num">{generatedResetDemo}</strong>
                   </div>
@@ -712,7 +731,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                     placeholder="Enter 6-character token"
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono-num focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   />
                 </div>
 
@@ -735,7 +754,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white font-bold text-sm shadow-lg shadow-purple-600/30 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] font-extrabold text-sm shadow-lg cursor-pointer"
                 >
                   {submitting ? 'Updating...' : 'Reset Password'}
                 </button>
@@ -756,12 +775,12 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
       </main>
 
       {/* Subtle Bottom Bar */}
-      <footer className="relative z-20 max-w-7xl w-full mx-auto px-6 sm:px-10 pb-5 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+      <footer className="relative z-20 max-w-7xl w-full mx-auto px-6 sm:px-10 pb-5 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Lock className="w-3.5 h-3.5 text-purple-400" />
-          <span>Controlled Share Register & Shareholder Portal</span>
+          <Lock className="w-3.5 h-3.5 text-[#FDE047]" />
+          <span>NIA Group of Company • Controlled Share Register & Shareholder Portal</span>
         </div>
-        <div>APEX Software Solutions • Ref: ALG-SP-2026-16</div>
+        <div className="text-[#F3E5AB]">119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</div>
       </footer>
     </div>
   );

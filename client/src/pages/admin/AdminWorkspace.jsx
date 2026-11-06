@@ -86,7 +86,7 @@ export default function AdminWorkspace({
   if (loading && !overviewData) {
     return (
       <div className="py-16 flex flex-col items-center justify-center text-slate-500">
-        <div className="w-10 h-10 rounded-full border-3 border-blue-600 border-t-transparent animate-spin mb-3" />
+        <div className="w-10 h-10 rounded-full border-3 border-[#D4AF37] border-t-transparent animate-spin mb-3" />
         <p className="text-sm font-medium">Loading administration workspace...</p>
       </div>
     );

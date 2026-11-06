@@ -315,7 +315,7 @@ export default function AdminGovernanceTabs({
               placeholder="e.g. Allocation confirmation AL-002 or Company annual report 2025/2026"
               value={pubForm.title}
               onChange={(e) => setPubForm({ ...pubForm, title: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
             />
           </div>
 
@@ -409,21 +409,21 @@ export default function AdminGovernanceTabs({
             <button
               type="button"
               onClick={() => handleSavePublication('publish')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
             >
               Publish immediately
             </button>
             <button
               type="button"
               onClick={() => handleSavePublication('submit')}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold cursor-pointer"
             >
               Preview and submit for review
             </button>
             <button
               type="button"
               onClick={() => handleSavePublication('draft')}
-              className="px-5 py-2.5 rounded-xl bg-[#0A1128] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold cursor-pointer"
             >
               Save draft
             </button>
@@ -514,7 +514,7 @@ export default function AdminGovernanceTabs({
             <button
               type="button"
               onClick={() => setShowInviteStaff(!showInviteStaff)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               Invite staff member
@@ -572,7 +572,7 @@ export default function AdminGovernanceTabs({
               </div>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#080C16] text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold cursor-pointer"
               >
                 Create staff account
               </button>
@@ -597,7 +597,7 @@ export default function AdminGovernanceTabs({
                       key={st._id}
                       onClick={() => setSelectedStaff(st)}
                       className={`hover:bg-slate-50/90 cursor-pointer ${
-                        selectedStaff?._id === st._id ? 'bg-purple-50/60' : ''
+                        selectedStaff?._id === st._id ? 'bg-amber-50/60' : ''
                       }`}
                     >
                       <td className="py-3.5 px-6">
@@ -656,7 +656,7 @@ export default function AdminGovernanceTabs({
                 <button
                   type="button"
                   onClick={() => handleStaffAction(selectedStaff, { revokeSessions: true })}
-                  className="text-[#6D28D9] hover:underline cursor-pointer"
+                  className="text-[#9A7B2C] hover:underline cursor-pointer"
                 >
                   Revoke sessions
                 </button>
@@ -777,7 +777,7 @@ export default function AdminGovernanceTabs({
           <button
             type="button"
             onClick={handleSaveRoleMatrix}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
           >
             Save role permissions
           </button>
@@ -871,7 +871,7 @@ export default function AdminGovernanceTabs({
                       <button
                         type="button"
                         onClick={() => handleGenerateReport(rep.id)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         Generate ({reportFormat.toUpperCase()})
@@ -991,7 +991,7 @@ export default function AdminGovernanceTabs({
                       key={t._id}
                       onClick={() => setSelectedTicket(t)}
                       className={`hover:bg-slate-50/90 cursor-pointer ${
-                        activeTicket?._id === t._id ? 'bg-purple-50/60' : ''
+                        activeTicket?._id === t._id ? 'bg-amber-50/60' : ''
                       }`}
                     >
                       <td className="py-3.5 px-6 font-mono-num font-bold text-slate-900">
@@ -1070,7 +1070,7 @@ export default function AdminGovernanceTabs({
                     replyMessage: replyText || 'Reviewed by shareholder support.'
                   })
                 }
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold cursor-pointer"
               >
                 Save reply
               </button>
@@ -1185,7 +1185,7 @@ export default function AdminGovernanceTabs({
                       key={log._id}
                       onClick={() => setSelectedAuditEvent(log)}
                       className={`hover:bg-slate-50/90 cursor-pointer ${
-                        inspectedLog?._id === log._id ? 'bg-purple-50/60' : ''
+                        inspectedLog?._id === log._id ? 'bg-amber-50/60' : ''
                       }`}
                     >
                       <td className="py-3.5 px-6 font-mono-num text-slate-600">
@@ -1258,7 +1258,7 @@ export default function AdminGovernanceTabs({
       {/* Infrastructure Status Banner (MongoDB + Cloudinary) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-2xs">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#6D28D9] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 text-[#9A7B2C] flex items-center justify-center shrink-0">
             <Cloud className="w-5 h-5" />
           </div>
           <div>
@@ -1302,7 +1302,7 @@ export default function AdminGovernanceTabs({
               onChange={(e) =>
                 setSettingsForm({ ...settingsForm, companyDisplayName: e.target.value })
               }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
             />
           </div>
 
@@ -1464,7 +1464,7 @@ export default function AdminGovernanceTabs({
 
         <button
           type="submit"
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
         >
           Save permitted settings
         </button>

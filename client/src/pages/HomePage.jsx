@@ -13,21 +13,24 @@ import {
   Building2,
   PieChart,
   HelpCircle,
-  ExternalLink,
   Sparkles,
-  Layers,
-  Award,
   Download,
   KeyRound,
   FileCheck2,
-  ArrowUpRight,
   Menu,
-  X
+  X,
+  Home,
+  HardHat,
+  Globe,
+  Settings,
+  MapPin,
+  Mail,
+  Phone,
+  ExternalLink
 } from 'lucide-react';
 import { ApexBrandLogo } from '../components/ApexBrandLogo';
 
 export default function HomePage({ onNavigateToAuth }) {
-  // Mobile navigation drawer toggle
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Interactive Holding Calculator State
@@ -43,14 +46,54 @@ export default function HomePage({ onNavigateToAuth }) {
   // FAQ open item
   const [openFaq, setOpenFaq] = useState(0);
 
+  // The 6 Official Business Sectors from the NIA Group Building Facade
+  const niaDivisions = [
+    {
+      title: 'REAL ESTATE',
+      subtitle: 'Commercial & Residential Developments',
+      desc: 'Premier land acquisition, luxury residential complexes, and commercial property development across Sri Lanka.',
+      icon: Home
+    },
+    {
+      title: 'CONSTRUCTION',
+      subtitle: 'Civil & Structural Engineering',
+      desc: 'End-to-end architectural construction, modern corporate towers, and high-standard infrastructure projects.',
+      icon: HardHat
+    },
+    {
+      title: 'INVESTMENT',
+      subtitle: 'Strategic Capital & Equity Growth',
+      desc: 'Disciplined capital allocation, shareholder wealth creation, and high-yield institutional portfolio management.',
+      icon: TrendingUp
+    },
+    {
+      title: 'TRADING',
+      subtitle: 'International & Domestic Commerce',
+      desc: 'Cross-border commodity trading, supply chain networks, and strategic import/export partnerships.',
+      icon: Globe
+    },
+    {
+      title: 'CONSULTANCY',
+      subtitle: 'Corporate & Financial Advisory',
+      desc: 'Enterprise structuring, project feasibility, regulatory compliance, and executive management consultancy.',
+      icon: Users
+    },
+    {
+      title: 'SERVICES',
+      subtitle: 'Integrated Facility & Enterprise Solutions',
+      desc: 'Comprehensive operational support, property management, and value-added corporate services.',
+      icon: Settings
+    }
+  ];
+
   const faqs = [
     {
-      q: 'How do I log in to my shareholder account?',
-      a: 'You can sign in using either your unique Shareholder ID (e.g. SH-001) or your registered company email address alongside your secure password. If your email was newly enrolled by the registry, select "Activate Invite" to set your permanent credentials.'
+      q: 'How do I log in to my NIA Group Shareholder account?',
+      a: 'You can sign in using either your unique Shareholder ID (e.g. SH-001) or your registered email address alongside your secure password. If your email was newly enrolled by the registry, select "Activate Invite" to set your permanent credentials.'
     },
     {
       q: 'Are the statements and valuation certificates legally recognized?',
-      a: 'Yes. All Share Holding Statements, Share Register Extracts, and Valuation Notices exported from the portal include certified digital cryptographic metadata, authorized registry seals, and timestamp verification in compliance with corporate governance guidelines.'
+      a: 'Yes. All Share Holding Statements, Share Register Extracts, and Valuation Notices exported from the NIA Group portal include certified digital cryptographic metadata, authorized registry seals, and timestamp verification.'
     },
     {
       q: 'How are share valuations updated in the system?',
@@ -58,7 +101,7 @@ export default function HomePage({ onNavigateToAuth }) {
     },
     {
       q: 'What should I do if my registered contact details change?',
-      a: 'Once logged in to the portal, navigate to the Support tab to submit an authenticated Change of Particulars request directly to the NIA Group Corporate Registry desk.'
+      a: 'Once logged in to the portal, navigate to the Support tab to submit an authenticated Change of Particulars request directly to the NIA Group Corporate Registry desk in Battaramulla.'
     },
     {
       q: 'How is shareholder data and equity information secured?',
@@ -75,28 +118,29 @@ export default function HomePage({ onNavigateToAuth }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A1026] text-white flex flex-col selection:bg-[#7C3AED] selection:text-white relative overflow-x-hidden">
-      {/* Architectural Glass Tower & Twilight Backdrop (Matches Login Screen & Proposal Reference) */}
+    <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-hidden">
+      {/* ========================================================= */}
+      {/* ARCHITECTURAL NIA GROUP BUILDING BACKDROP & GOLD GLOWS    */}
+      {/* ========================================================= */}
       <div
-        className="absolute top-0 inset-x-0 h-[1150px] bg-cover bg-center lg:bg-top bg-no-repeat opacity-45 pointer-events-none z-0"
+        className="absolute top-0 inset-x-0 h-[1200px] bg-cover bg-center lg:bg-top bg-no-repeat opacity-40 pointer-events-none z-0"
         style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=80")'
+          backgroundImage: 'url("/nia-building.jpg")'
         }}
       />
-      {/* Deep Twilight Indigo-to-Violet Overlay */}
-      <div className="absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-r from-[#090F26]/95 via-[#0E183B]/82 to-[#1B1447]/80 pointer-events-none z-0" />
-      <div className="absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-b from-[#080C20]/50 via-transparent to-[#0D1127] pointer-events-none z-0" />
+      {/* Deep Obsidian & Imperial Gold Gradient Overlays */}
+      <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-r from-[#060911]/95 via-[#0B101E]/88 to-[#0B101E]/80 pointer-events-none z-0" />
+      <div className="absolute top-0 inset-x-0 h-[1200px] bg-gradient-to-b from-[#060911]/60 via-transparent to-[#080C16] pointer-events-none z-0" />
 
-      {/* Dynamic Background Mesh Gradients */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[640px] pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-32 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-[#7C3AED]/25 via-[#6366F1]/20 to-transparent rounded-full blur-3xl opacity-70 animate-pulse-subtle" />
-        <div className="absolute top-20 right-10 w-[420px] h-[420px] bg-gradient-to-bl from-[#38BDF8]/20 via-[#4F46E5]/20 to-transparent rounded-full blur-3xl opacity-60" />
+      {/* Ambient Gold Spotlight Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-32 left-1/4 w-[520px] h-[520px] bg-gradient-to-br from-[#D4AF37]/20 via-[#F59E0B]/12 to-transparent rounded-full blur-3xl opacity-80 animate-pulse-subtle" />
+        <div className="absolute top-24 right-10 w-[440px] h-[440px] bg-gradient-to-bl from-[#FDE047]/15 via-[#B8860B]/15 to-transparent rounded-full blur-3xl opacity-70" />
       </div>
 
-      {/* Decorative Wave Mesh at Bottom */}
+      {/* Decorative Golden Ribbon Wave at Bottom */}
       <svg
-        className="absolute bottom-0 left-0 w-full pointer-events-none opacity-20 z-0"
+        className="absolute bottom-0 left-0 w-full pointer-events-none opacity-25 z-0"
         viewBox="0 0 1440 260"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -104,64 +148,64 @@ export default function HomePage({ onNavigateToAuth }) {
       >
         <path
           d="M0 160 C 360 80, 720 220, 1080 120 C 1260 70, 1380 110, 1440 90 L 1440 260 L 0 260 Z"
-          fill="url(#homeWave)"
+          fill="url(#niaHomeGoldWave)"
         />
         <defs>
-          <linearGradient id="homeWave" x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#38BDF8" />
-            <stop offset="50%" stopColor="#7C3AED" />
-            <stop offset="100%" stopColor="#4F46E5" />
+          <linearGradient id="niaHomeGoldWave" x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#9A7B2C" />
+            <stop offset="50%" stopColor="#FDE047" />
+            <stop offset="100%" stopColor="#D4AF37" />
           </linearGradient>
         </defs>
       </svg>
 
       {/* ========================================================= */}
-      {/* 1. TOP NAVIGATION BAR */}
+      {/* 1. TOP NAVIGATION BAR (OBSIDIAN & METALLIC GOLD)          */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-50 bg-[#0D1127]/85 backdrop-blur-md border-b border-white/10 transition-all">
+      <header className="sticky top-0 z-50 bg-[#080C16]/90 backdrop-blur-md border-b border-[#D4AF37]/25 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo & Entity Tag */}
+          {/* Official NIA Crest Logo & Alliance Tag */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <ApexBrandLogo size="md" subtitle="Software Solutions" lightText />
-            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-xs font-semibold text-slate-300 tracking-wide">
-                NIA Group • Institutional Equity Portal
+            <ApexBrandLogo size="md" subtitle="GROUP OF COMPANY" lightText showAllianceTag />
+            <div className="hidden xl:flex items-center gap-2 pl-3 border-l border-[#D4AF37]/25">
+              <span className="w-2 h-2 rounded-full bg-[#FDE047] animate-ping" />
+              <span className="text-xs font-semibold text-[#F3E5AB] tracking-wide">
+                E-STD 2022 • Shareholder & Equity Registry
               </span>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-medium text-slate-300">
+          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-300">
             <button
-              onClick={() => scrollToSection('features')}
-              className="hover:text-white transition-colors cursor-pointer"
+              onClick={() => scrollToSection('divisions')}
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Portal Capabilities
+              Our Sectors
             </button>
             <button
               onClick={() => scrollToSection('simulator')}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
               Holdings Calculator
             </button>
             <button
+              onClick={() => scrollToSection('features')}
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
+            >
+              Portal Capabilities
+            </button>
+            <button
               onClick={() => scrollToSection('modules')}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Enterprise Modules
+              Workspaces
             </button>
             <button
-              onClick={() => scrollToSection('security')}
-              className="hover:text-white transition-colors cursor-pointer"
+              onClick={() => scrollToSection('contact')}
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Governance & Security
-            </button>
-            <button
-              onClick={() => scrollToSection('faq')}
-              className="hover:text-white transition-colors cursor-pointer"
-            >
-              FAQ
+              Headquarters
             </button>
           </nav>
 
@@ -170,14 +214,14 @@ export default function HomePage({ onNavigateToAuth }) {
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="px-4 py-2 text-xs font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-[#F3E5AB] hover:text-[#FDE047] transition-colors cursor-pointer"
             >
               Staff SSO
             </button>
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="group px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] hover:from-[#5B21B6] hover:to-[#4F46E5] text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="group px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 text-xs font-extrabold shadow-[0_8px_25px_rgba(212,175,55,0.35)] flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <span>Sign In to Portal</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -189,14 +233,14 @@ export default function HomePage({ onNavigateToAuth }) {
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold cursor-pointer"
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-white/10 text-slate-300 hover:text-white focus:outline-none"
+              className="p-2 rounded-lg bg-white/10 border border-[#D4AF37]/30 text-[#FDE047] hover:text-white focus:outline-none"
               aria-label="Toggle Navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -206,47 +250,47 @@ export default function HomePage({ onNavigateToAuth }) {
 
         {/* Mobile Navigation Dropdown Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0D1127] border-b border-white/10 px-6 py-5 space-y-4 shadow-2xl">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Navigation
+          <div className="lg:hidden bg-[#080C16] border-b border-[#D4AF37]/30 px-6 py-5 space-y-4 shadow-2xl">
+            <div className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
+              NIA Group Navigation
             </div>
             <div className="flex flex-col space-y-3 text-sm font-medium text-slate-200">
               <button
-                onClick={() => scrollToSection('features')}
-                className="text-left py-1 hover:text-purple-300 transition-colors"
+                onClick={() => scrollToSection('divisions')}
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Portal Capabilities
+                6 Business Sectors
               </button>
               <button
                 onClick={() => scrollToSection('simulator')}
-                className="text-left py-1 hover:text-purple-300 transition-colors"
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
                 Holdings Calculator
               </button>
               <button
+                onClick={() => scrollToSection('features')}
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
+              >
+                Portal Capabilities
+              </button>
+              <button
                 onClick={() => scrollToSection('modules')}
-                className="text-left py-1 hover:text-purple-300 transition-colors"
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Enterprise Modules
+                Enterprise Workspaces
               </button>
               <button
-                onClick={() => scrollToSection('security')}
-                className="text-left py-1 hover:text-purple-300 transition-colors"
+                onClick={() => scrollToSection('contact')}
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Governance & Security
-              </button>
-              <button
-                onClick={() => scrollToSection('faq')}
-                className="text-left py-1 hover:text-purple-300 transition-colors"
-              >
-                Investor FAQ
+                Headquarters & Contact
               </button>
             </div>
-            <div className="pt-3 border-t border-white/10 flex flex-col gap-2.5">
+            <div className="pt-3 border-t border-[#D4AF37]/20 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 font-extrabold text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <span>Access Shareholder Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
@@ -257,29 +301,40 @@ export default function HomePage({ onNavigateToAuth }) {
       </header>
 
       {/* ========================================================= */}
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION (NIA GROUP MOTTO, CREST & LIVE PORTAL)    */}
       {/* ========================================================= */}
-      <section className="relative z-10 pt-10 sm:pt-16 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative z-10 pt-10 sm:pt-14 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-14">
-          {/* Left Column: Value Proposition & CTAs */}
+          {/* Left Column: NIA Group Identity, Motto & CTAs */}
           <div className="w-full lg:w-6/12 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-xs font-semibold text-purple-200">
-              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-              <span>Official Shareholder & Registry Platform • Ref: ALG-SP-2026-16</span>
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#121827]/90 border border-[#D4AF37]/40 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-[0_0_25px_rgba(212,175,55,0.18)]">
+              <Sparkles className="w-3.5 h-3.5 text-[#FDE047]" />
+              <span className="tracking-wider uppercase">
+                Nexus International Alliance • E-STD 2022
+              </span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
-              Transparent Equity.
-              <br />
-              <span className="bg-gradient-to-r from-[#A78BFA] via-[#C084FC] to-[#38BDF8] bg-clip-text text-transparent">
-                Institutional Trust.
-              </span>
-            </h1>
+            <div className="space-y-2">
+              <p className="text-xs sm:text-sm font-extrabold tracking-[0.28em] uppercase text-[#D4AF37]">
+                — Building A Better Tomorrow Together —
+              </p>
+              <h1
+                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+              >
+                NIA GROUP
+                <br />
+                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                  SHAREHOLDER PORTAL
+                </span>
+              </h1>
+            </div>
 
-            <p className="text-sm sm:text-base text-slate-300/90 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              A secure digital gateway for <strong>NIA Group</strong> shareholders, directors, and
-              corporate registry officers to track real-time shareholdings, monitor board-approved
-              valuations, and access certified equity statements instantly.
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
+              The official institutional equity and shareholder registry gateway for{' '}
+              <strong className="text-[#F3E5AB]">NIA Group of Company</strong> across Real Estate,
+              Construction, Investment, Trading, Consultancy, and Services. Monitor real-time
+              holdings, board-approved valuations, and certified share statements.
             </p>
 
             {/* CTAs */}
@@ -287,7 +342,7 @@ export default function HomePage({ onNavigateToAuth }) {
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#6D28D9] via-[#7C3AED] to-[#6366F1] hover:from-[#5B21B6] hover:to-[#4F46E5] text-white font-bold text-sm shadow-xl shadow-purple-600/35 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-sm shadow-[0_12px_35px_rgba(212,175,55,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 <span>Enter Shareholder Portal</span>
                 <ArrowRight className="w-4 h-4" />
@@ -296,41 +351,41 @@ export default function HomePage({ onNavigateToAuth }) {
               <button
                 type="button"
                 onClick={() => scrollToSection('simulator')}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-[#111827]/90 hover:bg-[#182235] border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-sm backdrop-blur-sm transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <PieChart className="w-4 h-4 text-purple-300" />
+                <PieChart className="w-4 h-4 text-[#FDE047]" />
                 <span>Simulate Holdings</span>
               </button>
             </div>
 
-            {/* Fast Trust Indicators */}
+            {/* 4 Gold-Accented Trust Indicators */}
             <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto lg:mx-0 text-left">
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-1.5 text-sky-300 text-xs font-semibold mb-0.5">
+              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
+                <div className="flex items-center gap-1.5 text-[#FDE047] text-xs font-bold mb-0.5">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>256-Bit TLS</span>
                 </div>
                 <p className="text-[11px] text-slate-400">Bank-grade vault</p>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-1.5 text-purple-300 text-xs font-semibold mb-0.5">
+              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
+                <div className="flex items-center gap-1.5 text-[#D4AF37] text-xs font-bold mb-0.5">
                   <BarChart3 className="w-3.5 h-3.5" />
                   <span>Stepped Value</span>
                 </div>
                 <p className="text-[11px] text-slate-400">Board resolutions</p>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-1.5 text-indigo-300 text-xs font-semibold mb-0.5">
+              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
+                <div className="flex items-center gap-1.5 text-amber-300 text-xs font-bold mb-0.5">
                   <FileText className="w-3.5 h-3.5" />
                   <span>Certified PDF</span>
                 </div>
                 <p className="text-[11px] text-slate-400">Official extracts</p>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-1.5 text-emerald-300 text-xs font-semibold mb-0.5">
+              <div className="p-2.5 rounded-xl bg-[#0E1422]/90 border border-[#D4AF37]/25">
+                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold mb-0.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Dual Control</span>
                 </div>
@@ -339,151 +394,144 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
           </div>
 
-          {/* Right Column: Live Mockup Card (Matches Prototype UI) */}
+          {/* Right Column: NIA Crest + Live Gold-Themed Dashboard Mockup */}
           <div className="w-full lg:w-6/12 relative">
-            <div className="relative mx-auto max-w-lg rounded-3xl bg-slate-900/90 border border-white/20 p-5 sm:p-7 shadow-[0_25px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl">
-              {/* Top Bar inside Mockup */}
-              <div className="flex items-center justify-between pb-4 border-b border-white/10 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6D28D9] to-[#7C3AED] text-white flex items-center justify-center font-bold text-xs">
-                    SH
-                  </div>
+            <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/95 border-2 border-[#D4AF37]/40 p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+              {/* Top Gold Header inside Mockup */}
+              <div className="flex items-center justify-between pb-4 border-b border-[#D4AF37]/25 text-xs">
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/nia-logo.png"
+                    alt="NIA Crest"
+                    className="w-10 h-10 rounded-full border border-[#D4AF37] object-contain bg-black"
+                  />
                   <div>
-                    <div className="font-bold text-white">Shareholder SH-001</div>
-                    <div className="text-[11px] text-slate-400">Ordinary Shareholder • Active</div>
+                    <div className="font-extrabold text-[#FDE047] tracking-wide">
+                      Shareholder SH-001
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      NIA Group of Company • Ordinary Share Register
+                    </div>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold text-[11px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Verified Register</span>
+                <div className="px-2.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] font-bold text-[11px] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FDE047]" />
+                  <span>Verified</span>
                 </div>
               </div>
 
-              {/* 4 Pastel KPI Cards Showcase */}
+              {/* 4 Gold & Obsidian KPI Cards */}
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {/* 1. Shares Held */}
-                <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
-                  <span className="text-[10px] font-semibold text-purple-200 uppercase tracking-wide">
+                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
+                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
                     Shares Held
                   </span>
                   <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
                     12,500
                   </div>
-                  <span className="text-[10px] text-purple-300/80">Ordinary Shares</span>
+                  <span className="text-[10px] text-[#D4AF37]">Ordinary Units</span>
                 </div>
 
-                {/* 2. Ownership */}
-                <div className="p-3 rounded-2xl bg-sky-500/10 border border-sky-500/20">
-                  <span className="text-[10px] font-semibold text-sky-200 uppercase tracking-wide">
+                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
+                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
                     Ownership
                   </span>
-                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
+                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] font-mono-num mt-0.5">
                     1.25%
                   </div>
-                  <span className="text-[10px] text-sky-300/80">of 1,000,000</span>
+                  <span className="text-[10px] text-slate-400">of 1,000,000</span>
                 </div>
 
-                {/* 3. Value Per Share */}
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-[10px] font-semibold text-amber-200 uppercase tracking-wide">
+                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
+                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
                     Value / Share
                   </span>
                   <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
                     LKR 125.00
                   </div>
-                  <span className="text-[10px] text-amber-300/80">Board Approved</span>
+                  <span className="text-[10px] text-[#D4AF37]">Board Approved</span>
                 </div>
 
-                {/* 4. Holding Value */}
-                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-[10px] font-semibold text-emerald-200 uppercase tracking-wide">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#D4AF37]/25 to-[#B8860B]/10 border border-[#FDE047]/50">
+                  <span className="text-[10px] font-bold text-[#FDE047] uppercase tracking-wide">
                     Holding Value
                   </span>
-                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
+                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] font-mono-num mt-0.5">
                     1.56M
                   </div>
-                  <span className="text-[10px] text-emerald-300/80">LKR 1,562,500</span>
+                  <span className="text-[10px] text-[#F3E5AB]">LKR 1,562,500</span>
                 </div>
               </div>
 
-              {/* Graphic Chart Simulation */}
-              <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+              {/* Golden Stepped Valuation Curve */}
+              <div className="mt-4 p-4 rounded-2xl bg-[#101726] border border-[#D4AF37]/25">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <div className="font-bold text-slate-200 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Holding Value Milestone Trajectory</span>
+                  <div className="font-bold text-[#F3E5AB] flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-[#FDE047]" />
+                    <span>Holding Value Over Time</span>
                   </div>
-                  <div className="text-[11px] text-purple-300 font-mono-num font-bold">
-                    +25.0% YTD
+                  <div className="text-[11px] text-[#FDE047] font-mono-num font-bold">
+                    +25.0% Growth
                   </div>
                 </div>
 
-                {/* Simulated Stepped Curve SVG */}
                 <div className="relative h-28 w-full pt-2">
                   <svg className="w-full h-full overflow-visible" viewBox="0 0 380 90">
                     <defs>
-                      <linearGradient id="heroChartFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.45" />
-                        <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.0" />
+                      <linearGradient id="niaHeroChartGold" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.48" />
+                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.0" />
                       </linearGradient>
                     </defs>
-                    {/* Area */}
                     <path
                       d="M 10 75 L 80 75 L 80 60 L 160 60 L 160 48 L 240 48 L 240 32 L 320 32 L 320 18 L 370 18 L 370 85 L 10 85 Z"
-                      fill="url(#heroChartFill)"
+                      fill="url(#niaHeroChartGold)"
                     />
-                    {/* Stepped Stroke Line */}
                     <path
                       d="M 10 75 L 80 75 L 80 60 L 160 60 L 160 48 L 240 48 L 240 32 L 320 32 L 320 18 L 370 18"
                       fill="none"
-                      stroke="#8B5CF6"
+                      stroke="#FDE047"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
-                    {/* Data Points */}
-                    <circle cx="80" cy="60" r="3.5" fill="#C084FC" />
-                    <circle cx="160" cy="48" r="3.5" fill="#C084FC" />
-                    <circle cx="240" cy="32" r="3.5" fill="#C084FC" />
-                    <circle cx="320" cy="18" r="4" fill="#38BDF8" stroke="#0D1127" strokeWidth="2" />
+                    <circle cx="80" cy="60" r="3.5" fill="#D4AF37" />
+                    <circle cx="160" cy="48" r="3.5" fill="#D4AF37" />
+                    <circle cx="240" cy="32" r="3.5" fill="#D4AF37" />
+                    <circle
+                      cx="320"
+                      cy="18"
+                      r="4.5"
+                      fill="#FDE047"
+                      stroke="#080C16"
+                      strokeWidth="2"
+                    />
                   </svg>
 
-                  {/* Floating Callout Tooltip */}
-                  <div className="absolute top-0 right-2 px-2.5 py-1 rounded-lg bg-[#6D28D9] text-white text-[10px] font-mono-num font-bold shadow-lg shadow-purple-900/50">
-                    Current: LKR 1,562,500
+                  <div className="absolute top-0 right-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#D4AF37] text-slate-950 text-[10px] font-mono-num font-extrabold shadow-lg">
+                    LKR 1,562,500
                   </div>
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono-num">
                   <span>Jun 2026</span>
                   <span>Aug 2026</span>
                   <span>Oct 2026</span>
-                  <span className="text-purple-300 font-semibold">Nov 2026 (Active)</span>
+                  <span className="text-[#FDE047] font-bold">Nov 2026</span>
                 </div>
               </div>
 
               {/* Bottom Quick Row */}
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+              <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center justify-between text-xs text-slate-300">
                 <span className="text-[11px] text-slate-400">
-                  Last Movement: <strong className="text-slate-200">Allocation (+2,500 units)</strong>
+                  Latest Allocation: <strong className="text-[#F3E5AB]">+2,500 Ordinary Shares</strong>
                 </span>
                 <button
                   type="button"
                   onClick={() => onNavigateToAuth('signin')}
-                  className="text-purple-300 hover:text-purple-200 font-bold flex items-center gap-1 cursor-pointer"
+                  className="text-[#FDE047] hover:text-amber-200 font-extrabold flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Open Interactive View</span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
-              </div>
-            </div>
-
-            {/* Floating Glass Pill */}
-            <div className="absolute -bottom-6 -left-4 sm:left-4 px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/20 backdrop-blur-xl shadow-xl flex items-center gap-2.5 text-xs">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-bold text-white">Cloud MongoDB Atlas</div>
-                <div className="text-[10px] text-slate-400">Cluster0 • High Availability</div>
               </div>
             </div>
           </div>
@@ -491,44 +539,44 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 3. INSTITUTIONAL METRICS STRIP */}
+      {/* 3. INSTITUTIONAL METRICS STRIP (GOLD & OBSIDIAN)          */}
       {/* ========================================================= */}
-      <section className="relative z-10 border-y border-white/10 bg-[#0A0D1F]/90 backdrop-blur-lg py-8">
+      <section className="relative z-10 border-y border-[#D4AF37]/30 bg-[#060911]/95 backdrop-blur-lg py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
               <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num">
                 1,000,000
               </div>
-              <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
+              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
                 Issued Ordinary Shares
               </p>
             </div>
 
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-purple-300 font-mono-num">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#FDE047] font-mono-num">
                 LKR 125.00
               </div>
-              <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                Indicative Share Valuation
+              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
+                Current Value Per Share
               </p>
             </div>
 
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-sky-300 font-mono-num">
+              <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num">
                 LKR 125.0M
               </div>
-              <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                Enterprise Capitalization
+              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
+                Indicative Enterprise Value
               </p>
             </div>
 
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-mono-num">
-                100%
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#FDE047] font-mono-num">
+                6 Sectors
               </div>
-              <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                Maker-Checker Audited
+              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
+                Diversified Group Portfolio
               </p>
             </div>
           </div>
@@ -536,31 +584,131 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 4. INTERACTIVE HOLDINGS SIMULATOR */}
+      {/* 4. ARCHITECTURAL SHOWCASE: NIA GROUP 6 CORE DIVISIONS     */}
+      {/* (Modeled directly after the NIA Group Building Facade)     */}
       {/* ========================================================= */}
-      <section id="simulator" className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold mb-3">
-            <PieChart className="w-3.5 h-3.5" />
-            <span>Interactive Equity Calculator</span>
+      <section id="divisions" className="relative z-10 py-16 sm:py-22 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold mb-3 uppercase tracking-wider">
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Diversified Corporate Structure</span>
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Estimate Your Shareholding & Portfolio Value
+          <h2
+            className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight uppercase"
+            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+          >
+            NIA Group of Company Pillars
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2">
-            Adjust the slider or enter your units to evaluate your proportional stake in NIA Group
-            based on the latest board-approved valuation.
+            Every ordinary share represents ownership across NIA Group’s six core operational
+            divisions headquartered in Battaramulla, Sri Lanka.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto p-6 sm:p-9 rounded-3xl bg-slate-900/90 border border-white/15 shadow-2xl backdrop-blur-xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          {/* Left Architectural Building Card (5 Columns) */}
+          <div className="lg:col-span-5 rounded-3xl overflow-hidden border-2 border-[#D4AF37]/45 bg-[#0B101E] shadow-2xl flex flex-col justify-between relative min-h-[460px]">
+            <img
+              src="/nia-building.jpg"
+              alt="NIA Group of Company Headquarters Building"
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-[#060911]/45 to-transparent" />
+
+            <div className="relative z-10 p-6 flex items-center justify-between">
+              <span className="px-3 py-1 rounded-full bg-black/75 border border-[#D4AF37]/50 text-[#FDE047] text-[11px] font-bold tracking-wider uppercase backdrop-blur-md">
+                Corporate Headquarters
+              </span>
+              <img
+                src="/nia-logo.png"
+                alt="NIA Group Seal"
+                className="w-14 h-14 rounded-full border-2 border-[#D4AF37] bg-black shadow-lg"
+              />
+            </div>
+
+            <div className="relative z-10 p-6 sm:p-7 space-y-2">
+              <div className="text-xs font-extrabold tracking-[0.2em] uppercase text-[#FDE047]">
+                Nexus International Alliance
+              </div>
+              <h3
+                className="text-2xl font-extrabold text-white uppercase"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+              >
+                Building A Better Tomorrow Together
+              </h3>
+              <p className="text-xs text-slate-200 flex items-center gap-1.5 pt-1">
+                <MapPin className="w-4 h-4 text-[#FDE047] shrink-0" />
+                <span>119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Right 6-Division Architectural Grid matching Building Facade Panels (7 Columns) */}
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {niaDivisions.map((div) => {
+              const IconComponent = div.icon;
+              return (
+                <div
+                  key={div.title}
+                  className="p-5 rounded-2xl bg-[#0D1322] border-b-2 border border-[#D4AF37]/35 hover:border-[#FDE047] transition-all group flex flex-col justify-between shadow-lg"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#9A7B2C]/10 border border-[#D4AF37]/40 text-[#FDE047] flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <IconComponent className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold tracking-widest uppercase text-[#D4AF37]/80">
+                        NIA SECTOR
+                      </span>
+                    </div>
+                    <h3
+                      className="text-base font-extrabold text-[#FDE047] tracking-wider uppercase"
+                      style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+                    >
+                      {div.title}
+                    </h3>
+                    <div className="text-xs font-semibold text-white mt-0.5">{div.subtitle}</div>
+                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">{div.desc}</p>
+                  </div>
+                  <div className="mt-4 pt-2.5 border-t border-[#D4AF37]/20 flex items-center justify-between text-[11px] text-[#F3E5AB]">
+                    <span>Active Equity Division</span>
+                    <span className="text-[#FDE047] font-bold">● Verified</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* 5. INTERACTIVE HOLDINGS SIMULATOR (GOLD & OBSIDIAN)       */}
+      {/* ========================================================= */}
+      <section id="simulator" className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold mb-3 uppercase tracking-wider">
+            <PieChart className="w-3.5 h-3.5" />
+            <span>Interactive Equity Calculator</span>
+          </div>
+          <h2
+            className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
+            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+          >
+            Estimate Your NIA Shareholding Value
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 mt-2">
+            Slide or select a benchmark holding to calculate your proportional stake and indicative
+            value in NIA Group of Company.
+          </p>
+        </div>
+
+        <div className="max-w-3xl mx-auto p-6 sm:p-9 rounded-3xl bg-[#0D1322]/95 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            {/* Input Controls */}
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between text-xs font-bold text-slate-300 mb-2">
                   <span>Number of Ordinary Shares</span>
-                  <span className="text-purple-300 font-mono-num text-sm">
+                  <span className="text-[#FDE047] font-mono-num text-sm font-extrabold">
                     {simulatedShares.toLocaleString()} units
                   </span>
                 </div>
@@ -571,7 +719,7 @@ export default function HomePage({ onNavigateToAuth }) {
                   step="500"
                   value={simulatedShares}
                   onChange={(e) => setSimulatedShares(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#7C3AED]"
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#D4AF37]"
                 />
                 <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-mono-num">
                   <span>500 shares</span>
@@ -580,10 +728,9 @@ export default function HomePage({ onNavigateToAuth }) {
                 </div>
               </div>
 
-              {/* Quick Select Buttons */}
               <div>
                 <span className="text-xs text-slate-400 font-semibold block mb-2">
-                  Quick Benchmark Samples:
+                  Quick Benchmark Holdings:
                 </span>
                 <div className="grid grid-cols-3 gap-2">
                   {[5000, 12500, 25000].map((units) => (
@@ -591,10 +738,10 @@ export default function HomePage({ onNavigateToAuth }) {
                       key={units}
                       type="button"
                       onClick={() => setSimulatedShares(units)}
-                      className={`py-1.5 px-2 rounded-xl text-xs font-mono-num font-bold border transition-all cursor-pointer ${
+                      className={`py-2 px-2 rounded-xl text-xs font-mono-num font-extrabold border transition-all cursor-pointer ${
                         simulatedShares === units
-                          ? 'bg-[#6D28D9] border-purple-400 text-white'
-                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                          ? 'bg-gradient-to-r from-[#B8860B] to-[#D4AF37] border-[#FDE047] text-slate-950'
+                          : 'bg-white/5 border-[#D4AF37]/25 text-[#F3E5AB] hover:bg-white/10'
                       }`}
                     >
                       {units.toLocaleString()} sh
@@ -603,11 +750,10 @@ export default function HomePage({ onNavigateToAuth }) {
                 </div>
               </div>
 
-              {/* Valuation Basis Reference */}
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/25 text-xs text-slate-300 space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Current Share Price:</span>
-                  <span className="font-bold text-white font-mono-num">LKR 125.00</span>
+                  <span className="text-slate-400">Board-Approved Share Price:</span>
+                  <span className="font-bold text-[#FDE047] font-mono-num">LKR 125.00</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total Issued Capital:</span>
@@ -615,15 +761,14 @@ export default function HomePage({ onNavigateToAuth }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Share Class:</span>
-                  <span className="font-bold text-slate-200">Voting Ordinary</span>
+                  <span className="font-bold text-[#F3E5AB]">Ordinary Voting</span>
                 </div>
               </div>
             </div>
 
-            {/* Output Display Card */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/30 text-center space-y-4">
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 via-[#131B2E] to-[#080C16] border border-[#D4AF37]/50 text-center space-y-4">
               <div>
-                <span className="text-xs font-semibold text-purple-300 uppercase tracking-wide">
+                <span className="text-xs font-extrabold text-[#FDE047] uppercase tracking-wider">
                   Indicative Holding Value
                 </span>
                 <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono-num mt-1">
@@ -631,21 +776,21 @@ export default function HomePage({ onNavigateToAuth }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-left">
-                <div className="p-2.5 rounded-xl bg-black/20 border border-white/5">
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#D4AF37]/25 text-left">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-[#D4AF37]/20">
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">
                     Company Stake
                   </span>
-                  <div className="text-lg font-bold text-sky-300 font-mono-num">
+                  <div className="text-lg font-extrabold text-[#FDE047] font-mono-num">
                     {simulatedOwnership}%
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-black/20 border border-white/5">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-[#D4AF37]/20">
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Voting Weight
+                    Voting Units
                   </span>
-                  <div className="text-lg font-bold text-purple-300 font-mono-num">
+                  <div className="text-lg font-extrabold text-white font-mono-num">
                     {simulatedShares.toLocaleString()}
                   </div>
                 </div>
@@ -654,9 +799,9 @@ export default function HomePage({ onNavigateToAuth }) {
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <span>Verify Your Actual Register Record</span>
+                <span>Verify Your Official Register Record</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -665,83 +810,87 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 5. CORE PORTAL CAPABILITIES (3-COLUMN GRID) */}
+      {/* 6. CORE PORTAL CAPABILITIES (GOLD & OBSIDIAN CARDS)       */}
       {/* ========================================================= */}
-      <section id="features" className="relative z-10 py-16 bg-[#0A0D1F]/60 border-t border-white/10">
+      <section id="features" className="relative z-10 py-16 bg-[#060911]/80 border-t border-[#D4AF37]/25">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Engineered for Enterprise Equity Management
+            <h2
+              className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
+              style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+            >
+              Institutional Registry Capabilities
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-2">
-              Comprehensive capabilities designed specifically for NIA Group shareholders and corporate governance officers.
+              Designed for complete transparency, dual-control governance, and instant document
+              verification.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-purple-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <BarChart3 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Real-Time Holdings & Movements</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Real-Time Holdings & Ledger</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                View your complete share ledger, historical cumulative movements, opening balances, and verified certificate references in real time.
+                Inspect your opening shares, newly allocated blocks, share transfers, and net
+                cumulative equity position in real time.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-sky-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <TrendingUp className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Stepped Valuation Tracking</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Stepped Valuation Engine</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Interactive charts illustrate exact board-approved stepped valuation increments with resolution dates, evidence attachments, and growth metrics.
+                Track board-approved share price increments with resolution dates, valuation
+                evidence attachments, and portfolio impact metrics.
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-indigo-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 text-indigo-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <FileCheck2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Certified PDF Statements</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Certified PDF Statements</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Generate and download signed Share Holding Statements, Share Register Extracts, and Valuation Notices with cryptographic verification.
+                Download official Share Holding Statements, Share Register Extracts, and Valuation
+                Notices formatted on NIA Group letterhead.
               </p>
             </div>
 
-            {/* Feature 4 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-emerald-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Dual-Control Maker-Checker</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Dual-Control Maker-Checker</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Corporate share allocations, transfers, and valuation amendments require explicit Data Officer preparation and Approver sign-off.
+                Share allocations, transfers, and valuation updates require Data Officer preparation
+                followed by independent Approver sign-off.
               </p>
             </div>
 
-            {/* Feature 5 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-amber-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <Bell className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Investor Updates & AGMs</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Investor Updates & AGMs</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Receive authoritative company notices, annual reports, circulars, and AGM documentation directly through targeted shareholder distribution.
+                Receive official company announcements, Annual General Meeting notices, and
+                executive project updates across all six NIA sectors.
               </p>
             </div>
 
-            {/* Feature 6 */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-white/10 hover:border-purple-500/40 transition-all hover:-translate-y-1 group">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-300 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Encrypted Cloud Storage</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Multi-Factor Security</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Powered by Cloudinary and MongoDB Atlas with record-level permissions ensuring private shareholder documents are strictly isolated.
+                Protected by 2FA staff verification, HttpOnly session cookies, record-level
+                document isolation, and immutable audit trails.
               </p>
             </div>
           </div>
@@ -749,91 +898,80 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 6. TABBED WORKSPACE PREVIEW */}
+      {/* 7. TABBED WORKSPACE PREVIEW                               */}
       {/* ========================================================= */}
       <section id="modules" className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h2
+            className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
+            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+          >
             Role-Tailored Digital Workspaces
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2">
-            Switch views to discover how the portal adapts to both individual shareholders and executive registry administrators.
+            Explore how the platform serves both NIA Group shareholders and corporate registry
+            administrators.
           </p>
         </div>
 
-        {/* Tab Switcher */}
         <div className="flex justify-center mb-8">
-          <div className="p-1.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md inline-flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setActiveTab('shareholder')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'shareholder'
-                  ? 'bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white shadow-md'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Shareholder Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('governance')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'governance'
-                  ? 'bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white shadow-md'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Administration & Registry
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('documents')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'documents'
-                  ? 'bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white shadow-md'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Document Vault
-            </button>
+          <div className="p-1.5 rounded-2xl bg-[#0D1322] border border-[#D4AF37]/35 inline-flex flex-wrap justify-center gap-1.5">
+            {[
+              { id: 'shareholder', label: 'Shareholder Portal' },
+              { id: 'governance', label: 'Administration & Registry' },
+              { id: 'documents', label: 'Document Vault' }
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  activeTab === t.id
+                    ? 'bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-[#FDE047]'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tab Content Preview */}
-        <div className="max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-white/15 backdrop-blur-xl shadow-2xl">
+        <div className="max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-[#0D1322]/95 border border-[#D4AF37]/35 shadow-2xl">
           {activeTab === 'shareholder' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
-                <span className="text-xs font-bold text-purple-300 uppercase tracking-wider">
-                  Interface M01 • Shareholder Overview
+                <span className="text-xs font-bold text-[#FDE047] uppercase tracking-wider">
+                  Shareholder Overview
                 </span>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  Clarity on Every Unit Held
+                  Complete Clarity on Every Unit Held
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Shareholders access an intuitive dashboard displaying their opening shares, recent allocations, transfers, and net holding value calculated against the latest company valuation.
+                  Shareholders access an intuitive dashboard displaying opening shares, recent
+                  allocations, transfers, and net holding value calculated against the latest
+                  board-approved valuation.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
                     <span>Instant breakdown of ownership percentage</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Stepped valuation curve with floating historical milestones</span>
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
+                    <span>Stepped valuation curve with historical milestones</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Mobile-responsive bottom navigation for on-the-go review</span>
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
+                    <span>Mobile-responsive bottom navigation bar</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                <div className="flex justify-between items-center text-xs pb-2 border-b border-white/10">
-                  <span className="font-bold text-white">Holding Summary</span>
-                  <span className="text-slate-400 font-mono-num">SH-001</span>
+              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
+                  <span className="font-bold text-[#F3E5AB]">Holding Summary</span>
+                  <span className="text-[#FDE047] font-mono-num font-bold">SH-001</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Opening Shares:</span>
@@ -841,11 +979,11 @@ export default function HomePage({ onNavigateToAuth }) {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Allocated Shares:</span>
-                  <span className="font-mono-num font-bold text-emerald-300">+2,500</span>
+                  <span className="font-mono-num font-bold text-emerald-400">+2,500</span>
                 </div>
-                <div className="flex justify-between text-xs pt-2 border-t border-white/10">
+                <div className="flex justify-between text-xs pt-2 border-t border-[#D4AF37]/20">
                   <span className="font-bold text-white">Current Holding:</span>
-                  <span className="font-mono-num font-extrabold text-purple-300">12,500</span>
+                  <span className="font-mono-num font-extrabold text-[#FDE047]">12,500</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Current Valuation:</span>
@@ -858,49 +996,50 @@ export default function HomePage({ onNavigateToAuth }) {
           {activeTab === 'governance' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
-                <span className="text-xs font-bold text-sky-300 uppercase tracking-wider">
-                  Interface M10 • Administrative Workspace
+                <span className="text-xs font-bold text-[#FDE047] uppercase tracking-wider">
+                  Administrative Workspace
                 </span>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
                   Dual-Control Approvals & Ledger Integrity
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Registry officers manage shareholders, capture share movements, and configure company valuations. All sensitive updates are queued into the Approvals tab requiring dual-signoff.
+                  Registry officers manage shareholders, record share movements, and submit
+                  valuation updates through a strict maker-checker approval queue.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
                     <span>Four-eyes approval queue (Pending, Approved, Rejected, History)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
                     <span>Role-based access controls (Admin, Data Officer, Approver)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                    <span>Automatic notification broadcasts upon change approval</span>
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
+                    <span>Automatic shareholder notifications upon approval</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                <div className="flex justify-between items-center text-xs pb-2 border-b border-white/10">
-                  <span className="font-bold text-white">Approval Queue Sample</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
+                  <span className="font-bold text-[#F3E5AB]">Approval Queue</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#FDE047] text-[10px] font-bold">
                     Pending (3)
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/5 text-xs space-y-1">
                   <div className="flex justify-between font-bold">
                     <span className="text-white">TX-2026-0045</span>
-                    <span className="text-purple-300">Share Transfer</span>
+                    <span className="text-[#FDE047]">Share Transfer</span>
                   </div>
                   <p className="text-[11px] text-slate-400">Transfer 5,000 shares SH-002 → SH-003</p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/5 text-xs space-y-1">
                   <div className="flex justify-between font-bold">
                     <span className="text-white">VAL-2026-0012</span>
-                    <span className="text-sky-300">Valuation Update</span>
+                    <span className="text-amber-300">Valuation Update</span>
                   </div>
                   <p className="text-[11px] text-slate-400">Update value per share to LKR 125.00</p>
                 </div>
@@ -911,49 +1050,50 @@ export default function HomePage({ onNavigateToAuth }) {
           {activeTab === 'documents' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                  Interface M03 • Certified PDF Output
+                <span className="text-xs font-bold text-[#FDE047] uppercase tracking-wider">
+                  Certified PDF Output
                 </span>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
                   Official Verification At Your Fingertips
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Export professional PDF documentation on official letterhead formatted to institutional legal and auditing standards.
+                  Export professional PDF documentation on official NIA Group of Company letterhead
+                  formatted to institutional legal and auditing standards.
                 </p>
                 <ul className="space-y-2 text-xs text-slate-300">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
                     <span>Certified Share Statement with seal and issuance date</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
                     <span>Audited Share Register Extracts for compliance audits</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-400" />
-                    <span>Valuation Notices and Annual General Meeting publications</span>
+                    <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
+                    <span>Valuation Notices and AGM publications</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                <div className="flex justify-between items-center text-xs pb-2 border-b border-white/10">
-                  <span className="font-bold text-white">Available Documents</span>
-                  <span className="text-slate-400">Tamper-Proof</span>
+              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
+                  <span className="font-bold text-[#F3E5AB]">Available Documents</span>
+                  <span className="text-[#D4AF37]">Tamper-Proof</span>
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 text-xs">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-red-400" />
+                    <FileText className="w-4 h-4 text-[#FDE047]" />
                     <span className="font-semibold text-slate-200">Share_Statement_SH001.pdf</span>
                   </div>
-                  <Download className="w-3.5 h-3.5 text-slate-400" />
+                  <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 text-xs">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-red-400" />
+                    <FileText className="w-4 h-4 text-[#FDE047]" />
                     <span className="font-semibold text-slate-200">Valuation_Notice_2026.pdf</span>
                   </div>
-                  <Download className="w-3.5 h-3.5 text-slate-400" />
+                  <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
                 </div>
               </div>
             </div>
@@ -962,96 +1102,42 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 7. SECURITY & GOVERNANCE */}
+      {/* 8. FREQUENTLY ASKED QUESTIONS                             */}
       {/* ========================================================= */}
-      <section id="security" className="relative z-10 py-16 bg-[#0A0D1F]/70 border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-3 mb-12">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Institutional Grade Security</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Enterprise Governance & Data Protection
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Built following international security standards to guarantee the confidentiality and integrity of NIA Group equity data.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-              <KeyRound className="w-6 h-6 text-purple-400 mb-3" />
-              <h4 className="text-sm font-bold text-white mb-1">Multi-Factor 2FA</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Staff accounts are safeguarded with mandatory multi-factor authentication and emergency recovery keys.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-              <Lock className="w-6 h-6 text-sky-400 mb-3" />
-              <h4 className="text-sm font-bold text-white mb-1">HttpOnly Cookie Tokens</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Tokens are stored in protected HttpOnly same-site cookies, preventing XSS credential theft.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-              <FileCheck2 className="w-6 h-6 text-indigo-400 mb-3" />
-              <h4 className="text-sm font-bold text-white mb-1">Immutable Audit Ledger</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Every login, valuation update, and share movement is stamped with user identity, timestamp, and IP address.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-              <ShieldCheck className="w-6 h-6 text-emerald-400 mb-3" />
-              <h4 className="text-sm font-bold text-white mb-1">Restricted Document Isolation</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Private shareholder files require verified individual authorization before files are decrypted and streamed.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* 8. FREQUENTLY ASKED QUESTIONS (ACCORDION) */}
-      {/* ========================================================= */}
-      <section id="faq" className="relative z-10 py-16 sm:py-20 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="faq" className="relative z-10 py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold mb-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] text-xs font-bold mb-3">
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Shareholder Support</span>
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h2
+            className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
+            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+          >
             Frequently Asked Questions
           </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-2">
-            Everything you need to know about the NIA Group Shareholder Portal.
-          </p>
         </div>
 
         <div className="space-y-3">
           {faqs.map((faq, idx) => (
             <div
               key={idx}
-              className="rounded-2xl bg-slate-900/80 border border-white/10 overflow-hidden transition-all"
+              className="rounded-2xl bg-[#0D1322] border border-[#D4AF37]/30 overflow-hidden transition-all"
             >
               <button
                 type="button"
                 onClick={() => setOpenFaq(openFaq === idx ? -1 : idx)}
-                className="w-full p-4 sm:p-5 text-left flex items-center justify-between text-sm sm:text-base font-bold text-white cursor-pointer hover:bg-white/5"
+                className="w-full p-4 sm:p-5 text-left flex items-center justify-between text-sm sm:text-base font-bold text-[#F3E5AB] cursor-pointer hover:bg-white/5"
               >
                 <span>{faq.q}</span>
                 <ChevronDown
-                  className={`w-4 h-4 text-purple-400 shrink-0 transition-transform ${
+                  className={`w-4 h-4 text-[#FDE047] shrink-0 transition-transform ${
                     openFaq === idx ? 'rotate-180' : ''
                   }`}
                 />
               </button>
               {openFaq === idx && (
-                <div className="px-4 pb-5 sm:px-5 sm:pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-white/5 pt-3">
+                <div className="px-4 pb-5 sm:px-5 sm:pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-[#D4AF37]/15 pt-3">
                   {faq.a}
                 </div>
               )}
@@ -1061,61 +1147,106 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 9. BOTTOM CALL TO ACTION BANNER */}
+      {/* 9. HEADQUARTERS & CALL TO ACTION BANNER                   */}
       {/* ========================================================= */}
-      <section className="relative z-10 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-gradient-to-r from-[#6D28D9]/90 via-[#7C3AED]/90 to-[#4F46E5]/90 p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl">
-          {/* Architectural Skyscraper Backdrop Accent */}
+      <section id="contact" className="relative z-10 py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="rounded-3xl bg-gradient-to-r from-[#12192B] via-[#0E1525] to-[#161F33] border-2 border-[#D4AF37]/50 p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
           <div
-            className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none mix-blend-overlay"
-            style={{
-              backgroundImage:
-                'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=75")'
-            }}
+            className="absolute inset-0 bg-cover bg-center opacity-20 pointer-events-none"
+            style={{ backgroundImage: 'url("/nia-building.jpg")' }}
           />
-          <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-              Access Your Shareholder Dashboard Today
-            </h2>
-            <p className="text-xs sm:text-sm text-purple-100/90 leading-relaxed">
-              Log in to view your verified equity balance, inspect recent allocations, and download your latest certified holding statement.
-            </p>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => onNavigateToAuth('signin')}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7 space-y-4 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] uppercase text-[#FDE047]">
+                <span>Nexus International Alliance • E-STD 2022</span>
+              </div>
+              <h2
+                className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
-                <span>Sign In to Portal</span>
-                <ArrowRight className="w-4 h-4 text-[#6D28D9]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigateToAuth('signin')}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-purple-900/40 hover:bg-purple-900/60 border border-white/30 text-white font-semibold text-sm cursor-pointer"
-              >
-                Activate Account Invite
-              </button>
+                Building A Better Tomorrow Together
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl">
+                Sign in to your NIA Group Shareholder account to view your verified equity balance,
+                inspect recent share movements, and download certified holding statements.
+              </p>
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => onNavigateToAuth('signin')}
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <span>Sign In to Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateToAuth('signin')}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-black/50 hover:bg-black/70 border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-sm cursor-pointer"
+                >
+                  Activate Account Invite
+                </button>
+              </div>
+            </div>
+
+            {/* Official Contact Details from NIA Group Building Banner */}
+            <div className="lg:col-span-5 p-6 rounded-2xl bg-[#080C16]/90 border border-[#D4AF37]/40 space-y-3.5 text-xs">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#D4AF37]/25">
+                <img
+                  src="/nia-logo.png"
+                  alt="NIA Group Crest"
+                  className="w-11 h-11 rounded-full border border-[#D4AF37] bg-black"
+                />
+                <div>
+                  <div className="font-extrabold text-[#FDE047] text-sm uppercase">
+                    NIA Group of Company
+                  </div>
+                  <div className="text-[11px] text-slate-400">Corporate Registry & Head Office</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 text-slate-200">
+                <MapPin className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                <span>119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-slate-200">
+                <Globe className="w-4 h-4 text-[#FDE047] shrink-0" />
+                <span>www.niagc.com</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-slate-200">
+                <Mail className="w-4 h-4 text-[#FDE047] shrink-0" />
+                <span>info@niagc.com / niagc.com@gmail.com</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-slate-200">
+                <Phone className="w-4 h-4 text-[#FDE047] shrink-0" />
+                <span className="font-mono-num">0723343824 / 0753343824 / 0713343824</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ========================================================= */}
-      {/* 10. ENTERPRISE FOOTER */}
+      {/* 10. ENTERPRISE FOOTER                                     */}
       {/* ========================================================= */}
-      <footer className="relative z-10 border-t border-white/10 bg-[#070914] py-10 text-xs text-slate-400">
+      <footer className="relative z-10 border-t border-[#D4AF37]/25 bg-[#050810] py-10 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <ApexBrandLogo size="sm" subtitle="Software Solutions" lightText />
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400">NIA Group of Company</span>
+            <ApexBrandLogo size="sm" subtitle="GROUP OF COMPANY" lightText />
+            <span className="text-[#D4AF37]/50">•</span>
+            <span className="text-[#F3E5AB]">Nexus International Alliance (E-STD 2022)</span>
           </div>
 
           <div className="text-center sm:text-right space-y-1">
-            <div>Institutional Shareholder & Registry Web Application</div>
+            <div className="text-[#F3E5AB] font-semibold">
+              119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka
+            </div>
             <div className="text-[11px] text-slate-500">
-              Proposal Ref: ALG-SP-2026-16 • © {new Date().getFullYear()} APEX Software Solutions. All rights reserved.
+              Proposal Ref: ALG-SP-2026-16 • © {new Date().getFullYear()} NIA Group of Company. All
+              rights reserved.
             </div>
           </div>
         </div>

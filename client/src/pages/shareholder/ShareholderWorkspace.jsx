@@ -49,13 +49,13 @@ function OwnershipDonutChart({ ownershipPercent = 0, myShares = 0, issuedShares 
             stroke="#E2E8F0"
             strokeWidth="14"
           />
-          {/* Foreground Purple Arc */}
+          {/* Foreground Imperial Gold Arc */}
           <circle
             cx="70"
             cy="70"
             r={radius}
             fill="none"
-            stroke="#7C3AED"
+            stroke="#D4AF37"
             strokeWidth="14"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -75,7 +75,7 @@ function OwnershipDonutChart({ ownershipPercent = 0, myShares = 0, issuedShares 
       {!compact && (
         <div className="space-y-3.5 flex-1 w-full">
           <div className="flex items-start gap-2.5">
-            <span className="w-3.5 h-3.5 rounded bg-[#7C3AED] shrink-0 mt-0.5 shadow-2xs" />
+            <span className="w-3.5 h-3.5 rounded bg-[#D4AF37] shrink-0 mt-0.5 shadow-2xs" />
             <div>
               <div className="text-xs font-extrabold text-slate-900">Your Holding</div>
               <div className="text-xs text-slate-500 font-mono-num">
@@ -151,9 +151,9 @@ function CumulativeHoldingBarChart({ ledger = [], currentShares = 0 }) {
                   key={idx}
                   className="flex-1 max-w-[54px] h-full flex flex-col items-center justify-end group relative"
                 >
-                  {/* Floating Purple Pill on Current Bar */}
+                  {/* Floating Obsidian & Gold Pill on Current Bar */}
                   {b.isCurrent && (
-                    <div className="mb-1.5 px-2.5 py-0.5 rounded-lg bg-[#6D28D9] text-white text-[11px] font-extrabold font-mono-num shadow-md whitespace-nowrap">
+                    <div className="mb-1.5 px-2.5 py-0.5 rounded-lg bg-[#080C16] text-[#FDE047] border border-[#D4AF37]/40 text-[11px] font-extrabold font-mono-num shadow-md whitespace-nowrap">
                       {b.value.toLocaleString()}
                     </div>
                   )}
@@ -161,8 +161,8 @@ function CumulativeHoldingBarChart({ ledger = [], currentShares = 0 }) {
                     style={{ height: `${heightPct}%` }}
                     className={`w-full rounded-t-xl transition-all duration-300 ${
                       b.isCurrent
-                        ? 'bg-gradient-to-t from-[#6D28D9] to-[#8B5CF6] shadow-md shadow-purple-500/25'
-                        : 'bg-[#C4B5FD]/75 hover:bg-[#A78BFA]'
+                        ? 'bg-gradient-to-t from-[#9A7B2C] via-[#D4AF37] to-[#FDE047] shadow-md shadow-[#D4AF37]/25'
+                        : 'bg-[#D4AF37]/35 hover:bg-[#D4AF37]/60'
                     }`}
                     title={`${b.label}: ${b.value.toLocaleString()} shares`}
                   />
@@ -428,7 +428,7 @@ export default function ShareholderWorkspace({
   if (loading && !overviewData) {
     return (
       <div className="py-16 flex flex-col items-center justify-center text-slate-500">
-        <div className="w-10 h-10 rounded-full border-3 border-[#7C3AED] border-t-transparent animate-spin mb-3" />
+        <div className="w-10 h-10 rounded-full border-3 border-[#D4AF37] border-t-transparent animate-spin mb-3" />
         <p className="text-sm font-medium">Loading your shareholder portal...</p>
       </div>
     );
@@ -483,14 +483,14 @@ export default function ShareholderWorkspace({
 
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200/80 text-xs font-semibold text-slate-600 shadow-2xs">
-              <Calendar className="w-3.5 h-3.5 text-[#6D28D9]" />
+              <Calendar className="w-3.5 h-3.5 text-[#B8860B]" />
               <span>As at {asAtFormatted}</span>
             </div>
 
             <button
               type="button"
               onClick={() => handleDownloadStatement()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-sm transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Statement PDF</span>
@@ -498,25 +498,25 @@ export default function ShareholderWorkspace({
           </div>
         </div>
 
-        {/* 4 Pastel-Tinted KPI Cards (Matches Reference Image Desktop Grid & Mobile Stacked Cards with Chevron) */}
+        {/* 4 NIA Group Obsidian & Gold KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Shares Held (Soft Lavender Tint) */}
+          {/* Card 1: Shares Held (Obsidian & Imperial Gold) */}
           <div
             onClick={() => setActiveTab('holdings')}
-            className="group relative rounded-2xl bg-gradient-to-br from-white via-[#F5F3FF] to-[#EDE9FE] border border-purple-200/70 p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex sm:block items-center justify-between"
+            className="group relative rounded-2xl bg-gradient-to-br from-[#080C16] via-[#0B101E] to-[#131C31] border border-[#D4AF37]/40 p-5 shadow-md hover:shadow-lg transition-all cursor-pointer flex sm:block items-center justify-between text-white"
           >
             <div className="flex sm:block items-center gap-4">
-              <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-300/50 flex items-center justify-center text-[#6D28D9] shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] shrink-0">
                 <Layers className="w-5 h-5" />
               </div>
               <div className="sm:mt-3.5">
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono-num tracking-tight">
+                <div className="text-xl sm:text-2xl font-extrabold text-white font-mono-num tracking-tight">
                   {Number(summary.myShares || 0).toLocaleString()}
                 </div>
-                <div className="text-xs font-semibold text-slate-500 mt-0.5">Shares Held</div>
+                <div className="text-xs font-semibold text-[#F3E5AB]/80 mt-0.5">Shares Held</div>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 sm:hidden group-hover:translate-x-0.5 transition-transform" />
+            <ChevronRight className="w-4 h-4 text-[#D4AF37] sm:hidden group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Card 2: Ownership (Soft Sky-Blue Tint) */}
@@ -626,7 +626,7 @@ export default function ShareholderWorkspace({
                 <button
                   type="button"
                   onClick={() => setActiveTab('holdings')}
-                  className="font-bold text-[#6D28D9] hover:text-[#5B21B6] inline-flex items-center gap-1 cursor-pointer"
+                  className="font-bold text-[#9A7B2C] hover:text-[#785E1E] inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>My Holdings Details</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -669,21 +669,21 @@ export default function ShareholderWorkspace({
           <button
             type="button"
             onClick={() => handleDownloadStatement()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-sm cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Download Holding Statement</span>
           </button>
         </div>
 
-        {/* 2-Column Split Layout from Reference Image Middle-Left */}
+        {/* 2-Column Split Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT CARD: Shareholder Account Breakdown (Matches Reference Image Left Card & Mobile 3rd Screen) */}
+          {/* LEFT CARD: Shareholder Account Breakdown */}
           <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
             {/* Account Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-purple-100 text-[#6D28D9] flex items-center justify-center">
+                <div className="w-11 h-11 rounded-2xl bg-[#080C16] border border-[#D4AF37]/40 text-[#FDE047] flex items-center justify-center">
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <div>
@@ -754,7 +754,7 @@ export default function ShareholderWorkspace({
 
               <div className="pt-3.5 pb-1 flex items-center justify-between">
                 <span className="text-slate-900 font-extrabold">Holding Value</span>
-                <span className="font-mono-num font-extrabold text-[#6D28D9] text-base">
+                <span className="font-mono-num font-extrabold text-[#9A7B2C] text-base">
                   {currency}{' '}
                   {Number(summary.myHoldingValue || 0).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
@@ -767,7 +767,7 @@ export default function ShareholderWorkspace({
             <button
               type="button"
               onClick={() => setHoldingsSubTab('movements')}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] hover:from-[#5B21B6] hover:to-[#6D28D9] text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs sm:text-sm font-extrabold shadow-md shadow-[#D4AF37]/20 transition-all cursor-pointer"
             >
               View Movements
             </button>
@@ -775,7 +775,7 @@ export default function ShareholderWorkspace({
 
           {/* RIGHT CARD: Tabbed Overview / Share Movements / Value History */}
           <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
-            {/* Purple Underline Sub-Tabs (Matches Reference Image) */}
+            {/* Imperial Gold Underline Sub-Tabs */}
             <div className="flex items-center gap-6 border-b border-slate-200/80 mb-5">
               {[
                 { id: 'overview', label: 'Holding Overview' },
@@ -790,13 +790,13 @@ export default function ShareholderWorkspace({
                     onClick={() => setHoldingsSubTab(t.id)}
                     className={`pb-3 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
                       active
-                        ? 'text-[#6D28D9]'
+                        ? 'text-[#9A7B2C]'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     {t.label}
                     {active && (
-                      <span className="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-[#6D28D9]" />
+                      <span className="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-[#D4AF37]" />
                     )}
                   </button>
                 );
@@ -815,7 +815,7 @@ export default function ShareholderWorkspace({
                   <button
                     type="button"
                     onClick={() => setHoldingsSubTab('movements')}
-                    className="font-bold text-[#6D28D9] hover:underline cursor-pointer"
+                    className="font-bold text-[#9A7B2C] hover:underline cursor-pointer"
                   >
                     Inspect full ledger ({ledger.length}) →
                   </button>
@@ -882,7 +882,7 @@ export default function ShareholderWorkspace({
                                 href={row.supportingDocumentUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6D28D9] hover:underline mt-0.5"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#9A7B2C] hover:underline mt-0.5"
                               >
                                 <ExternalLink className="w-3 h-3" />
                                 Doc
@@ -974,14 +974,14 @@ export default function ShareholderWorkspace({
           <button
             type="button"
             onClick={handleExportHistoryCSV}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-sm cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
           </button>
         </div>
 
-        {/* Share Transactions List (Matches 4th Phone Screen "< Transactions") */}
+        {/* Share Transactions List */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
@@ -990,7 +990,7 @@ export default function ShareholderWorkspace({
                 Approved allocations, transfers, and opening balances
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-purple-50 text-[#6D28D9] text-xs font-bold font-mono-num">
+            <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30 text-xs font-bold font-mono-num">
               {ledger.length} records
             </span>
           </div>
@@ -1097,7 +1097,7 @@ export default function ShareholderWorkspace({
               </select>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-[#6D28D9] font-bold">
+          <span className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30 font-bold">
             Class: {historyData?.shareClass || 'Ordinary'}
           </span>
         </div>
@@ -1156,9 +1156,9 @@ export default function ShareholderWorkspace({
                 key={cat}
                 type="button"
                 onClick={() => setDocCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   docCategory === cat
-                    ? 'bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white shadow-md shadow-purple-600/20'
+                    ? 'bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 shadow-md shadow-[#D4AF37]/20'
                     : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1168,7 +1168,7 @@ export default function ShareholderWorkspace({
           </div>
 
           <div className="flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-2xs">
-            <Calendar className="w-4 h-4 text-[#6D28D9]" />
+            <Calendar className="w-4 h-4 text-[#B8860B]" />
             <span className="text-xs font-semibold text-slate-600">Statement as at:</span>
             <input
               type="date"
@@ -1179,14 +1179,14 @@ export default function ShareholderWorkspace({
             <button
               type="button"
               onClick={() => handleDownloadStatement(statementSnapshotDate)}
-              className="px-3 py-1.5 rounded-lg bg-[#6D28D9] hover:bg-[#5B21B6] text-white text-xs font-bold transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#080C16] hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold transition-colors cursor-pointer"
             >
               Download PDF
             </button>
           </div>
         </div>
 
-        {/* Document Cards List (Matches 5th Mobile Screen with Coral PDF Badge & Lavender Download Icon Button) */}
+        {/* Document Cards List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Built-in Automated Share Statement Card */}
           {(docCategory === 'All documents' || docCategory === 'Statements') && (
@@ -1216,7 +1216,7 @@ export default function ShareholderWorkspace({
                 type="button"
                 onClick={() => handleDownloadStatement(statementSnapshotDate)}
                 title="Download PDF"
-                className="w-10 h-10 rounded-xl bg-[#EDE9FE] hover:bg-[#6D28D9] text-[#6D28D9] hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 hover:bg-[#080C16] text-[#9A7B2C] hover:text-[#FDE047] border border-[#D4AF37]/30 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
               </button>
@@ -1254,7 +1254,7 @@ export default function ShareholderWorkspace({
                   target="_blank"
                   rel="noreferrer"
                   title="Download PDF"
-                  className="w-10 h-10 rounded-xl bg-[#EDE9FE] hover:bg-[#6D28D9] text-[#6D28D9] hover:text-white flex items-center justify-center transition-colors shrink-0"
+                  className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 hover:bg-[#080C16] text-[#9A7B2C] hover:text-[#FDE047] border border-[#D4AF37]/30 flex items-center justify-center transition-colors shrink-0"
                 >
                   <Download className="w-4 h-4" />
                 </a>
@@ -1265,7 +1265,7 @@ export default function ShareholderWorkspace({
                     handleDownloadStatement(doc.periodOrDate || statementSnapshotDate)
                   }
                   title="Download PDF"
-                  className="w-10 h-10 rounded-xl bg-[#EDE9FE] hover:bg-[#6D28D9] text-[#6D28D9] hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 hover:bg-[#080C16] text-[#9A7B2C] hover:text-[#FDE047] border border-[#D4AF37]/30 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -1276,7 +1276,7 @@ export default function ShareholderWorkspace({
 
         {/* Privacy Assurance Card */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-[#6D28D9] shrink-0 mt-0.5" />
+          <ShieldCheck className="w-5 h-5 text-[#B8860B] shrink-0 mt-0.5" />
           <div>
             <h3 className="text-sm font-bold text-slate-900">Your documents stay private</h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -1319,27 +1319,27 @@ export default function ShareholderWorkspace({
                 className={`bg-white rounded-2xl border overflow-hidden shadow-xs transition-all flex flex-col justify-between ${
                   ann.isRead
                     ? 'border-slate-200/80'
-                    : 'border-[#7C3AED] ring-2 ring-[#7C3AED]/15'
+                    : 'border-[#D4AF37] ring-2 ring-[#D4AF37]/20'
                 }`}
               >
-                {/* Decorative Executive Banner Header matching 6th Mobile Screen */}
+                {/* Decorative NIA Group Obsidian & Gold Banner Header */}
                 <div
                   className={`h-32 px-6 py-4 flex flex-col justify-end relative overflow-hidden ${
                     idx % 2 === 0
-                      ? 'bg-gradient-to-r from-[#0D1127] via-[#1E1B4B] to-[#4C1D95]'
-                      : 'bg-gradient-to-r from-[#0F172A] via-[#1E3A8A] to-[#3B82F6]'
-                  } text-white`}
+                      ? 'bg-gradient-to-r from-[#080C16] via-[#0D1322] to-[#1E293B]'
+                      : 'bg-gradient-to-r from-[#0B101E] via-[#131C31] to-[#262010]'
+                  } text-white border-b border-[#D4AF37]/30`}
                 >
-                  <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
+                  <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-[#D4AF37]/15 blur-xl pointer-events-none" />
                   <div className="relative z-10 flex items-center justify-between gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-white/15 backdrop-blur-xs">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#FDE047] border border-[#D4AF37]/30 backdrop-blur-xs">
                       {ann.category || 'Company Update'}
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         ann.isRead
                           ? 'bg-white/15 text-slate-200'
-                          : 'bg-amber-400 text-slate-950'
+                          : 'bg-[#D4AF37] text-slate-950'
                       }`}
                     >
                       {ann.isRead ? 'Read' : 'New Update'}
@@ -1363,7 +1363,7 @@ export default function ShareholderWorkspace({
                       <button
                         type="button"
                         onClick={() => setActiveTab('history')}
-                        className="text-[#6D28D9] hover:underline cursor-pointer"
+                        className="text-[#9A7B2C] hover:underline cursor-pointer"
                       >
                         View History
                       </button>
@@ -1401,7 +1401,7 @@ export default function ShareholderWorkspace({
                   placeholder="Question about my holding statement"
                   value={supportSubject}
                   onChange={(e) => setSupportSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
               <div>
@@ -1426,14 +1426,14 @@ export default function ShareholderWorkspace({
                 placeholder="Please explain the dated valuation or record you would like clarified..."
                 value={supportMessage}
                 onChange={(e) => setSupportMessage(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
 
             <button
               type="submit"
               disabled={submittingSupport}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer disabled:opacity-60"
             >
               <Send className="w-3.5 h-3.5" />
               {submittingSupport ? 'Submitting...' : 'Submit Support Request'}
@@ -1450,7 +1450,7 @@ export default function ShareholderWorkspace({
                 <div key={t._id} className="py-4 first:pt-0 last:pb-0 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-purple-50 font-mono-num text-xs font-bold text-[#6D28D9]">
+                      <span className="px-2 py-0.5 rounded bg-[#D4AF37]/15 font-mono-num text-xs font-bold text-[#9A7B2C]">
                         {t.reference}
                       </span>
                       <span className="text-sm font-bold text-slate-900">{t.subject}</span>
@@ -1460,7 +1460,7 @@ export default function ShareholderWorkspace({
                         t.status === 'Resolved'
                           ? 'bg-emerald-50 text-emerald-700'
                           : t.status === 'In progress'
-                          ? 'bg-purple-50 text-[#6D28D9]'
+                          ? 'bg-[#D4AF37]/15 text-[#9A7B2C]'
                           : 'bg-amber-50 text-amber-800'
                       }`}
                     >
@@ -1469,7 +1469,7 @@ export default function ShareholderWorkspace({
                   </div>
                   <p className="text-xs text-slate-600">{t.message}</p>
                   {t.replies && t.replies.length > 0 && (
-                    <div className="pl-4 border-l-2 border-[#7C3AED] space-y-2 mt-2">
+                    <div className="pl-4 border-l-2 border-[#D4AF37] space-y-2 mt-2">
                       {t.replies.map((rep) => (
                         <div key={rep.id} className="bg-slate-50 p-3 rounded-xl text-xs">
                           <div className="font-bold text-slate-900">
@@ -1513,7 +1513,7 @@ export default function ShareholderWorkspace({
                 type="text"
                 value={profileForm.fullName}
                 onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
 
@@ -1533,7 +1533,7 @@ export default function ShareholderWorkspace({
                 type="email"
                 value={profileForm.email}
                 onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
 
@@ -1544,7 +1544,7 @@ export default function ShareholderWorkspace({
                 placeholder="+94 7X XXX XXXX"
                 value={profileForm.phone}
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
               />
             </div>
           </div>
@@ -1556,7 +1556,7 @@ export default function ShareholderWorkspace({
               placeholder="Company-verified address on file"
               value={profileForm.postalAddress}
               onChange={(e) => setProfileForm({ ...profileForm, postalAddress: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
             />
           </div>
 
@@ -1568,7 +1568,7 @@ export default function ShareholderWorkspace({
 
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] text-white text-xs font-bold shadow-md shadow-purple-600/20 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
           >
             Request Profile Update
           </button>
@@ -1582,7 +1582,7 @@ export default function ShareholderWorkspace({
           <button
             type="button"
             onClick={() => setShowPasswordModal(!showPasswordModal)}
-            className="text-[#6D28D9] hover:text-[#5B21B6] inline-flex items-center gap-1.5 cursor-pointer"
+            className="text-[#9A7B2C] hover:text-[#785E1E] inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Lock className="w-4 h-4" />
             Change password
@@ -1591,7 +1591,7 @@ export default function ShareholderWorkspace({
           <button
             type="button"
             onClick={handleToggleVerification}
-            className="text-[#6D28D9] hover:text-[#5B21B6] inline-flex items-center gap-1.5 cursor-pointer"
+            className="text-[#9A7B2C] hover:text-[#785E1E] inline-flex items-center gap-1.5 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
             Manage verification ({user?.verificationEnabled ? 'Enabled' : 'Disabled'})
@@ -1600,7 +1600,7 @@ export default function ShareholderWorkspace({
           <button
             type="button"
             onClick={handleRevokeOtherSessions}
-            className="text-[#6D28D9] hover:text-[#5B21B6] inline-flex items-center gap-1.5 cursor-pointer"
+            className="text-[#9A7B2C] hover:text-[#785E1E] inline-flex items-center gap-1.5 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Sign out other sessions
@@ -1638,7 +1638,7 @@ export default function ShareholderWorkspace({
             />
             <button
               type="submit"
-              className="px-4 py-2.5 rounded-xl bg-[#6D28D9] hover:bg-[#5B21B6] text-white text-xs font-bold cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold cursor-pointer"
             >
               Update password
             </button>
