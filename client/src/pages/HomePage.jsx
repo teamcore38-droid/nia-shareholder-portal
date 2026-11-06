@@ -75,7 +75,19 @@ export default function HomePage({ onNavigateToAuth }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1127] text-white flex flex-col selection:bg-[#7C3AED] selection:text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0A1026] text-white flex flex-col selection:bg-[#7C3AED] selection:text-white relative overflow-x-hidden">
+      {/* Architectural Glass Tower & Twilight Backdrop (Matches Login Screen & Proposal Reference) */}
+      <div
+        className="absolute top-0 inset-x-0 h-[1150px] bg-cover bg-center lg:bg-top bg-no-repeat opacity-45 pointer-events-none z-0"
+        style={{
+          backgroundImage:
+            'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=80")'
+        }}
+      />
+      {/* Deep Twilight Indigo-to-Violet Overlay */}
+      <div className="absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-r from-[#090F26]/95 via-[#0E183B]/82 to-[#1B1447]/80 pointer-events-none z-0" />
+      <div className="absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-b from-[#080C20]/50 via-transparent to-[#0D1127] pointer-events-none z-0" />
+
       {/* Dynamic Background Mesh Gradients */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[640px] pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-32 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-[#7C3AED]/25 via-[#6366F1]/20 to-transparent rounded-full blur-3xl opacity-70 animate-pulse-subtle" />
@@ -1053,6 +1065,14 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ========================================================= */}
       <section className="relative z-10 py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-gradient-to-r from-[#6D28D9]/90 via-[#7C3AED]/90 to-[#4F46E5]/90 p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl">
+          {/* Architectural Skyscraper Backdrop Accent */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none mix-blend-overlay"
+            style={{
+              backgroundImage:
+                'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=75")'
+            }}
+          />
           <div className="relative z-10 max-w-2xl mx-auto space-y-4">
             <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
               Access Your Shareholder Dashboard Today
