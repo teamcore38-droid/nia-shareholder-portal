@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ScrollImageSequenceCanvas from '../components/ScrollImageSequenceCanvas';
 import {
   ShieldCheck,
   Lock,
@@ -38,6 +39,28 @@ export default function HomePage({ onNavigateToAuth }) {
 
   // FAQ open item
   const [openFaq, setOpenFaq] = useState(0);
+
+  // Scroll-linked hero image sequence
+  const heroTrackRef = useRef(null);
+  const [heroScrollProgress, setHeroScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const el = heroTrackRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const totalScrollable = el.offsetHeight - window.innerHeight;
+      if (totalScrollable <= 0) return;
+
+      const scrolled = -rect.top;
+      const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
+      setHeroScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // The 6 Official Business Sectors from the NIA Group Building Facade
   const niaDivisions = [
@@ -112,50 +135,6 @@ export default function HomePage({ onNavigateToAuth }) {
 
   return (
     <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-hidden">
-      {/* ========================================================= */}
-      {/* ARCHITECTURAL NIA CAMPUS HERO BACKDROP & GOLD GLOWS        */}
-      {/* Responsive: Desktop (16:9 landscape) / Mobile (9:16 portrait) */}
-      {/* ========================================================= */}
-      <picture className="absolute top-0 inset-x-0 h-[1050px] lg:h-[1150px] pointer-events-none z-0 overflow-hidden block">
-        <source media="(min-width: 768px)" srcSet="/nia-campus-desktop.webp" />
-        <img
-          src="/nia-campus-mobile.webp"
-          alt="NIA Corporate Campus Hero Backdrop"
-          className="w-full h-full object-cover object-top lg:object-center opacity-85 select-none"
-          loading="eager"
-          fetchPriority="high"
-        />
-      </picture>
-      {/* Balanced Cinematic Overlays: lets campus architecture & blue sky remain clearly visible while keeping text crisp */}
-      <div className="absolute top-0 inset-x-0 h-[1050px] lg:h-[1150px] bg-gradient-to-b from-[#080C16]/80 via-[#080C16]/30 to-[#080C16] pointer-events-none z-0" />
-      <div className="hidden lg:block absolute top-0 inset-x-0 h-[1150px] bg-gradient-to-r from-[#080C16]/85 via-[#080C16]/40 to-transparent pointer-events-none z-0" />
-
-      {/* Ambient Gold Spotlight Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-32 left-1/4 w-[520px] h-[520px] bg-gradient-to-br from-[#D4AF37]/20 via-[#F59E0B]/12 to-transparent rounded-full blur-3xl opacity-80 animate-pulse-subtle" />
-        <div className="absolute top-24 right-10 w-[440px] h-[440px] bg-gradient-to-bl from-[#FDE047]/15 via-[#B8860B]/15 to-transparent rounded-full blur-3xl opacity-70" />
-      </div>
-
-      {/* Decorative Golden Ribbon Wave at Bottom */}
-      <svg
-        className="absolute bottom-0 left-0 w-full pointer-events-none opacity-25 z-0"
-        viewBox="0 0 1440 260"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="none"
-      >
-        <path
-          d="M0 160 C 360 80, 720 220, 1080 120 C 1260 70, 1380 110, 1440 90 L 1440 260 L 0 260 Z"
-          fill="url(#niaHomeGoldWave)"
-        />
-        <defs>
-          <linearGradient id="niaHomeGoldWave" x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#9A7B2C" />
-            <stop offset="50%" stopColor="#FDE047" />
-            <stop offset="100%" stopColor="#D4AF37" />
-          </linearGradient>
-        </defs>
-      </svg>
 
       {/* ========================================================= */}
       {/* 1. TOP NAVIGATION BAR (OBSIDIAN & METALLIC GOLD)          */}
@@ -297,11 +276,28 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         )}
       </header>
+      {/* ========================================================= */}
+      {/* 2. HERO SECTION (400vh SCROLL-LINKED SEQUENCE TRACK)       */}
+      {/* ========================================================= */}
+      <div ref={heroTrackRef} className="relative h-[400vh] w-full">
+        {/* Sticky Viewport Container directly below sticky header */}
+        <div className="sticky top-20 h-[calc(100vh-5rem)] w-full overflow-hidden flex flex-col justify-center">
+          {/* Scroll-Linked Image Sequence Canvas (Behind the UI) */}
+          <ScrollImageSequenceCanvas
+            scrollProgress={heroScrollProgress}
+            totalFrames={70}
+            className="absolute inset-0 z-0 pointer-events-none"
+          />
 
-      {/* ========================================================= */}
-      {/* 2. HERO SECTION (NIA GROUP MOTTO, CREST & LIVE PORTAL)    */}
-      {/* ========================================================= */}
-      <section className="relative z-10 pt-10 sm:pt-14 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Ambient Gold Spotlight Glows (Preserved from existing) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none overflow-hidden z-0">
+            <div className="absolute -top-32 left-1/4 w-[520px] h-[520px] bg-gradient-to-br from-[#D4AF37]/20 via-[#F59E0B]/12 to-transparent rounded-full blur-3xl opacity-80 animate-pulse-subtle" />
+            <div className="absolute top-24 right-10 w-[440px] h-[440px] bg-gradient-to-bl from-[#FDE047]/15 via-[#B8860B]/15 to-transparent rounded-full blur-3xl opacity-70" />
+          </div>
+
+          {/* Exact Hero Section UI from existing code (100% UNCHANGED) */}
+          <div className="relative z-10 w-full my-auto">
+<section className="relative z-10 pt-10 sm:pt-14 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
           {/* Left Column: NIA Group Identity, Motto & CTAs */}
           <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
@@ -482,6 +478,10 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         </div>
       </section>
+          </div>
+        </div>
+      </div>
+
 
       {/* ========================================================= */}
       {/* 3. INSTITUTIONAL METRICS STRIP (GOLD & OBSIDIAN)          */}
