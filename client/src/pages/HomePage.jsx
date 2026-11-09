@@ -27,7 +27,11 @@ import {
   MapPin,
   Mail,
   Phone,
-  ExternalLink
+  ExternalLink,
+  Layers,
+  Monitor,
+  Zap,
+  Share2
 } from 'lucide-react';
 import { ApexBrandLogo } from '../components/ApexBrandLogo';
 
@@ -181,71 +185,60 @@ export default function HomePage({ onNavigateToAuth }) {
     <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-clip">
 
       {/* ========================================================= */}
-      {/* 1. TOP NAVIGATION BAR (OBSIDIAN & METALLIC GOLD)          */}
+      {/* 1. TOP NAVIGATION BAR (EXACT SCREENSHOT DESIGN)           */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-50 bg-[#080C16]/90 backdrop-blur-md border-b border-[#D4AF37]/25 transition-all">
+      <header className="sticky top-0 z-50 bg-[#080C16]/80 backdrop-blur-md border-b border-[#D4AF37]/20 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Official NIA Crest Logo & Alliance Tag */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          {/* Left: Official NIA Crest & Brand Identity with Divider */}
+          <div className="flex items-center">
             <ApexBrandLogo size="md" subtitle="GROUP OF COMPANY" lightText showAllianceTag />
-            <div className="hidden xl:flex items-center gap-2 pl-3 border-l border-[#D4AF37]/25">
-              <span className="w-2 h-2 rounded-full bg-[#FDE047] animate-ping" />
-              <span className="text-xs font-semibold text-[#F3E5AB] tracking-wide">
-                E-STD 2022 • Shareholder & Equity Registry
-              </span>
-            </div>
+            <div className="hidden lg:block h-7 w-px bg-[#D4AF37]/40 ml-4" />
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-300">
+          {/* Center Navigation Links (Exact from Screenshot) */}
+          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-200">
+            {/* Active Link: Home with Gold Underline */}
             <button
-              onClick={() => scrollToSection('official-announcement')}
-              className="text-[#FDE047] hover:text-amber-300 transition-colors cursor-pointer font-bold"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="text-[#FDE047] font-bold cursor-pointer relative pb-1 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FDE047] transition-all"
             >
-              Official Announcement
+              Home
             </button>
             <button
               onClick={() => scrollToSection('divisions')}
               className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Our Sectors
+              About NIA
+            </button>
+            <button
+              onClick={() => scrollToSection('official-announcement')}
+              className="hover:text-[#FDE047] transition-colors cursor-pointer"
+            >
+              Our Network
             </button>
             <button
               onClick={() => scrollToSection('features')}
               className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Portal Capabilities
-            </button>
-            <button
-              onClick={() => scrollToSection('modules')}
-              className="hover:text-[#FDE047] transition-colors cursor-pointer"
-            >
-              Workspaces
+              Shareholder Portal
             </button>
             <button
               onClick={() => scrollToSection('contact')}
               className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Important Instructions
+              Governance
             </button>
           </nav>
 
-          {/* Action CTAs */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Right Action: Sign In to Portal Pill Button */}
+          <div className="hidden sm:flex items-center">
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="px-4 py-2 text-xs font-bold text-[#F3E5AB] hover:text-[#FDE047] transition-colors cursor-pointer"
-            >
-              Staff SSO
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateToAuth('signin')}
-              className="group px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 text-xs font-extrabold shadow-[0_8px_25px_rgba(212,175,55,0.35)] flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="group px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 text-xs font-extrabold shadow-[0_4px_20px_rgba(212,175,55,0.4)] flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <span>Sign In to Portal</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-slate-950 font-bold" />
             </button>
           </div>
 
@@ -254,7 +247,7 @@ export default function HomePage({ onNavigateToAuth }) {
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold cursor-pointer"
             >
               Sign In
             </button>
@@ -277,41 +270,41 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
             <div className="flex flex-col space-y-3 text-sm font-medium text-slate-200">
               <button
-                onClick={() => scrollToSection('official-announcement')}
-                className="text-left py-1 text-[#FDE047] font-bold hover:text-amber-300 transition-colors"
+                onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="text-left py-1 text-[#FDE047] font-bold"
               >
-                Official Announcement (60 Digital Branches)
+                Home
               </button>
               <button
                 onClick={() => scrollToSection('divisions')}
                 className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                6 Business Sectors
+                About NIA
+              </button>
+              <button
+                onClick={() => scrollToSection('official-announcement')}
+                className="text-left py-1 hover:text-[#FDE047] transition-colors"
+              >
+                Our Network (60 Digital Branches)
               </button>
               <button
                 onClick={() => scrollToSection('features')}
                 className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Portal Capabilities
-              </button>
-              <button
-                onClick={() => scrollToSection('modules')}
-                className="text-left py-1 hover:text-[#FDE047] transition-colors"
-              >
-                Enterprise Workspaces
+                Shareholder Portal
               </button>
               <button
                 onClick={() => scrollToSection('contact')}
                 className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Important Instructions & Disclaimers
+                Governance
               </button>
             </div>
             <div className="pt-3 border-t border-[#D4AF37]/20 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 font-extrabold text-sm shadow-md flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#FDE047] text-slate-950 font-extrabold text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <span>Access Shareholder Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
@@ -339,239 +332,178 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
 
           {/* ========================================================= */}
-          {/* STAGE 1: OFFICIAL HERO SECTION (100% UNCHANGED CONTENT)   */}
+          {/* STAGE 1: EXACT SCREENSHOT DESIGN (HERO & DIGITAL NETWORK) */}
           {/* ========================================================= */}
           <div
             className="absolute inset-0 flex flex-col justify-center"
             style={chapter1Style}
           >
             <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
-<section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
-          {/* Left Column: NIA Group Identity, Motto & CTAs */}
-          <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/80 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg">
-              <Sparkles className="w-3.5 h-3.5 text-[#FDE047]" />
-              <span className="tracking-wider uppercase">
-                Nexus International Alliance • E-STD 2022
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs sm:text-sm font-extrabold tracking-[0.25em] uppercase text-[#D4AF37] drop-shadow-md">
-                — Building A Better Tomorrow Together —
-              </p>
-              <h1
-                className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)]"
-                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
-              >
-                NIA GROUP
-                <br />
-                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
-                  SHAREHOLDER PORTAL
-                </span>
-              </h1>
-            </div>
-
-            {/* Reduced, crisp, punchy text */}
-            <p className="text-sm sm:text-base text-slate-100 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              Official institutional equity registry and shareholder governance gateway for{' '}
-              <strong className="text-[#FDE047] font-bold">NIA Group of Company</strong>.
-            </p>
-
-            {/* CTAs */}
-            <div className="pt-1 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
-              <button
-                type="button"
-                onClick={() => onNavigateToAuth('signin')}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <span>Enter Shareholder Portal</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => scrollToSection('official-announcement')}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#080C16]/80 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Bell className="w-4 h-4 text-[#FDE047]" />
-                <span>60 Digital Branches Notice</span>
-              </button>
-            </div>
-
-            {/* Compact Sleek Trust Badges */}
-            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 max-w-lg mx-auto lg:mx-0">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#FDE047] text-xs font-semibold backdrop-blur-md shadow">
-                <Globe className="w-3.5 h-3.5" />
-                <span>60 Digital Locations</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#D4AF37] text-xs font-semibold backdrop-blur-md shadow">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>All 25 Districts</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-amber-300 text-xs font-semibold backdrop-blur-md shadow">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>100% Digital Operations</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-emerald-400 text-xs font-semibold backdrop-blur-md shadow">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>One Connected Organization</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Right Column: Low-Text, Ultra-Transparent Cinematic Telemetry HUD (3D Building Fully Visible) */}
-          <div className="w-full lg:w-6/12 relative">
-            <div className="relative mx-auto max-w-lg rounded-3xl bg-black/20 border border-[#D4AF37]/35 p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-[#D4AF37]/60 transition-all">
-              {/* Top Live Telemetry Status Header */}
-              <div className="flex items-center justify-between pb-3.5 border-b border-[#D4AF37]/20 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FDE047] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FDE047]"></span>
-                  </div>
-                  <span className="font-extrabold text-[#FDE047] tracking-wider uppercase text-[11px]">
-                    Live Digital Network Telemetry
-                  </span>
-                </div>
-                <div className="px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-[10px] flex items-center gap-1.5 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>System Active</span>
-                </div>
-              </div>
-
-              {/* 4 Low-Text Visual Metric Dials */}
-              <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {/* Metric 1 */}
-                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
-                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1">
-                    <Globe className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-[#FDE047] font-mono-num leading-none">
-                    60
-                  </div>
-                  <div className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide mt-1">
-                    Locations
-                  </div>
-                  <div className="text-[9px] text-[#D4AF37] mt-0.5">Islandwide</div>
-                </div>
-
-                {/* Metric 2 */}
-                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
-                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-slate-200 mb-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-white font-mono-num leading-none">
-                    25
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-200 uppercase tracking-wide mt-1">
-                    Districts
-                  </div>
-                  <div className="text-[9px] text-slate-400 mt-0.5">All SL Regions</div>
-                </div>
-
-                {/* Metric 3 */}
-                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
-                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-amber-300 mb-1">
-                    <Building2 className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-white font-mono-num leading-none">
-                    05
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-200 uppercase tracking-wide mt-1">
-                    Capital Hubs
-                  </div>
-                  <div className="text-[9px] text-[#D4AF37] mt-0.5">Commercial Core</div>
-                </div>
-
-                {/* Metric 4 */}
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-transparent border border-[#FDE047]/45 backdrop-blur-md text-center">
-                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#FDE047]/20 flex items-center justify-center text-[#FDE047] mb-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-[#FDE047] font-mono-num leading-none">
-                    100%
-                  </div>
-                  <div className="text-[10px] font-bold text-[#FDE047] uppercase tracking-wide mt-1">
-                    Digital
-                  </div>
-                  <div className="text-[9px] text-[#F3E5AB] mt-0.5">Maker-Checker</div>
-                </div>
-              </div>
-
-              {/* Visual 25-District Micro-Matrix Indicator */}
-              <div className="mt-3.5 p-3 rounded-2xl bg-white/[0.03] border border-[#D4AF37]/25 backdrop-blur-md">
-                <div className="flex items-center justify-between text-[11px] font-bold text-[#F3E5AB] mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-[#FDE047]" />
-                    <span>25 Districts Islandwide Connectivity Matrix</span>
-                  </div>
-                  <span className="text-[#FDE047] font-mono text-[10px]">25 / 25 Linked</span>
-                </div>
-                {/* 25 glowing micro dots representing the 25 administrative districts */}
-                <div className="grid grid-cols-5 sm:grid-cols-13 gap-1.5 py-1">
-                  {Array.from({ length: 25 }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="h-2 rounded-full bg-[#D4AF37]/40 border border-[#FDE047]/60 shadow-[0_0_8px_rgba(253,224,71,0.35)] transition-all hover:bg-[#FDE047] hover:scale-125"
-                      title={`District ${idx + 1} Digital Link Active`}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#D4AF37]/15 text-[10px] text-slate-300">
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                    <span>Digital Branch Operations Active</span>
-                  </span>
-                  <span className="text-[#F3E5AB]">Zero Physical Branch Visits</span>
-                </div>
-              </div>
-
-              {/* Low-Text Notice Capsule with 1-Click Action */}
-              <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-[#D4AF37]/10 via-transparent to-[#F59E0B]/10 border border-[#D4AF37]/30 backdrop-blur-md flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] shrink-0">
-                    <Bell className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <div className="text-xs font-bold text-white truncate">
-                      Official Transition Notice
+              <section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
+                  {/* Left Column: Exact Screenshot Typography, Buttons & Badges */}
+                  <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
+                    {/* Top Pill Badge */}
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-[#D4AF37]/60 backdrop-blur-md text-xs font-semibold text-[#FDE047] tracking-[0.16em] uppercase shadow-lg">
+                      <span>NEXUS INTERNATIONAL ALLIANCE • EST. 2022</span>
                     </div>
-                    <div className="text-[10px] text-[#F3E5AB]/85 truncate">
-                      60 Locations • Digital System Guidelines
+
+                    {/* Motto */}
+                    <div className="space-y-2">
+                      <p className="text-xs sm:text-sm font-extrabold tracking-[0.25em] uppercase text-[#D4AF37] drop-shadow-md">
+                        — CONNECTING PEOPLE. BUILDING THE FUTURE. —
+                      </p>
+                      <h1
+                        className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                        style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+                      >
+                        NIA GROUP
+                        <br />
+                        <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
+                          SHAREHOLDER PORTAL
+                        </span>
+                      </h1>
+                    </div>
+
+                    {/* Exact Description Text from Screenshot */}
+                    <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                      Your secure gateway to shareholdings, investment insights, and corporate governance.
+                    </p>
+
+                    {/* Exact CTA Buttons from Screenshot */}
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
+                      <button
+                        type="button"
+                        onClick={() => onNavigateToAuth('signin')}
+                        className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#E6C65B] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 font-extrabold text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <span>Access Your Dashboard</span>
+                        <ArrowRight className="w-4 h-4 text-slate-950 font-bold" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => scrollToSection('official-announcement')}
+                        className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-black/40 hover:bg-black/60 border border-[#D4AF37]/60 hover:border-[#FDE047] text-white font-bold text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        <span>Explore Our Network</span>
+                        <ArrowRight className="w-4 h-4 text-[#FDE047]" />
+                      </button>
+                    </div>
+
+                    {/* Exact 3 Badges from Screenshot */}
+                    <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-200">
+                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
+                        <ShieldCheck className="w-4 h-4 text-[#FDE047]" />
+                        <span>Secure Access</span>
+                      </span>
+                      <span className="text-[#D4AF37]/40 hidden sm:inline">|</span>
+                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
+                        <Share2 className="w-4 h-4 text-[#FDE047]" />
+                        <span>Digital Network</span>
+                      </span>
+                      <span className="text-[#D4AF37]/40 hidden sm:inline">|</span>
+                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
+                        <BarChart3 className="w-4 h-4 text-[#FDE047]" />
+                        <span>Equity Insights</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Exact "NIA DIGITAL NETWORK" Card from Screenshot */}
+                  <div className="w-full lg:w-6/12 relative">
+                    <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/40 border border-[#D4AF37]/45 p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+                      {/* Top Header: Layers Icon & Title */}
+                      <div className="flex items-center gap-3 pb-5">
+                        <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                          <Layers className="w-5 h-5" />
+                        </div>
+                        <h2
+                          className="text-lg sm:text-xl font-extrabold text-[#FDE047] tracking-wider uppercase drop-shadow-md"
+                          style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+                        >
+                          NIA DIGITAL NETWORK
+                        </h2>
+                      </div>
+
+                      {/* 4 Exact Grid Tiles (2x2) */}
+                      <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
+                        {/* Tile 1: 60 Digital Locations */}
+                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                            60
+                          </div>
+                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                            Digital Locations
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+                        </div>
+
+                        {/* Tile 2: 25 Districts Covered */}
+                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
+                            <Layers className="w-4 h-4" />
+                          </div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                            25
+                          </div>
+                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                            Districts Covered
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+                        </div>
+
+                        {/* Tile 3: 05 Capital Hubs */}
+                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                            05
+                          </div>
+                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                            Capital Hubs
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+                        </div>
+
+                        {/* Tile 4: 100% Digital Operations */}
+                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
+                            <Monitor className="w-4 h-4" />
+                          </div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                            100%
+                          </div>
+                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                            Digital Operations
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+                        </div>
+                      </div>
+
+                      {/* Bottom Footer inside Card (Exact 3 Badges from Screenshot) */}
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/25 flex items-center justify-between text-xs text-[#F3E5AB]">
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-[#FDE047]" />
+                          <span className="font-medium text-[11px] sm:text-xs">256-Bit Security</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-[#FDE047]" />
+                          <span className="font-medium text-[11px] sm:text-xs">Dual Control</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-[#FDE047]" />
+                          <span className="font-medium text-[11px] sm:text-xs">Instant SSO</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('official-announcement')}
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 hover:scale-[1.03] active:scale-[0.98]"
-                >
-                  <span>View Notice</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* Micro Quick Accents */}
-              <div className="mt-3 flex items-center justify-between text-[10px] text-slate-300 px-1">
-                <span className="flex items-center gap-1 text-[#F3E5AB]">
-                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
-                  <span>256-Bit Ledger</span>
-                </span>
-                <span className="flex items-center gap-1 text-[#F3E5AB]">
-                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
-                  <span>Dual Control</span>
-                </span>
-                <span className="flex items-center gap-1 text-[#F3E5AB]">
-                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
-                  <span>Instant SSO</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              </section>
             </div>
           </div>
 
