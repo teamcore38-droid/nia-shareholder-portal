@@ -43,20 +43,23 @@ export default function ScrollImageSequenceCanvas({
     }
 
     // 1. Progressive Image Preloading
-    // Frame 1 is prioritized for instant initial render
+    // Frame 1 is prioritized for instant initial render (cached or fresh)
     const frame1 = new Image();
-    frame1.src = framePath(1);
     frame1.onload = () => {
       imagesCache.current[1] = frame1;
       needsRedrawRef.current = true;
     };
+    frame1.src = framePath(1);
+    if (frame1.complete && frame1.naturalWidth > 0) {
+      imagesCache.current[1] = frame1;
+      needsRedrawRef.current = true;
+    }
 
     // Load remaining frames in sequence without blocking the main thread
     let idlePreloadId;
     const preloadRest = () => {
       for (let i = 2; i <= totalFrames; i++) {
         const img = new Image();
-        img.src = framePath(i);
         img.onload = () => {
           imagesCache.current[i] = img;
           const currentRounded = Math.round(currentFrameRef.current);
@@ -64,13 +67,17 @@ export default function ScrollImageSequenceCanvas({
             needsRedrawRef.current = true;
           }
         };
+        img.src = framePath(i);
+        if (img.complete && img.naturalWidth > 0) {
+          imagesCache.current[i] = img;
+        }
       }
     };
 
     if ('requestIdleCallback' in window) {
-      idlePreloadId = window.requestIdleCallback(preloadRest, { timeout: 1500 });
+      idlePreloadId = window.requestIdleCallback(preloadRest, { timeout: 1000 });
     } else {
-      setTimeout(preloadRest, 50);
+      setTimeout(preloadRest, 40);
     }
 
     // 2. Responsive Canvas Sizing (with Retina DPR support)
@@ -142,9 +149,7 @@ export default function ScrollImageSequenceCanvas({
         offsetY = 0;
       }
 
-      // Clear with background color and draw image
-      ctx.fillStyle = '#080C16';
-      ctx.fillRect(0, 0, cWidth, cHeight);
+      // Draw image filling entire canvas
       ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
     };
 
@@ -191,16 +196,21 @@ export default function ScrollImageSequenceCanvas({
 
   return (
     <div className={`relative overflow-hidden bg-[#080C16] ${className}`}>
-      {/* Hardware-accelerated canvas */}
+      {/* Hardware-accelerated canvas (fills 100% of container) */}
       <canvas
         ref={canvasRef}
         className="w-full h-full block object-cover select-none"
         style={{ willChange: 'transform' }}
       />
 
-      {/* Seamless luxury vignette & gradient edge blending (zero visible borders) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#080C16]/85 via-transparent to-[#080C16] pointer-events-none z-10" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#080C16]/75 via-transparent to-[#080C16]/75 pointer-events-none z-10" />
+      {/* Subtle luxury darkening overlay so text is readable, but the 3D scene is 100% visible */}
+      <div className="absolute inset-0 bg-[#080C16]/30 pointer-events-none z-10" />
+
+      {/* Top subtle fade under navbar */}
+      <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-[#080C16]/80 to-transparent pointer-events-none z-10" />
+
+      {/* Bottom subtle edge blend */}
+      <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-[#080C16] via-[#080C16]/40 to-transparent pointer-events-none z-10" />
     </div>
   );
 }

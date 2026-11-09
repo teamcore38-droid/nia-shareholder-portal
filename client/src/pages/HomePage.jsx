@@ -52,8 +52,8 @@ export default function HomePage({ onNavigateToAuth }) {
       const totalScrollable = el.offsetHeight - window.innerHeight;
       if (totalScrollable <= 0) return;
 
-      const scrolled = -rect.top;
-      const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
+      const scrolled = Math.max(0, -rect.top + 80);
+      const progress = Math.min(1, scrolled / totalScrollable);
       setHeroScrollProgress(progress);
     };
 
@@ -297,7 +297,7 @@ export default function HomePage({ onNavigateToAuth }) {
 
           {/* Exact Hero Section UI from existing code (100% UNCHANGED) */}
           <div className="relative z-10 w-full my-auto">
-<section className="relative z-10 pt-10 sm:pt-14 pb-16 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
           {/* Left Column: NIA Group Identity, Motto & CTAs */}
           <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
