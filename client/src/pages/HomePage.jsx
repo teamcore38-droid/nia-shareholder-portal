@@ -33,13 +33,6 @@ import { ApexBrandLogo } from '../components/ApexBrandLogo';
 export default function HomePage({ onNavigateToAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Interactive Holding Calculator State
-  const [simulatedShares, setSimulatedShares] = useState(12500);
-  const sharePrice = 125.0; // LKR
-  const totalIssuedShares = 1000000;
-  const simulatedValue = simulatedShares * sharePrice;
-  const simulatedOwnership = ((simulatedShares / totalIssuedShares) * 100).toFixed(2);
-
   // Active showcase tab: 'shareholder' | 'governance' | 'documents'
   const [activeTab, setActiveTab] = useState('shareholder');
 
@@ -88,24 +81,24 @@ export default function HomePage({ onNavigateToAuth }) {
 
   const faqs = [
     {
-      q: 'How do I log in to my NIA Group Shareholder account?',
-      a: 'You can sign in using either your unique Shareholder ID (e.g. SH-001) or your registered email address alongside your secure password. If your email was newly enrolled by the registry, select "Activate Invite" to set your permanent credentials.'
+      q: 'What is the 60 Digital Branch Locations – Islandwide Coverage initiative?',
+      a: 'Following the closure of physical branch offices, Nexus International Alliance (NIA) is transitioning towards a fully digital branch operating system. Our planned network of 60 Digital Branch Locations covers all 25 administrative districts of Sri Lanka, major commercial areas, and five dedicated Digital Branch Locations in the capital city—operating through our official website, software systems, applications, and authorized digital communication channels.'
     },
     {
-      q: 'Are the statements and valuation certificates legally recognized?',
-      a: 'Yes. All Share Holding Statements, Share Register Extracts, and Valuation Notices exported from the NIA Group portal include certified digital cryptographic metadata, authorized registry seals, and timestamp verification.'
+      q: 'Do the 60 Digital Branch Locations represent 60 new physical office buildings?',
+      a: 'No. Please understand that these 60 locations are part of our planned digital branch network and do not represent 60 new physical office buildings. All official digital branch locations, operating details, department information, and service access instructions will be announced through our official company website once the development and verification process is completed.'
     },
     {
-      q: 'How are share valuations updated in the system?',
-      a: 'Valuations are managed under a strict dual-control (Maker-Checker) protocol. A Data Officer enters the new board-approved value per share and attaches board resolution evidence; an authorized Approver reviews and formally publishes it across the registry.'
+      q: 'Can I visit or send documents/parcels to previous physical branch addresses?',
+      a: 'No. Please do not visit previous physical branch addresses for company services, and do not send documents or parcels to any previous branch address without management approval. Contact the relevant department through our authorized digital channels for official postal delivery instructions.'
     },
     {
-      q: 'What should I do if my registered contact details change?',
-      a: 'Once logged in to the portal, navigate to the Support tab to submit an authenticated Change of Particulars request directly to the NIA Group Corporate Registry desk in Battaramulla.'
+      q: 'How do I log in to my NIA Group Shareholder or Staff account?',
+      a: 'You can sign in using either your unique Shareholder ID or your registered email address alongside your secure password. If your email was newly enrolled by the registry, select "Activate Invite" to set your permanent credentials.'
     },
     {
-      q: 'How is shareholder data and equity information secured?',
-      a: 'The portal utilizes 256-bit bank-grade encryption in transit and at rest, HttpOnly same-site session handling, multi-factor authentication (2FA) for administrative staff, and an immutable ledger audit trail.'
+      q: 'How are share valuations and registry records secured in the digital system?',
+      a: 'Valuations and share movements are managed under a strict dual-control (Maker-Checker) protocol with 256-bit encryption, multi-factor staff verification, and an immutable ledger audit trail.'
     }
   ];
 
@@ -183,16 +176,16 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-300">
             <button
+              onClick={() => scrollToSection('official-announcement')}
+              className="text-[#FDE047] hover:text-amber-300 transition-colors cursor-pointer font-bold"
+            >
+              Official Announcement
+            </button>
+            <button
               onClick={() => scrollToSection('divisions')}
               className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
               Our Sectors
-            </button>
-            <button
-              onClick={() => scrollToSection('simulator')}
-              className="hover:text-[#FDE047] transition-colors cursor-pointer"
-            >
-              Holdings Calculator
             </button>
             <button
               onClick={() => scrollToSection('features')}
@@ -210,7 +203,7 @@ export default function HomePage({ onNavigateToAuth }) {
               onClick={() => scrollToSection('contact')}
               className="hover:text-[#FDE047] transition-colors cursor-pointer"
             >
-              Headquarters
+              Important Instructions
             </button>
           </nav>
 
@@ -261,16 +254,16 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
             <div className="flex flex-col space-y-3 text-sm font-medium text-slate-200">
               <button
+                onClick={() => scrollToSection('official-announcement')}
+                className="text-left py-1 text-[#FDE047] font-bold hover:text-amber-300 transition-colors"
+              >
+                Official Announcement (60 Digital Branches)
+              </button>
+              <button
                 onClick={() => scrollToSection('divisions')}
                 className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
                 6 Business Sectors
-              </button>
-              <button
-                onClick={() => scrollToSection('simulator')}
-                className="text-left py-1 hover:text-[#FDE047] transition-colors"
-              >
-                Holdings Calculator
               </button>
               <button
                 onClick={() => scrollToSection('features')}
@@ -288,7 +281,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 onClick={() => scrollToSection('contact')}
                 className="text-left py-1 hover:text-[#FDE047] transition-colors"
               >
-                Headquarters & Contact
+                Important Instructions & Disclaimers
               </button>
             </div>
             <div className="pt-3 border-t border-[#D4AF37]/20 flex flex-col gap-2.5">
@@ -354,39 +347,39 @@ export default function HomePage({ onNavigateToAuth }) {
 
               <button
                 type="button"
-                onClick={() => scrollToSection('simulator')}
+                onClick={() => scrollToSection('official-announcement')}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#080C16]/80 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
               >
-                <PieChart className="w-4 h-4 text-[#FDE047]" />
-                <span>Simulate Holdings</span>
+                <Bell className="w-4 h-4 text-[#FDE047]" />
+                <span>60 Digital Branches Notice</span>
               </button>
             </div>
 
             {/* Compact Sleek Trust Badges */}
             <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 max-w-lg mx-auto lg:mx-0">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#FDE047] text-xs font-semibold backdrop-blur-md shadow">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>256-Bit TLS</span>
+                <Globe className="w-3.5 h-3.5" />
+                <span>60 Digital Locations</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-[#D4AF37] text-xs font-semibold backdrop-blur-md shadow">
-                <BarChart3 className="w-3.5 h-3.5" />
-                <span>Stepped Value</span>
+                <MapPin className="w-3.5 h-3.5" />
+                <span>All 25 Districts</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-amber-300 text-xs font-semibold backdrop-blur-md shadow">
-                <FileText className="w-3.5 h-3.5" />
-                <span>Certified PDF</span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>100% Digital Operations</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#080C16]/80 border border-[#D4AF37]/35 text-emerald-400 text-xs font-semibold backdrop-blur-md shadow">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Dual Control</span>
+                <span>One Connected Organization</span>
               </span>
             </div>
           </div>
 
-          {/* Right Column: NIA Crest + Live Gold-Themed Dashboard Mockup */}
+          {/* Right Column: Official Digital Transformation & 60 Digital Branch Network Summary Card */}
           <div className="w-full lg:w-6/12 relative">
-            <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/95 border-2 border-[#D4AF37]/40 p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-xl">
-              {/* Top Gold Header inside Mockup */}
+            <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/95 border-2 border-[#D4AF37]/50 p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+              {/* Top Gold Header */}
               <div className="flex items-center justify-between pb-4 border-b border-[#D4AF37]/25 text-xs">
                 <div className="flex items-center gap-3">
                   <img
@@ -395,130 +388,93 @@ export default function HomePage({ onNavigateToAuth }) {
                     className="w-10 h-10 rounded-full border border-[#D4AF37] object-contain bg-black"
                   />
                   <div>
-                    <div className="font-extrabold text-[#FDE047] tracking-wide">
-                      Shareholder SH-001
+                    <div className="font-extrabold text-[#FDE047] tracking-wide uppercase">
+                      Official Company Announcement
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      NIA Group of Company • Ordinary Share Register
+                    <div className="text-[11px] text-slate-300">
+                      Nexus International Alliance (NIA) • Management Team
                     </div>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] font-bold text-[11px] flex items-center gap-1.5">
+                <div className="px-2.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] font-bold text-[11px] flex items-center gap-1.5 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#FDE047]" />
-                  <span>Verified</span>
+                  <span>Islandwide</span>
                 </div>
               </div>
 
-              {/* 4 Gold & Obsidian KPI Cards */}
+              {/* 4 Key Network Highlights */}
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
                   <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Shares Held
-                  </span>
-                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
-                    12,500
-                  </div>
-                  <span className="text-[10px] text-[#D4AF37]">Ordinary Units</span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
-                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Ownership
+                    Network
                   </span>
                   <div className="text-base sm:text-lg font-extrabold text-[#FDE047] font-mono-num mt-0.5">
-                    1.25%
+                    60
                   </div>
-                  <span className="text-[10px] text-slate-400">of 1,000,000</span>
+                  <span className="text-[10px] text-[#D4AF37]">Digital Locations</span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
                   <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Value / Share
+                    Coverage
                   </span>
                   <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
-                    LKR 125.00
+                    25
                   </div>
-                  <span className="text-[10px] text-[#D4AF37]">Board Approved</span>
+                  <span className="text-[10px] text-slate-300">SL Districts</span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
+                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
+                    Capital City
+                  </span>
+                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
+                    5
+                  </div>
+                  <span className="text-[10px] text-[#D4AF37]">Digital Branches</span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-gradient-to-br from-[#D4AF37]/25 to-[#B8860B]/10 border border-[#FDE047]/50">
                   <span className="text-[10px] font-bold text-[#FDE047] uppercase tracking-wide">
-                    Holding Value
+                    Access
                   </span>
-                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] font-mono-num mt-0.5">
-                    1.56M
+                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] mt-0.5">
+                    100%
                   </div>
-                  <span className="text-[10px] text-[#F3E5AB]">LKR 1,562,500</span>
+                  <span className="text-[10px] text-[#F3E5AB]">Digital System</span>
                 </div>
               </div>
 
-              {/* Golden Stepped Valuation Curve */}
-              <div className="mt-4 p-4 rounded-2xl bg-[#101726] border border-[#D4AF37]/25">
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <div className="font-bold text-[#F3E5AB] flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#FDE047]" />
-                    <span>Holding Value Over Time</span>
-                  </div>
-                  <div className="text-[11px] text-[#FDE047] font-mono-num font-bold">
-                    +25.0% Growth
-                  </div>
+              {/* Official Transition & Clarification Summary */}
+              <div className="mt-4 p-4 rounded-2xl bg-[#101726] border border-[#D4AF37]/30 space-y-2.5 text-xs">
+                <div className="font-extrabold text-[#FDE047] uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-[#FDE047]" />
+                  <span>60 Digital Branch Locations – Islandwide Coverage</span>
                 </div>
-
-                <div className="relative h-28 w-full pt-2">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 380 90">
-                    <defs>
-                      <linearGradient id="niaHeroChartGold" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.48" />
-                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M 10 75 L 80 75 L 80 60 L 160 60 L 160 48 L 240 48 L 240 32 L 320 32 L 320 18 L 370 18 L 370 85 L 10 85 Z"
-                      fill="url(#niaHeroChartGold)"
-                    />
-                    <path
-                      d="M 10 75 L 80 75 L 80 60 L 160 60 L 160 48 L 240 48 L 240 32 L 320 32 L 320 18 L 370 18"
-                      fill="none"
-                      stroke="#FDE047"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="80" cy="60" r="3.5" fill="#D4AF37" />
-                    <circle cx="160" cy="48" r="3.5" fill="#D4AF37" />
-                    <circle cx="240" cy="32" r="3.5" fill="#D4AF37" />
-                    <circle
-                      cx="320"
-                      cy="18"
-                      r="4.5"
-                      fill="#FDE047"
-                      stroke="#080C16"
-                      strokeWidth="2"
-                    />
-                  </svg>
-
-                  <div className="absolute top-0 right-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-[#B8860B] to-[#D4AF37] text-slate-950 text-[10px] font-mono-num font-extrabold shadow-lg">
-                    LKR 1,562,500
-                  </div>
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono-num">
-                  <span>Jun 2026</span>
-                  <span>Aug 2026</span>
-                  <span>Oct 2026</span>
-                  <span className="text-[#FDE047] font-bold">Nov 2026</span>
+                <p className="text-slate-200 leading-relaxed">
+                  Following the closure of our physical branch offices, our company is transitioning
+                  towards a fully digital branch operating system designed to provide services and
+                  support across Sri Lanka.
+                </p>
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-[#D4AF37]/40 text-[#F3E5AB] text-[11px] leading-relaxed">
+                  <strong className="text-[#FDE047]">Important Clarification:</strong> These 60
+                  locations are part of our planned digital branch network. They do not represent 60
+                  new physical office buildings. Do not visit or send documents/parcels to previous
+                  physical branch addresses without management approval.
                 </div>
               </div>
 
               {/* Bottom Quick Row */}
               <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center justify-between text-xs text-slate-300">
-                <span className="text-[11px] text-slate-400">
-                  Latest Allocation: <strong className="text-[#F3E5AB]">+2,500 Ordinary Shares</strong>
+                <span className="text-[11px] text-[#F3E5AB] font-semibold">
+                  60 Digital Locations. 25 Districts. One Connected Organization.
                 </span>
                 <button
                   type="button"
-                  onClick={() => onNavigateToAuth('signin')}
-                  className="text-[#FDE047] hover:text-amber-200 font-extrabold flex items-center gap-1 cursor-pointer"
+                  onClick={() => scrollToSection('official-announcement')}
+                  className="text-[#FDE047] hover:text-amber-200 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 ml-2"
                 >
-                  <span>Sign In</span>
+                  <span>Read Full Notice</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -534,39 +490,199 @@ export default function HomePage({ onNavigateToAuth }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num">
-                1,000,000
-              </div>
-              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
-                Issued Ordinary Shares
-              </p>
-            </div>
-
-            <div>
               <div className="text-2xl sm:text-3xl font-extrabold text-[#FDE047] font-mono-num">
-                LKR 125.00
+                60
               </div>
               <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
-                Current Value Per Share
+                Digital Branch Locations
               </p>
             </div>
 
             <div>
               <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num">
-                LKR 125.0M
+                25 Districts
               </div>
               <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
-                Indicative Enterprise Value
+                Islandwide Sri Lanka Coverage
               </p>
             </div>
 
             <div>
               <div className="text-2xl sm:text-3xl font-extrabold text-[#FDE047] font-mono-num">
+                5 Capital Hubs
+              </div>
+              <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
+                Dedicated Capital City Digital Branches
+              </p>
+            </div>
+
+            <div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num">
                 6 Sectors
               </div>
               <p className="text-xs text-[#D4AF37] mt-1 uppercase tracking-wider font-bold">
-                Diversified Group Portfolio
+                One Connected Organization
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* 3B. OFFICIAL COMPANY ANNOUNCEMENT & DISCLAIMERS           */}
+      {/* ========================================================= */}
+      <section
+        id="official-announcement"
+        className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      >
+        <div className="rounded-3xl bg-gradient-to-b from-[#0D1322] via-[#0B101E] to-[#080C16] border-2 border-[#D4AF37]/55 p-6 sm:p-10 lg:p-12 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-8">
+          {/* Announcement Header */}
+          <div className="border-b border-[#D4AF37]/30 pb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#FDE047] text-xs font-extrabold uppercase tracking-wider">
+                <Bell className="w-3.5 h-3.5" />
+                <span>Official Company Announcement</span>
+              </div>
+              <h2
+                className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight uppercase"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+              >
+                60 Digital Branch Locations – Islandwide Coverage
+              </h2>
+              <p className="text-xs sm:text-sm text-[#F3E5AB] font-semibold">
+                Issued by the Management Team • Nexus International Alliance (NIA)
+              </p>
+            </div>
+
+            <div className="px-4 py-3 rounded-2xl bg-[#080C16] border border-[#D4AF37]/40 text-xs text-slate-200 shrink-0">
+              <div className="font-extrabold text-[#FDE047] uppercase tracking-wider">
+                60 Digital Locations. 25 Districts.
+              </div>
+              <div className="text-slate-300 mt-0.5">
+                One Connected Organization • Moving Forward Across Sri Lanka
+              </div>
+            </div>
+          </div>
+
+          {/* Salutation & Intro */}
+          <div className="space-y-3 text-xs sm:text-sm text-slate-200 leading-relaxed">
+            <p className="font-bold text-[#FDE047] text-sm sm:text-base">
+              Dear All Work-from-Home Employees &amp; Stakeholders,
+            </p>
+            <p>
+              We are pleased to inform you about our company&apos;s upcoming digital transformation
+              and expansion plan. Following the closure of our physical branch offices, our company
+              is transitioning towards a <strong className="text-white">fully digital branch operating system</strong>,
+              designed to provide services and support across Sri Lanka.
+            </p>
+          </div>
+
+          {/* 2-Column Grid: Digital Branch Network + What Does This Mean */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl bg-[#080C16]/90 border border-[#D4AF37]/35 space-y-4">
+              <h3 className="text-base sm:text-lg font-extrabold text-[#FDE047] uppercase tracking-wide flex items-center gap-2">
+                <Globe className="w-5 h-5 text-[#FDE047]" />
+                <span>Our New Digital Branch Network</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300">
+                Our company is planning to establish a network of{' '}
+                <strong className="text-white">60 Digital Branch Locations</strong> covering:
+              </p>
+              <ul className="space-y-2.5 text-xs sm:text-sm text-slate-200">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                  <span>All 25 administrative districts of Sri Lanka.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                  <span>Major cities and important commercial areas throughout the country.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                  <span>Five dedicated Digital Branch Locations in the capital city.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                  <span>Islandwide digital access to company services and departmental support.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#080C16]/90 border border-[#D4AF37]/35 space-y-4 flex flex-col justify-between">
+              <div className="space-y-3">
+                <h3 className="text-base sm:text-lg font-extrabold text-[#FDE047] uppercase tracking-wide flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#FDE047]" />
+                  <span>What Does This Mean For Our Employees?</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                  Our Digital Branch Locations will operate through our official website, software
+                  systems, applications, and authorized digital communication channels.
+                </p>
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                  Employees will be able to access their relevant departmental services and receive
+                  company support digitally without needing to visit a physical branch.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-[#D4AF37]/45 space-y-1.5">
+                <div className="text-xs font-extrabold text-[#FDE047] uppercase tracking-wider">
+                  Important Clarification
+                </div>
+                <p className="text-xs text-[#F3E5AB] leading-relaxed">
+                  Please understand that these 60 locations are part of our planned digital branch
+                  network. <strong>They do not represent 60 new physical office buildings.</strong>{' '}
+                  All official digital branch locations, operating details, department information,
+                  and service access instructions will be announced through our official company
+                  website once the development and verification process is completed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Important Instructions (5 Mandatory Rules) */}
+          <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-r from-[#131B2E] via-[#0E1525] to-[#131B2E] border-2 border-[#D4AF37]/45 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-base sm:text-lg font-extrabold text-[#FDE047] uppercase tracking-wide">
+                Important Instructions &amp; Disclaimers
+              </h3>
+              <span className="text-xs font-bold text-amber-300">
+                Mandatory Compliance for All Employees &amp; Stakeholders
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs sm:text-sm">
+              {[
+                '1. Please do not visit previous physical branch addresses for company services.',
+                '2. Do not send documents or parcels to any previous branch address without management approval.',
+                '3. Contact the relevant department for authorized postal delivery instructions.',
+                '4. Follow only official company announcements and verified communication channels.',
+                '5. Continue your regular Work-from-Home responsibilities without interruption.'
+              ].map((inst, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-xl bg-[#080C16]/90 border border-[#D4AF37]/30 text-slate-100 font-medium leading-relaxed"
+                >
+                  {inst}
+                </div>
+              ))}
+              <div className="p-3.5 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/45 text-[#FDE047] font-bold leading-relaxed flex items-center">
+                We kindly request all employees to remain calm, confident, and cooperative during
+                this transition.
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-[#D4AF37]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
+              <p>
+                This is an important step towards building a modern, digitally connected
+                organization with nationwide service coverage. Thank you for your understanding,
+                dedication, and continued cooperation.
+              </p>
+              <div className="text-right shrink-0">
+                <div className="font-extrabold text-[#FDE047] uppercase">Management Team</div>
+                <div className="text-[#F3E5AB] font-semibold">
+                  Nexus International Alliance (NIA)
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -590,7 +706,8 @@ export default function HomePage({ onNavigateToAuth }) {
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2">
             Every ordinary share represents ownership across NIA Group’s six core operational
-            divisions headquartered in Battaramulla, Sri Lanka.
+            divisions connected through our islandwide digital branch operating system across all 25
+            administrative districts of Sri Lanka.
           </p>
         </div>
 
@@ -599,14 +716,14 @@ export default function HomePage({ onNavigateToAuth }) {
           <div className="lg:col-span-5 rounded-3xl overflow-hidden border-2 border-[#D4AF37]/45 bg-[#0B101E] shadow-2xl flex flex-col justify-between relative min-h-[460px]">
             <img
               src="/nia-building.jpg"
-              alt="NIA Group of Company Headquarters Building"
+              alt="NIA Group of Company Digital Network"
               className="absolute inset-0 w-full h-full object-cover object-center opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-[#060911]/45 to-transparent" />
 
             <div className="relative z-10 p-6 flex items-center justify-between">
               <span className="px-3 py-1 rounded-full bg-black/75 border border-[#D4AF37]/50 text-[#FDE047] text-[11px] font-bold tracking-wider uppercase backdrop-blur-md">
-                Corporate Headquarters
+                60 Digital Locations • 25 Districts
               </span>
               <img
                 src="/nia-logo.png"
@@ -617,17 +734,17 @@ export default function HomePage({ onNavigateToAuth }) {
 
             <div className="relative z-10 p-6 sm:p-7 space-y-2">
               <div className="text-xs font-extrabold tracking-[0.2em] uppercase text-[#FDE047]">
-                Nexus International Alliance
+                Nexus International Alliance (NIA)
               </div>
               <h3
                 className="text-2xl font-extrabold text-white uppercase"
                 style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
-                Building A Better Tomorrow Together
+                Moving Forward – Building a Digital Future Across Sri Lanka
               </h3>
               <p className="text-xs text-slate-200 flex items-center gap-1.5 pt-1">
-                <MapPin className="w-4 h-4 text-[#FDE047] shrink-0" />
-                <span>119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</span>
+                <Globe className="w-4 h-4 text-[#FDE047] shrink-0" />
+                <span>60 Digital Locations • 25 Districts • One Connected Organization</span>
               </p>
             </div>
           </div>
@@ -671,126 +788,67 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 5. INTERACTIVE HOLDINGS SIMULATOR (GOLD & OBSIDIAN)       */}
+      {/* 5. DIGITAL BRANCH NETWORK & WORK-FROM-HOME OPERATIONS     */}
       {/* ========================================================= */}
       <section id="simulator" className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold mb-3 uppercase tracking-wider">
-            <PieChart className="w-3.5 h-3.5" />
-            <span>Interactive Equity Calculator</span>
+            <Globe className="w-3.5 h-3.5" />
+            <span>Islandwide Digital Transformation</span>
           </div>
           <h2
             className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight"
             style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
           >
-            Estimate Your NIA Shareholding Value
+            60 Digital Locations. 25 Districts. One Connected Organization.
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2">
-            Slide or select a benchmark holding to calculate your proportional stake and indicative
-            value in NIA Group of Company.
+            Our Digital Branch Locations operate through our official website, software systems,
+            applications, and authorized digital communication channels.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto p-6 sm:p-9 rounded-3xl bg-[#0D1322]/95 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto p-6 sm:p-9 rounded-3xl bg-[#0D1322]/95 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-5">
-              <div>
-                <div className="flex justify-between text-xs font-bold text-slate-300 mb-2">
-                  <span>Number of Ordinary Shares</span>
-                  <span className="text-[#FDE047] font-mono-num text-sm font-extrabold">
-                    {simulatedShares.toLocaleString()} units
-                  </span>
+            <div className="space-y-4 text-xs sm:text-sm text-slate-200">
+              <div className="p-4 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-2">
+                <div className="font-extrabold text-[#FDE047] uppercase tracking-wider">
+                  Islandwide Service Coverage
                 </div>
-                <input
-                  type="range"
-                  min="500"
-                  max="100000"
-                  step="500"
-                  value={simulatedShares}
-                  onChange={(e) => setSimulatedShares(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#D4AF37]"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-mono-num">
-                  <span>500 shares</span>
-                  <span>50,000 shares</span>
-                  <span>100,000 shares</span>
-                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Covering all 25 administrative districts of Sri Lanka, major cities and commercial
+                  areas throughout the country, plus five dedicated Digital Branch Locations in the
+                  capital city.
+                </p>
               </div>
 
-              <div>
-                <span className="text-xs text-slate-400 font-semibold block mb-2">
-                  Quick Benchmark Holdings:
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[5000, 12500, 25000].map((units) => (
-                    <button
-                      key={units}
-                      type="button"
-                      onClick={() => setSimulatedShares(units)}
-                      className={`py-2 px-2 rounded-xl text-xs font-mono-num font-extrabold border transition-all cursor-pointer ${
-                        simulatedShares === units
-                          ? 'bg-gradient-to-r from-[#B8860B] to-[#D4AF37] border-[#FDE047] text-slate-950'
-                          : 'bg-white/5 border-[#D4AF37]/25 text-[#F3E5AB] hover:bg-white/10'
-                      }`}
-                    >
-                      {units.toLocaleString()} sh
-                    </button>
-                  ))}
+              <div className="p-4 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-2">
+                <div className="font-extrabold text-[#FDE047] uppercase tracking-wider">
+                  Digital Departmental Access
                 </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/25 text-xs text-slate-300 space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Board-Approved Share Price:</span>
-                  <span className="font-bold text-[#FDE047] font-mono-num">LKR 125.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Total Issued Capital:</span>
-                  <span className="font-bold text-white font-mono-num">1,000,000 shares</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Share Class:</span>
-                  <span className="font-bold text-[#F3E5AB]">Ordinary Voting</span>
-                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Work-from-Home employees and shareholders can access relevant departmental
+                  services and receive company support digitally without needing to visit a physical
+                  branch.
+                </p>
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 via-[#131B2E] to-[#080C16] border border-[#D4AF37]/50 text-center space-y-4">
-              <div>
-                <span className="text-xs font-extrabold text-[#FDE047] uppercase tracking-wider">
-                  Indicative Holding Value
-                </span>
-                <div className="text-3xl sm:text-4xl font-extrabold text-white font-mono-num mt-1">
-                  LKR {simulatedValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 via-[#131B2E] to-[#080C16] border border-[#D4AF37]/50 space-y-4">
+              <div className="text-xs font-extrabold text-[#FDE047] uppercase tracking-wider">
+                Official Verification &amp; Communication Policy
               </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#D4AF37]/25 text-left">
-                <div className="p-2.5 rounded-xl bg-black/40 border border-[#D4AF37]/20">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Company Stake
-                  </span>
-                  <div className="text-lg font-extrabold text-[#FDE047] font-mono-num">
-                    {simulatedOwnership}%
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-black/40 border border-[#D4AF37]/20">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Voting Units
-                  </span>
-                  <div className="text-lg font-extrabold text-white font-mono-num">
-                    {simulatedShares.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                All official digital branch locations, operating details, department information,
+                and service access instructions will be announced through our official company
+                website once the development and verification process is completed.
+              </p>
               <button
                 type="button"
                 onClick={() => onNavigateToAuth('signin')}
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <span>Verify Your Official Register Record</span>
+                <span>Sign In to Official Digital Portal</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -959,24 +1017,24 @@ export default function HomePage({ onNavigateToAuth }) {
 
               <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
-                  <span className="font-bold text-[#F3E5AB]">Holding Summary</span>
-                  <span className="text-[#FDE047] font-mono-num font-bold">SH-001</span>
+                  <span className="font-bold text-[#F3E5AB]">Shareholder Portal Access</span>
+                  <span className="text-[#FDE047] font-bold">Verified Account</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Opening Shares:</span>
-                  <span className="font-mono-num font-bold text-white">10,000</span>
+                  <span className="text-slate-400">Share Register Ledger:</span>
+                  <span className="font-bold text-white">Opening, Allocations &amp; Transfers</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Allocated Shares:</span>
-                  <span className="font-mono-num font-bold text-emerald-400">+2,500</span>
+                  <span className="text-slate-400">Valuation Tracking:</span>
+                  <span className="font-bold text-emerald-400">Board-Approved Stepped History</span>
                 </div>
                 <div className="flex justify-between text-xs pt-2 border-t border-[#D4AF37]/20">
-                  <span className="font-bold text-white">Current Holding:</span>
-                  <span className="font-mono-num font-extrabold text-[#FDE047]">12,500</span>
+                  <span className="font-bold text-white">Holding Statements:</span>
+                  <span className="font-extrabold text-[#FDE047]">Dated PDF Snapshots</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Current Valuation:</span>
-                  <span className="font-mono-num font-extrabold text-white">LKR 1,562,500</span>
+                  <span className="text-slate-400">Support Channel:</span>
+                  <span className="font-extrabold text-white">100% Digital Branch System</span>
                 </div>
               </div>
             </div>
@@ -989,7 +1047,7 @@ export default function HomePage({ onNavigateToAuth }) {
                   Administrative Workspace
                 </span>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  Dual-Control Approvals & Ledger Integrity
+                  Dual-Control Approvals &amp; Ledger Integrity
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                   Registry officers manage shareholders, record share movements, and submit
@@ -1013,24 +1071,28 @@ export default function HomePage({ onNavigateToAuth }) {
 
               <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
-                  <span className="font-bold text-[#F3E5AB]">Approval Queue</span>
+                  <span className="font-bold text-[#F3E5AB]">Governance Controls</span>
                   <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#FDE047] text-[10px] font-bold">
-                    Pending (3)
+                    Dual-Control Active
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/5 text-xs space-y-1">
                   <div className="flex justify-between font-bold">
-                    <span className="text-white">TX-2026-0045</span>
-                    <span className="text-[#FDE047]">Share Transfer</span>
+                    <span className="text-white">Share Register Movements</span>
+                    <span className="text-[#FDE047]">Maker-Checker</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">Transfer 5,000 shares SH-002 → SH-003</p>
+                  <p className="text-[11px] text-slate-400">
+                    Independent approval required before ledger publication
+                  </p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/5 text-xs space-y-1">
                   <div className="flex justify-between font-bold">
-                    <span className="text-white">VAL-2026-0012</span>
-                    <span className="text-amber-300">Valuation Update</span>
+                    <span className="text-white">Share Valuation Updates</span>
+                    <span className="text-amber-300">Board Resolution</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">Update value per share to LKR 125.00</p>
+                  <p className="text-[11px] text-slate-400">
+                    Dated effective valuation publishing with full audit log
+                  </p>
                 </div>
               </div>
             </div>
@@ -1060,27 +1122,27 @@ export default function HomePage({ onNavigateToAuth }) {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-[#FDE047]" />
-                    <span>Valuation Notices and AGM publications</span>
+                    <span>Valuation Notices and Official Company Announcements</span>
                   </li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
-                  <span className="font-bold text-[#F3E5AB]">Available Documents</span>
-                  <span className="text-[#D4AF37]">Tamper-Proof</span>
+                  <span className="font-bold text-[#F3E5AB]">Digital Document Vault</span>
+                  <span className="text-[#D4AF37]">Record-Level Privacy</span>
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 text-xs">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#FDE047]" />
-                    <span className="font-semibold text-slate-200">Share_Statement_SH001.pdf</span>
+                    <span className="font-semibold text-slate-200">Dated Holding Statement (PDF)</span>
                   </div>
                   <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 text-xs">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#FDE047]" />
-                    <span className="font-semibold text-slate-200">Valuation_Notice_2026.pdf</span>
+                    <span className="font-semibold text-slate-200">Official Company Notices &amp; Reports</span>
                   </div>
                   <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
                 </div>
@@ -1136,7 +1198,7 @@ export default function HomePage({ onNavigateToAuth }) {
       </section>
 
       {/* ========================================================= */}
-      {/* 9. HEADQUARTERS & CALL TO ACTION BANNER                   */}
+      {/* 9. DIGITAL BRANCH NETWORK & CALL TO ACTION BANNER         */}
       {/* ========================================================= */}
       <section id="contact" className="relative z-10 py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-gradient-to-r from-[#12192B] via-[#0E1525] to-[#161F33] border-2 border-[#D4AF37]/50 p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
@@ -1153,17 +1215,17 @@ export default function HomePage({ onNavigateToAuth }) {
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-7 space-y-4 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] uppercase text-[#FDE047]">
-                <span>Nexus International Alliance • E-STD 2022</span>
+                <span>Nexus International Alliance (NIA) • Management Team</span>
               </div>
               <h2
                 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white"
                 style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
-                Building A Better Tomorrow Together
+                Moving Forward – Building a Digital Future Across Sri Lanka
               </h2>
               <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl">
-                Sign in to your NIA Group Shareholder account to view your verified equity balance,
-                inspect recent share movements, and download certified holding statements.
+                60 Digital Locations. 25 Districts. One Connected Organization. Access departmental
+                services, equity records, and company support digitally through our official portal.
               </p>
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                 <button
@@ -1184,7 +1246,7 @@ export default function HomePage({ onNavigateToAuth }) {
               </div>
             </div>
 
-            {/* Official Contact Details from NIA Group Building Banner */}
+            {/* Official Digital Transformation & Disclaimer Box */}
             <div className="lg:col-span-5 p-6 rounded-2xl bg-[#080C16]/90 border border-[#D4AF37]/40 space-y-3.5 text-xs">
               <div className="flex items-center gap-3 pb-3 border-b border-[#D4AF37]/25">
                 <img
@@ -1194,30 +1256,35 @@ export default function HomePage({ onNavigateToAuth }) {
                 />
                 <div>
                   <div className="font-extrabold text-[#FDE047] text-sm uppercase">
-                    NIA Group of Company
+                    Nexus International Alliance (NIA)
                   </div>
-                  <div className="text-[11px] text-slate-400">Corporate Registry & Head Office</div>
+                  <div className="text-[11px] text-slate-300">
+                    60 Digital Branch Locations – Islandwide Coverage
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5 text-slate-200">
-                <MapPin className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
-                <span>119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</span>
+                <Globe className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                <span>
+                  All 25 Administrative Districts of Sri Lanka • 5 Capital City Digital Branches
+                </span>
               </div>
 
-              <div className="flex items-center gap-2.5 text-slate-200">
-                <Globe className="w-4 h-4 text-[#FDE047] shrink-0" />
-                <span>www.niagc.com</span>
+              <div className="flex items-start gap-2.5 text-amber-200">
+                <ShieldCheck className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                <span>
+                  Please do not visit previous physical branch addresses or send documents/parcels
+                  without management approval.
+                </span>
               </div>
 
-              <div className="flex items-center gap-2.5 text-slate-200">
-                <Mail className="w-4 h-4 text-[#FDE047] shrink-0" />
-                <span>info@niagc.com / niagc.com@gmail.com</span>
-              </div>
-
-              <div className="flex items-center gap-2.5 text-slate-200">
-                <Phone className="w-4 h-4 text-[#FDE047] shrink-0" />
-                <span className="font-mono-num">0723343824 / 0753343824 / 0713343824</span>
+              <div className="flex items-start gap-2.5 text-slate-200">
+                <Bell className="w-4 h-4 text-[#FDE047] shrink-0 mt-0.5" />
+                <span>
+                  Contact the relevant department via authorized digital channels for postal
+                  delivery instructions.
+                </span>
               </div>
             </div>
           </div>
@@ -1228,21 +1295,31 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* 10. ENTERPRISE FOOTER                                     */}
       {/* ========================================================= */}
       <footer className="relative z-10 border-t border-[#D4AF37]/25 bg-[#050810] py-10 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <ApexBrandLogo size="sm" subtitle="GROUP OF COMPANY" lightText />
-            <span className="text-[#D4AF37]/50">•</span>
-            <span className="text-[#F3E5AB]">Nexus International Alliance (E-STD 2022)</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <ApexBrandLogo size="sm" subtitle="GROUP OF COMPANY" lightText />
+              <span className="text-[#D4AF37]/50">•</span>
+              <span className="text-[#F3E5AB]">Nexus International Alliance (NIA)</span>
+            </div>
+
+            <div className="text-center sm:text-right space-y-1">
+              <div className="text-[#FDE047] font-bold">
+                60 Digital Locations. 25 Districts. One Connected Organization.
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Moving Forward – Building a Digital Future Across Sri Lanka • ©{' '}
+                {new Date().getFullYear()} Nexus International Alliance (NIA).
+              </div>
+            </div>
           </div>
 
-          <div className="text-center sm:text-right space-y-1">
-            <div className="text-[#F3E5AB] font-semibold">
-              119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka
-            </div>
-            <div className="text-[11px] text-slate-500">
-              Proposal Ref: ALG-SP-2026-16 • © {new Date().getFullYear()} NIA Group of Company. All
-              rights reserved.
-            </div>
+          <div className="pt-4 border-t border-[#D4AF37]/15 text-[11px] text-slate-400 text-center sm:text-left leading-relaxed">
+            <strong className="text-[#F3E5AB]">Official Disclaimer:</strong> Following the closure
+            of physical branch offices, Nexus International Alliance (NIA) is transitioning towards
+            a fully digital branch operating system. The planned 60 Digital Branch Locations do not
+            represent 60 new physical office buildings. Please do not visit or send documents or
+            parcels to any previous physical branch address without management approval.
           </div>
         </div>
       </footer>

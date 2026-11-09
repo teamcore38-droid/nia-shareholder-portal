@@ -130,8 +130,8 @@ const authLimiter = rateLimit({
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Apex Link Shareholder Portal API',
-    proposalRef: 'ALG-SP-2026-16',
+    service: 'NIA Group of Company — Nexus International Alliance (NIA) Digital Portal API',
+    network: '60 Digital Locations • 25 Districts • One Connected Organization',
     healthEndpoint: '/api/health',
     databaseMode: dbState.mode
   });
@@ -140,8 +140,8 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Apex Link Shareholder Portal API',
-    proposalRef: 'ALG-SP-2026-16',
+    service: 'NIA Group of Company — Nexus International Alliance (NIA) Digital Portal API',
+    network: '60 Digital Locations • 25 Districts • One Connected Organization',
     database: dbState,
     cloudinary: getCloudinaryStatus(),
     timestamp: new Date().toISOString()

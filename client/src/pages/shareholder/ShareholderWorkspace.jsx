@@ -1320,11 +1320,72 @@ export default function ShareholderWorkspace({
             Company Updates
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Official valuation notices, AGM announcements, and shareholder support.
+            Official valuation notices, company announcements, and digital branch operating guidelines.
           </p>
         </div>
 
-        {/* Visual Company Updates Cards (Matches 6th Mobile Screen in Reference Image) */}
+        {/* Pinned Official Company Announcement: 60 Digital Branch Locations */}
+        <div className="bg-gradient-to-br from-[#080C16] via-[#0D1322] to-[#131C31] rounded-2xl border-2 border-[#D4AF37]/70 p-6 sm:p-8 text-white shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#D4AF37]/30">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#FDE047] text-[11px] font-extrabold uppercase tracking-wider">
+              Official Company Announcement • Pinned Notice
+            </div>
+            <span className="text-xs font-bold text-[#F3E5AB]">
+              MANAGEMENT TEAM — NEXUS INTERNATIONAL ALLIANCE (NIA)
+            </span>
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-extrabold text-white mt-4 tracking-tight">
+            60 DIGITAL BRANCH LOCATIONS – ISLANDWIDE COVERAGE
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+            Dear All Work-from-Home Employees &amp; Stakeholders, following the closure of our physical branch offices, our company is transitioning towards a{' '}
+            <strong className="text-[#FDE047]">fully digital branch operating system</strong>, designed to provide services and support across Sri Lanka.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-[#FDE047]">
+                Our New Digital Branch Network
+              </div>
+              <ul className="text-xs text-slate-200 space-y-1.5 list-disc list-inside leading-relaxed">
+                <li>All 25 administrative districts of Sri Lanka.</li>
+                <li>Major cities and important commercial areas throughout the country.</li>
+                <li>Five dedicated Digital Branch Locations in the capital city.</li>
+                <li>Islandwide digital access to company services and departmental support.</li>
+              </ul>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-[#D4AF37]/40 space-y-2">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-[#FDE047]">
+                Important Clarification
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                Please understand that these 60 locations are part of our <strong className="text-white">planned digital branch network</strong>. They <strong className="text-[#FDE047] underline">do not represent 60 new physical office buildings</strong>. All official digital branch locations, operating details, department information, and service access instructions will be announced through our official company website once the development and verification process is completed.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/15">
+            <div className="text-xs font-extrabold uppercase tracking-wider text-[#FDE047] mb-2">
+              Important Instructions &amp; Disclaimers
+            </div>
+            <ol className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200 list-decimal list-inside">
+              <li>Please do not visit previous physical branch addresses for company services.</li>
+              <li>Do not send documents or parcels to any previous branch address without management approval.</li>
+              <li>Contact the relevant department for authorized postal delivery instructions.</li>
+              <li>Follow only official company announcements and verified communication channels.</li>
+              <li className="sm:col-span-2">Continue your regular Work-from-Home responsibilities without interruption.</li>
+            </ol>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-[#F3E5AB] font-bold">
+            <span>60 Digital Locations. 25 Districts. One Connected Organization.</span>
+            <span>Moving Forward – Building a Digital Future Across Sri Lanka.</span>
+          </div>
+        </div>
+
+        {/* Visual Company Updates Cards */}
         {announcements.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center text-xs text-slate-500">
             No company updates published yet. When a new share valuation or company notice is published, it will appear here.
@@ -1514,11 +1575,32 @@ export default function ShareholderWorkspace({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Support, Profile & Security
+          Support, Profile &amp; Security
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Keep contact information current and manage your account security.
+          Keep contact information current and manage your account security through the official NIA Digital Branch Operating System.
         </p>
+      </div>
+
+      {/* Official Digital Branch & Postal Delivery Disclaimer Banner */}
+      <div className="bg-amber-50/90 rounded-2xl border border-[#D4AF37]/60 p-5 text-xs text-slate-800 space-y-2 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-extrabold uppercase tracking-wider text-[#9A7B2C]">
+            Important Instructions — Digital Branch Operations &amp; Postal Delivery
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full bg-[#080C16] text-[#FDE047] font-bold text-[10px]">
+            60 Digital Locations • 25 Districts
+          </span>
+        </div>
+        <p className="text-slate-700 leading-relaxed">
+          Following the closure of physical branch offices, <strong>Nexus International Alliance (NIA)</strong> operates through a fully digital branch operating system across Sri Lanka. Please understand that our 60 Digital Branch Locations do not represent 60 new physical office buildings.
+        </p>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-700 font-medium list-disc list-inside pt-1">
+          <li>Please do not visit previous physical branch addresses for company services.</li>
+          <li>Do not send documents or parcels to any previous branch address without management approval.</li>
+          <li>Contact the relevant department via this portal for authorized postal delivery instructions.</li>
+          <li>Follow only official company announcements and verified communication channels.</li>
+        </ul>
       </div>
 
       {/* Profile Form Card */}

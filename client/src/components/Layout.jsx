@@ -581,14 +581,18 @@ export default function Layout({
             <span className="font-bold text-slate-900">
               {company?.companyDisplayName || 'NIA Group of Company'}
             </span>{' '}
-            • Nexus International Alliance (E-STD 2022) • Base Currency:{' '}
+            • Nexus International Alliance (NIA) • Base Currency:{' '}
             <span className="font-mono-num font-bold text-[#9A7B2C]">
               {company?.baseCurrency || 'LKR'}
             </span>
           </div>
-          <div>
-            119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka •{' '}
-            <span className="font-bold text-[#9A7B2C]">www.niagc.com</span>
+          <div className="text-right">
+            <span className="font-bold text-[#9A7B2C]">
+              60 Digital Locations • 25 Districts • One Connected Organization
+            </span>{' '}
+            <span className="hidden sm:inline text-slate-500">
+              • Do not visit or send parcels to previous physical branch addresses without management approval.
+            </span>
           </div>
         </footer>
       </div>

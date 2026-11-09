@@ -29,54 +29,6 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
     !bootstrapStatus.initialized ? 'setup-admin' : initialMode
   );
 
-  const [showDemoModal, setShowDemoModal] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState('');
-
-  const DEMO_ACCOUNTS = [
-    {
-      role: 'Administrator',
-      fullName: 'Company Administrator',
-      email: 'admin@niagroup.com',
-      password: 'Admin@2026',
-      description: 'Full portal governance & approvals'
-    },
-    {
-      role: 'Data officer',
-      fullName: 'Kamal Senanayake',
-      email: 'dataofficer@niagroup.com',
-      password: 'Officer@2026',
-      description: 'Enters draft movements & valuations'
-    },
-    {
-      role: 'Approver',
-      fullName: 'Dharshini Gunawardena',
-      email: 'approver@niagroup.com',
-      password: 'Approver@2026',
-      description: 'Maker-Checker review & formal publishing'
-    },
-    {
-      role: 'Shareholder',
-      fullName: 'Dr. Keerthi Wickramasinghe',
-      email: 'shareholder1@niagroup.com',
-      password: 'Shareholder@2026',
-      description: 'SH-001 (325,000 Ordinary shares)'
-    },
-    {
-      role: 'Shareholder',
-      fullName: 'Apex Horizon Holdings',
-      email: 'shareholder2@niagroup.com',
-      password: 'Shareholder@2026',
-      description: 'SH-002 (250,000 Ordinary shares)'
-    }
-  ];
-
-  const handleSelectDemoAccount = (acc) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setShowDemoModal(false);
-    notify(`Selected demo account: ${acc.fullName} (${acc.role})`);
-  };
-
   // Sign-In state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -103,7 +55,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
   // First-time Admin Initialization state (when 0 users exist)
   const [adminName, setAdminName] = useState('Company Administrator');
   const [adminEmail, setAdminEmail] = useState('admin@niagroup.com');
-  const [adminPassword, setAdminPassword] = useState('Admin@2026');
+  const [adminPassword, setAdminPassword] = useState('');
   const [companyNameInput, setCompanyNameInput] = useState(
     company?.companyDisplayName || 'NIA Group of company'
   );
@@ -115,7 +67,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
       const res = await api.post('/auth/login', { email, password, rememberMe });
       if (res.data.requiresVerification) {
         setPreAuthData(res.data);
-        setVerificationCode(res.data.demoVerificationCode || '246810');
+        setVerificationCode('');
         setMode('verify-staff');
         notify('Additional multi-factor verification required for staff sign-in.', 'info');
       } else {
@@ -367,6 +319,24 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
               <span className="text-sm sm:text-base font-medium">Company Updates</span>
             </div>
           </div>
+
+          {/* Official Digital Branch & Disclaimer Summary */}
+          <div className="mt-7 p-4 rounded-2xl bg-[#080C16]/85 border border-[#D4AF37]/45 backdrop-blur-md space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#FDE047]">
+                Official Digital Branch Operating System
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#F3E5AB] border border-[#D4AF37]/35">
+                60 Digital Locations • 25 Districts
+              </span>
+            </div>
+            <p className="text-xs text-slate-200 leading-relaxed">
+              Following the closure of physical branch offices, Nexus International Alliance (NIA) operates across 60 planned Digital Branch Locations (including 5 capital city digital branches) covering all 25 administrative districts of Sri Lanka.
+            </p>
+            <p className="text-[11px] text-[#F3E5AB] font-medium leading-relaxed pt-1 border-t border-white/10">
+              <strong>Important Notice:</strong> These 60 locations represent our planned digital branch network (not 60 new physical office buildings). Please do not visit or send documents/parcels to previous physical branch addresses without management approval.
+            </p>
+          </div>
         </div>
 
         {/* Right Floating Authentication Card with Gold Border Accent */}
@@ -474,15 +444,6 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
               >
                 <BadgeCheck className="w-4 h-4 text-[#B8860B]" />
                 <span>Sign in with Company SSO / Activate Invite</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowDemoModal(true)}
-                className="mt-2.5 w-full py-2.5 px-3 rounded-xl border border-dashed border-[#D4AF37]/60 bg-amber-50/30 hover:bg-amber-50 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <Key className="w-3.5 h-3.5 text-[#B8860B]" />
-                <span>Quick Fill Demo Credentials (Admin / Staff / Shareholder)</span>
               </button>
 
               {onBackToHome && (
@@ -622,10 +583,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base font-mono-num font-bold tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                     />
                     <p className="text-[11px] text-slate-400 mt-1.5 text-center">
-                      Default staff verification code:{' '}
-                      <code className="font-mono-num text-slate-700 font-bold">
-                        {preAuthData?.demoVerificationCode || '246810'}
-                      </code>
+                      Enter the 6-digit staff verification code issued by your administrator.
                     </p>
                   </div>
                 ) : (
@@ -844,88 +802,12 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
       <footer className="relative z-20 max-w-7xl w-full mx-auto px-6 sm:px-10 pb-5 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Lock className="w-3.5 h-3.5 text-[#FDE047]" />
-          <span>NIA Group of Company • Controlled Share Register & Shareholder Portal</span>
+          <span>NIA Group of Company • Nexus International Alliance (NIA)</span>
         </div>
-        <div className="text-[#F3E5AB]">119 Battaramulla - Pannipitiya Rd, Battaramulla, Sri Lanka</div>
+        <div className="text-[#F3E5AB]">
+          60 Digital Locations. 25 Districts. One Connected Organization. • Moving Forward – Building a Digital Future Across Sri Lanka.
+        </div>
       </footer>
-
-      {/* QUICK FILL DEMO CREDENTIALS MODAL */}
-      {showDemoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border-2 border-[#D4AF37] max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] flex items-center justify-center">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Quick-Fill Demo Credentials
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Click any role below to automatically fill the login form.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDemoModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-2.5">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <div
-                  key={acc.email}
-                  className="p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-amber-50/40 transition-all flex items-center justify-between gap-3 text-xs"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-slate-900">{acc.fullName}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                          acc.role === 'Administrator'
-                            ? 'bg-purple-100 text-purple-800'
-                            : acc.role === 'Approver'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : acc.role === 'Data officer'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {acc.role}
-                      </span>
-                    </div>
-                    <div className="text-slate-500 font-mono-num text-[11px] mt-0.5">{acc.email}</div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectDemoAccount(acc)}
-                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0B101E] to-[#1E293B] hover:brightness-125 border border-[#D4AF37]/50 text-[#FDE047] text-xs font-extrabold shrink-0 shadow-xs cursor-pointer"
-                  >
-                    Select & Fill
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-              <span>Staff 2FA Verification code is: <strong className="font-mono-num text-slate-800">246810</strong></span>
-              <button
-                type="button"
-                onClick={() => setShowDemoModal(false)}
-                className="font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

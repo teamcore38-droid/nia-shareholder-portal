@@ -119,16 +119,16 @@ function generateHoldingStatementPDF(res, {
     doc.addPage();
     currentY = 50;
   }
-  doc.roundedRect(50, currentY, 495, 65, 5).fillAndStroke('#FFFBEB', '#FDE68A');
-  doc.fillColor('#92400E').fontSize(8.5).font('Helvetica-Bold').text('Calculation Basis & Confidentiality Notice', 62, currentY + 10);
+  doc.roundedRect(50, currentY, 495, 76, 5).fillAndStroke('#FFFBEB', '#FDE68A');
+  doc.fillColor('#92400E').fontSize(8.5).font('Helvetica-Bold').text('Calculation Basis & Official Digital Branch Notice', 62, currentY + 10);
   doc
     .fillColor('#78350F')
-    .fontSize(8)
+    .fontSize(7.5)
     .font('Helvetica')
     .text(
-      `This statement is generated from a dated snapshot as at ${asAtDate}. Holding value equals published shares multiplied by the applicable published value per share. This calculated total is not an audited enterprise valuation or guaranteed selling price. Generated on ${new Date().toISOString()} (${settings.businessTimezone || 'Asia/Colombo'}).`,
+      `This statement is generated from a dated snapshot as at ${asAtDate}. Holding value equals published shares multiplied by the applicable published value per share. This calculated total is not an audited enterprise valuation or guaranteed selling price. Nexus International Alliance (NIA) operates through its 60 Digital Branch Locations across all 25 districts of Sri Lanka. Please do not visit or send documents/parcels to previous physical branch addresses without management approval. Generated on ${new Date().toISOString()} (${settings.businessTimezone || 'Asia/Colombo'}).`,
       62,
-      currentY + 24,
+      currentY + 23,
       { width: 470 }
     );
 
