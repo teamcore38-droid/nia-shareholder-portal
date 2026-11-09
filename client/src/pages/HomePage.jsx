@@ -52,14 +52,18 @@ export default function HomePage({ onNavigateToAuth }) {
       const totalScrollable = el.offsetHeight - window.innerHeight;
       if (totalScrollable <= 0) return;
 
-      const scrolled = Math.max(0, -rect.top + 80);
-      const progress = Math.min(1, scrolled / totalScrollable);
+      const scrolled = -rect.top;
+      const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
       setHeroScrollProgress(progress);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, []);
 
   // The 6 Official Business Sectors from the NIA Group Building Facade
@@ -279,14 +283,13 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ========================================================= */}
       {/* 2. HERO SECTION (400vh SCROLL-LINKED SEQUENCE TRACK)       */}
       {/* ========================================================= */}
-      <div ref={heroTrackRef} className="relative h-[400vh] w-full">
+      <div ref={heroTrackRef} className="relative h-[400vh] w-full -mt-20">
         {/* Sticky Viewport Container directly below sticky header */}
-        <div className="sticky top-20 h-[calc(100vh-5rem)] w-full overflow-hidden flex flex-col justify-center">
+        <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-center">
           {/* Scroll-Linked Image Sequence Canvas (Behind the UI) */}
           <ScrollImageSequenceCanvas
             scrollProgress={heroScrollProgress}
             totalFrames={70}
-            className="absolute inset-0 z-0 pointer-events-none"
           />
 
           {/* Ambient Gold Spotlight Glows (Preserved from existing) */}
@@ -296,7 +299,7 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
 
           {/* Exact Hero Section UI from existing code (100% UNCHANGED) */}
-          <div className="relative z-10 w-full my-auto">
+          <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
 <section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
           {/* Left Column: NIA Group Identity, Motto & CTAs */}
