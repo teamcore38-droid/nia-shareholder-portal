@@ -421,107 +421,152 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
           </div>
 
-          {/* Right Column: Official Digital Transformation & 60 Digital Branch Network Summary Card */}
+          {/* Right Column: Low-Text, Ultra-Transparent Cinematic Telemetry HUD (3D Building Fully Visible) */}
           <div className="w-full lg:w-6/12 relative">
-            <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/95 border-2 border-[#D4AF37]/50 p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-xl">
-              {/* Top Gold Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-[#D4AF37]/25 text-xs">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="/nia-logo.png"
-                    alt="NIA Crest"
-                    className="w-10 h-10 rounded-full border border-[#D4AF37] object-contain bg-black"
-                  />
-                  <div>
-                    <div className="font-extrabold text-[#FDE047] tracking-wide uppercase">
-                      Official Company Announcement
-                    </div>
-                    <div className="text-[11px] text-slate-300">
-                      Nexus International Alliance (NIA) • Management Team
-                    </div>
+            <div className="relative mx-auto max-w-lg rounded-3xl bg-black/20 border border-[#D4AF37]/35 p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur-md hover:border-[#D4AF37]/60 transition-all">
+              {/* Top Live Telemetry Status Header */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-[#D4AF37]/20 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FDE047] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FDE047]"></span>
                   </div>
+                  <span className="font-extrabold text-[#FDE047] tracking-wider uppercase text-[11px]">
+                    Live Digital Network Telemetry
+                  </span>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#FDE047] font-bold text-[11px] flex items-center gap-1.5 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FDE047]" />
-                  <span>Islandwide</span>
+                <div className="px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-[10px] flex items-center gap-1.5 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>System Active</span>
                 </div>
               </div>
 
-              {/* 4 Key Network Highlights */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
-                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Network
-                  </span>
-                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] font-mono-num mt-0.5">
+              {/* 4 Low-Text Visual Metric Dials */}
+              <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {/* Metric 1 */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
+                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1">
+                    <Globe className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#FDE047] font-mono-num leading-none">
                     60
                   </div>
-                  <span className="text-[10px] text-[#D4AF37]">Digital Locations</span>
+                  <div className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide mt-1">
+                    Locations
+                  </div>
+                  <div className="text-[9px] text-[#D4AF37] mt-0.5">Islandwide</div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
-                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Coverage
-                  </span>
-                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
+                {/* Metric 2 */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
+                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-slate-200 mb-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-white font-mono-num leading-none">
                     25
                   </div>
-                  <span className="text-[10px] text-slate-300">SL Districts</span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-[#131B2E] border border-[#D4AF37]/30">
-                  <span className="text-[10px] font-bold text-[#F3E5AB] uppercase tracking-wide">
-                    Capital City
-                  </span>
-                  <div className="text-base sm:text-lg font-extrabold text-white font-mono-num mt-0.5">
-                    5
+                  <div className="text-[10px] font-bold text-slate-200 uppercase tracking-wide mt-1">
+                    Districts
                   </div>
-                  <span className="text-[10px] text-[#D4AF37]">Digital Branches</span>
+                  <div className="text-[9px] text-slate-400 mt-0.5">All SL Regions</div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#D4AF37]/25 to-[#B8860B]/10 border border-[#FDE047]/50">
-                  <span className="text-[10px] font-bold text-[#FDE047] uppercase tracking-wide">
-                    Access
-                  </span>
-                  <div className="text-base sm:text-lg font-extrabold text-[#FDE047] mt-0.5">
+                {/* Metric 3 */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#D4AF37]/30 backdrop-blur-md text-center hover:border-[#FDE047]/60 transition-colors">
+                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-amber-300 mb-1">
+                    <Building2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-white font-mono-num leading-none">
+                    05
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-200 uppercase tracking-wide mt-1">
+                    Capital Hubs
+                  </div>
+                  <div className="text-[9px] text-[#D4AF37] mt-0.5">Commercial Core</div>
+                </div>
+
+                {/* Metric 4 */}
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-transparent border border-[#FDE047]/45 backdrop-blur-md text-center">
+                  <div className="w-6 h-6 mx-auto rounded-lg bg-[#FDE047]/20 flex items-center justify-center text-[#FDE047] mb-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#FDE047] font-mono-num leading-none">
                     100%
                   </div>
-                  <span className="text-[10px] text-[#F3E5AB]">Digital System</span>
+                  <div className="text-[10px] font-bold text-[#FDE047] uppercase tracking-wide mt-1">
+                    Digital
+                  </div>
+                  <div className="text-[9px] text-[#F3E5AB] mt-0.5">Maker-Checker</div>
                 </div>
               </div>
 
-              {/* Official Transition & Clarification Summary */}
-              <div className="mt-4 p-4 rounded-2xl bg-[#101726] border border-[#D4AF37]/30 space-y-2.5 text-xs">
-                <div className="font-extrabold text-[#FDE047] uppercase tracking-wider flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-[#FDE047]" />
-                  <span>60 Digital Branch Locations – Islandwide Coverage</span>
+              {/* Visual 25-District Micro-Matrix Indicator */}
+              <div className="mt-3.5 p-3 rounded-2xl bg-white/[0.03] border border-[#D4AF37]/25 backdrop-blur-md">
+                <div className="flex items-center justify-between text-[11px] font-bold text-[#F3E5AB] mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-[#FDE047]" />
+                    <span>25 Districts Islandwide Connectivity Matrix</span>
+                  </div>
+                  <span className="text-[#FDE047] font-mono text-[10px]">25 / 25 Linked</span>
                 </div>
-                <p className="text-slate-200 leading-relaxed">
-                  Following the closure of our physical branch offices, our company is transitioning
-                  towards a fully digital branch operating system designed to provide services and
-                  support across Sri Lanka.
-                </p>
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-[#D4AF37]/40 text-[#F3E5AB] text-[11px] leading-relaxed">
-                  <strong className="text-[#FDE047]">Important Clarification:</strong> These 60
-                  locations are part of our planned digital branch network. They do not represent 60
-                  new physical office buildings. Do not visit or send documents/parcels to previous
-                  physical branch addresses without management approval.
+                {/* 25 glowing micro dots representing the 25 administrative districts */}
+                <div className="grid grid-cols-5 sm:grid-cols-13 gap-1.5 py-1">
+                  {Array.from({ length: 25 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="h-2 rounded-full bg-[#D4AF37]/40 border border-[#FDE047]/60 shadow-[0_0_8px_rgba(253,224,71,0.35)] transition-all hover:bg-[#FDE047] hover:scale-125"
+                      title={`District ${idx + 1} Digital Link Active`}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#D4AF37]/15 text-[10px] text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    <span>Digital Branch Operations Active</span>
+                  </span>
+                  <span className="text-[#F3E5AB]">Zero Physical Branch Visits</span>
                 </div>
               </div>
 
-              {/* Bottom Quick Row */}
-              <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex items-center justify-between text-xs text-slate-300">
-                <span className="text-[11px] text-[#F3E5AB] font-semibold">
-                  60 Digital Locations. 25 Districts. One Connected Organization.
-                </span>
+              {/* Low-Text Notice Capsule with 1-Click Action */}
+              <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-[#D4AF37]/10 via-transparent to-[#F59E0B]/10 border border-[#D4AF37]/30 backdrop-blur-md flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] shrink-0">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <div className="text-xs font-bold text-white truncate">
+                      Official Transition Notice
+                    </div>
+                    <div className="text-[10px] text-[#F3E5AB]/85 truncate">
+                      60 Locations • Digital System Guidelines
+                    </div>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => scrollToSection('official-announcement')}
-                  className="text-[#FDE047] hover:text-amber-200 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 hover:scale-[1.03] active:scale-[0.98]"
                 >
-                  <span>Read Full Notice</span>
+                  <span>View Notice</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
+              </div>
+
+              {/* Micro Quick Accents */}
+              <div className="mt-3 flex items-center justify-between text-[10px] text-slate-300 px-1">
+                <span className="flex items-center gap-1 text-[#F3E5AB]">
+                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
+                  <span>256-Bit Ledger</span>
+                </span>
+                <span className="flex items-center gap-1 text-[#F3E5AB]">
+                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
+                  <span>Dual Control</span>
+                </span>
+                <span className="flex items-center gap-1 text-[#F3E5AB]">
+                  <CheckCircle2 className="w-3 h-3 text-[#FDE047]" />
+                  <span>Instant SSO</span>
+                </span>
               </div>
             </div>
           </div>
@@ -561,7 +606,7 @@ export default function HomePage({ onNavigateToAuth }) {
 
               {/* 3 Luxury Frosted Glass Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 max-w-5xl mx-auto mt-6">
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <Globe className="w-4 h-4" />
                   </div>
@@ -572,7 +617,7 @@ export default function HomePage({ onNavigateToAuth }) {
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
@@ -583,7 +628,7 @@ export default function HomePage({ onNavigateToAuth }) {
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <BarChart3 className="w-4 h-4" />
                   </div>
@@ -631,7 +676,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 {['REAL ESTATE', 'CONSTRUCTION', 'INVESTMENT', 'TRADING', 'CONSULTANCY', 'SERVICES'].map((sector) => (
                   <span
                     key={sector}
-                    className="px-3 py-1 rounded-xl bg-[#0B101E]/80 border border-[#D4AF37]/40 text-[#F3E5AB] text-[11px] font-extrabold backdrop-blur-md shadow-md tracking-wider"
+                    className="px-3 py-1 rounded-xl bg-black/25 border border-[#D4AF37]/35 text-[#F3E5AB] text-[11px] font-extrabold backdrop-blur-md shadow-md tracking-wider"
                   >
                     {sector}
                   </span>
