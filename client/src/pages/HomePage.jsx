@@ -31,6 +31,41 @@ import {
 } from 'lucide-react';
 import { ApexBrandLogo } from '../components/ApexBrandLogo';
 
+// Helper to compute smooth opacity and subtle translate transitions across scroll stages
+const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
+  let opacity = 0;
+  let translateY = 24;
+
+  if (progress <= enterStart) {
+    opacity = 0;
+    translateY = 24;
+  } else if (progress < enterEnd) {
+    const t = (progress - enterStart) / (enterEnd - enterStart);
+    const ease = t * t * (3 - 2 * t);
+    opacity = ease;
+    translateY = (1 - ease) * 24;
+  } else if (progress <= exitStart) {
+    opacity = 1;
+    translateY = 0;
+  } else if (progress < exitEnd) {
+    const t = (progress - exitStart) / (exitEnd - exitStart);
+    const ease = t * t * (3 - 2 * t);
+    opacity = 1 - ease;
+    translateY = -ease * 24;
+  } else {
+    opacity = 0;
+    translateY = -24;
+  }
+
+  return {
+    opacity,
+    transform: `translate3d(0, ${translateY.toFixed(1)}px, 0)`,
+    pointerEvents: opacity > 0.2 ? 'auto' : 'none',
+    visibility: opacity > 0.005 ? 'visible' : 'hidden',
+    transition: 'opacity 0.15s ease-out, transform 0.15s ease-out'
+  };
+};
+
 export default function HomePage({ onNavigateToAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -43,6 +78,11 @@ export default function HomePage({ onNavigateToAuth }) {
   // Scroll-linked hero image sequence
   const heroTrackRef = useRef(null);
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
+
+  // Smooth stage transitions: appear and vanish as the 3D sequence scrolls
+  const chapter1Style = getStageStyle(heroScrollProgress, -0.1, 0.0, 0.22, 0.32);
+  const chapter2Style = getStageStyle(heroScrollProgress, 0.35, 0.44, 0.60, 0.68);
+  const chapter3Style = getStageStyle(heroScrollProgress, 0.70, 0.78, 0.94, 1.00);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -138,7 +178,7 @@ export default function HomePage({ onNavigateToAuth }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-clip">
 
       {/* ========================================================= */}
       {/* 1. TOP NAVIGATION BAR (OBSIDIAN & METALLIC GOLD)          */}
@@ -298,8 +338,14 @@ export default function HomePage({ onNavigateToAuth }) {
             <div className="absolute top-24 right-10 w-[440px] h-[440px] bg-gradient-to-bl from-[#FDE047]/15 via-[#B8860B]/15 to-transparent rounded-full blur-3xl opacity-70" />
           </div>
 
-          {/* Exact Hero Section UI from existing code (100% UNCHANGED) */}
-          <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
+          {/* ========================================================= */}
+          {/* STAGE 1: OFFICIAL HERO SECTION (100% UNCHANGED CONTENT)   */}
+          {/* ========================================================= */}
+          <div
+            className="absolute inset-0 flex flex-col justify-center"
+            style={chapter1Style}
+          >
+            <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
 <section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
           {/* Left Column: NIA Group Identity, Motto & CTAs */}
@@ -481,6 +527,137 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         </div>
       </section>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* STAGE 2: NATIONWIDE DIGITAL NETWORK & GOVERNANCE PILLARS  */}
+          {/* ========================================================= */}
+          <div
+            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
+            style={chapter2Style}
+          >
+            <div className="relative z-10 w-full max-w-6xl mx-auto text-center pt-16 lg:pt-20 my-auto">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/85 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg mb-3">
+                <Sparkles className="w-3.5 h-3.5 text-[#FDE047]" />
+                <span className="tracking-wider uppercase">Nationwide Digital Network • 25 Districts</span>
+              </div>
+
+              {/* Cinematic Headline */}
+              <h2
+                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+              >
+                THE DIGITAL TRANSFORMATION OF <br />
+                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                  SHAREHOLDER OPERATIONS
+                </span>
+              </h2>
+
+              <p className="text-xs sm:text-sm lg:text-base text-slate-200 font-medium max-w-2xl mx-auto mt-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                Connecting 60 planned digital branch locations across all 25 administrative districts of Sri Lanka under our unified institutional governance network.
+              </p>
+
+              {/* 3 Luxury Frosted Glass Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 max-w-5xl mx-auto mt-6">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Islandwide Access</div>
+                  <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">60 Digital Locations</h3>
+                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                    Islandwide coverage across all 25 districts, with 5 specialized digital hubs in the capital city.
+                  </p>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Dual-Control Security</div>
+                  <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">Maker-Checker Protocol</h3>
+                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                    Institutional security with 256-bit encryption, role-based governance, and immutable ledger audit logging.
+                  </p>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#0B101E]/85 border border-[#D4AF37]/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Real-Time Holdings</div>
+                  <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">Verified Equity Ledger</h3>
+                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                    Instant digital certificate issuance, stepped share valuations, and transparent shareholder communication.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* STAGE 3: 6 DIVERSIFIED SECTORS & GATEWAY ACCESS           */}
+          {/* ========================================================= */}
+          <div
+            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
+            style={chapter3Style}
+          >
+            <div className="relative z-10 w-full max-w-5xl mx-auto text-center pt-16 lg:pt-20 my-auto">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/85 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg mb-3">
+                <Building2 className="w-3.5 h-3.5 text-[#FDE047]" />
+                <span className="tracking-wider uppercase">Nexus International Alliance • 6 Diversified Sectors</span>
+              </div>
+
+              {/* Headline */}
+              <h2
+                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+              >
+                DRIVING INSTITUTIONAL GROWTH <br />
+                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                  FOR ALL SHAREHOLDERS
+                </span>
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-200 font-medium max-w-xl mx-auto mt-2.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                Real Estate • Construction • Investment • Trading • Consultancy • Integrated Services
+              </p>
+
+              {/* 6 Sector Chips */}
+              <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto mt-5">
+                {['REAL ESTATE', 'CONSTRUCTION', 'INVESTMENT', 'TRADING', 'CONSULTANCY', 'SERVICES'].map((sector) => (
+                  <span
+                    key={sector}
+                    className="px-3 py-1 rounded-xl bg-[#0B101E]/80 border border-[#D4AF37]/40 text-[#F3E5AB] text-[11px] font-extrabold backdrop-blur-md shadow-md tracking-wider"
+                  >
+                    {sector}
+                  </span>
+                ))}
+              </div>
+
+              {/* Direct Action CTAs */}
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+                <button
+                  type="button"
+                  onClick={() => onNavigateToAuth('signin')}
+                  className="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-xs sm:text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <span>Enter Shareholder Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('official-announcement')}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#080C16]/85 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-xs sm:text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Bell className="w-4 h-4 text-[#FDE047]" />
+                  <span>60 Digital Branches Notice</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
