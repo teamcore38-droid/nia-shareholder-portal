@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { User, RolePermission } = require('../models');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'apex_link_nia_group_shareholder_portal_secret_key_2026';
+const { JWT_SECRET, IS_PRODUCTION } = require('../config/env');
 
 function signAuthToken(user, staffVerified = true) {
   return jwt.sign(
@@ -22,21 +21,19 @@ function signAuthToken(user, staffVerified = true) {
 }
 
 function setAuthCookie(res, token) {
-  const isProdOrVercel = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
   res.cookie('apex_token', token, {
     httpOnly: true,
-    sameSite: isProdOrVercel ? 'none' : 'lax',
-    secure: isProdOrVercel,
+    sameSite: IS_PRODUCTION ? 'none' : 'lax',
+    secure: IS_PRODUCTION,
     maxAge: 12 * 60 * 60 * 1000 // 12 hours
   });
 }
 
 function clearAuthCookie(res) {
-  const isProdOrVercel = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
   res.clearCookie('apex_token', {
     httpOnly: true,
-    sameSite: isProdOrVercel ? 'none' : 'lax',
-    secure: isProdOrVercel
+    sameSite: IS_PRODUCTION ? 'none' : 'lax',
+    secure: IS_PRODUCTION
   });
 }
 

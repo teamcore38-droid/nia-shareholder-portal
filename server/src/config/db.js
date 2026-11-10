@@ -11,6 +11,7 @@ try {
 }
 
 const os = require('os');
+const { MONGODB_URI, IS_PRODUCTION, sanitizeMongoUri } = require('./env');
 const DATA_DIR = process.env.VERCEL
   ? path.join(os.tmpdir(), 'apex_portal_data')
   : path.join(__dirname, '../../data');
@@ -25,8 +26,8 @@ try {
 }
 
 const dbState = {
+  status: 'initializing',
   mode: 'initializing', // 'mongodb' | 'persistent-local'
-  uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal',
   connectedAt: null,
   lastError: null
 };
@@ -318,23 +319,24 @@ async function connectDB(customUri) {
   if (mongoose.connection.readyState === 1 && dbState.mode === 'mongodb' && !customUri) {
     return dbState;
   }
-  const uri = customUri || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal';
-  dbState.uri = uri.replace(/:([^:@]+)@/, ':****@');
+  const uri = customUri || MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal';
   loadLocalStore();
 
   try {
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: uri.includes('127.0.0.1') || uri.includes('localhost') ? 2500 : 10000
     });
+    dbState.status = 'connected';
     dbState.mode = 'mongodb';
     dbState.connectedAt = new Date().toISOString();
     dbState.lastError = null;
-    console.log('✅ Connected to MongoDB via Mongoose:', dbState.uri);
+    console.log('✅ Connected to MongoDB via Mongoose:', sanitizeMongoUri(uri));
     return dbState;
   } catch (err) {
+    dbState.status = 'connected';
     dbState.mode = 'persistent-local';
     dbState.connectedAt = new Date().toISOString();
-    dbState.lastError = err.message;
+    dbState.lastError = IS_PRODUCTION ? 'Database connection unavailable' : err.message;
     console.log('ℹ️ MongoDB fallback active — using Persistent Local JSON-Document Engine. Configure MONGODB_URI for Atlas/remote MongoDB at any time.');
     return dbState;
   }

@@ -1,35 +1,83 @@
-# Dependencies
+# =============================================================================
+# APEX LINK & NIA GROUP PORTAL — PRODUCTION-GRADE SECURITY .GITIGNORE
+# CRITICAL: NEVER REMOVE OR BYPASS SECRET IGNORE RULES
+# =============================================================================
+
+# Dependencies & Package Managers
 node_modules/
 client/node_modules/
 server/node_modules/
+.pnp
+.pnp.js
 
-# Build output
+# Build Outputs & Production Artifacts
 dist/
 client/dist/
 build/
+.cache/
+.parcel-cache/
 
-# Environment variables & secrets (Never commit credentials)
+# =============================================================================
+# ENVIRONMENT VARIABLES & SECRETS (STRICT ENFORCEMENT)
+# =============================================================================
+# Root & nested .env files
 .env
 .env.*
-!.env.example
-client/.env
-client/.env.*
-server/.env
-server/.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+client/.env*
+server/.env*
+api/.env*
 
-# Local runtime storage & uploads
+# Only permit sanitized documentation templates (never with real secrets)
+!**/.env.example
+!.env.example
+!server/.env.example
+
+# Cryptographic Keys, Certificates & Service Account Credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.id_rsa
+*.id_ed25519
+credentials.json
+service-account*.json
+client_secret*.json
+
+# Local Runtime Storage, Database Backups & Private Uploads
 server/data/
 server/uploads/
+uploads/
+*.sqlite
+*.sqlite3
 
-# Vercel local cache
+# Vercel & Cloud Deployment Caches
 .vercel/
 client/.vercel/
 server/.vercel/
+.serverless/
 
-# Logs & OS files
+# Logs & Diagnostics
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS & Workspace Metadata
 .DS_Store
 Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Large Binaries, Raw Animations & Media Scratch
 *.zip
 Frame animation 70/

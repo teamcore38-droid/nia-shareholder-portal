@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const os = require('os');
+const { CLOUDINARY } = require('./env');
 const UPLOADS_DIR = process.env.VERCEL
   ? path.join(os.tmpdir(), 'apex_portal_uploads')
   : path.join(__dirname, '../../uploads');
@@ -16,10 +17,10 @@ try {
 }
 
 let runtimeCloudinaryConfig = {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
-  api_key: process.env.CLOUDINARY_API_KEY || '',
-  api_secret: process.env.CLOUDINARY_API_SECRET || '',
-  folder: process.env.CLOUDINARY_FOLDER || 'apex_shareholder_portal'
+  cloud_name: CLOUDINARY.cloud_name,
+  api_key: CLOUDINARY.api_key,
+  api_secret: CLOUDINARY.api_secret,
+  folder: CLOUDINARY.folder
 };
 
 function configureCloudinary(customConfig = {}) {

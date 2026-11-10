@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { User, Shareholder, RolePermission } = require('../models');
 const { ensureCoreSystemConfig, logAuditEvent } = require('../utils/ledgerEngine');
+const { IS_PRODUCTION } = require('../config/env');
 const {
   JWT_SECRET,
   signAuthToken,
@@ -59,7 +60,7 @@ router.get('/bootstrap-status', async (req, res) => {
 });
 
 // Initialize the very first Administrator account when database is empty (no unwanted seed data)
-router.post('/setup-initial-admin', async (req, res) => {
+router.post('/setup-initial-admin', strictLoginLimiter, async (req, res) => {
   try {
     const userCount = await User.countDocuments({});
     if (userCount > 0) {
@@ -67,9 +68,12 @@ router.post('/setup-initial-admin', async (req, res) => {
     }
 
     const { fullName, email, password, companyDisplayName } = req.body;
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Valid email and password strings are required.' });
+    }
     const pwdError = validatePasswordPolicy(password);
-    if (!email || pwdError) {
-      return res.status(400).json({ message: pwdError || 'Valid email and password are required.' });
+    if (pwdError) {
+      return res.status(400).json({ message: pwdError });
     }
 
     const settings = await ensureCoreSystemConfig();
@@ -128,7 +132,14 @@ router.post('/setup-initial-admin', async (req, res) => {
 router.post('/login', strictLoginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+    if (
+      !email ||
+      !password ||
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      !email.trim() ||
+      !password.trim()
+    ) {
       return res.status(400).json({ message: 'Please enter both Shareholder ID / Email and password.' });
     }
 
@@ -212,8 +223,12 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
         preAuthToken,
         email: user.email,
         role: user.role,
-        demoVerificationCode: user.verificationCode || '246810',
-        demoRecoveryCode: user.recoveryCode || 'APEX-RECOVERY-2026'
+        ...(!IS_PRODUCTION && process.env.ALLOW_DEV_DEMO_CODES === 'true'
+          ? {
+              demoVerificationCode: user.verificationCode || '246810',
+              demoRecoveryCode: user.recoveryCode || 'APEX-RECOVERY-2026'
+            }
+          : {})
       });
     }
 
@@ -428,12 +443,14 @@ router.post('/activate-invite', strictLoginLimiter, async (req, res) => {
 router.post('/forgot-password', strictLoginLimiter, async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email address is required.' });
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ message: 'Valid email address is required.' });
+    }
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       return res.json({
-        message: 'If that email is registered, a short-lived password reset token has been generated.'
+        message: 'If that email address is registered, password reset instructions have been dispatched.'
       });
     }
 
@@ -452,8 +469,10 @@ router.post('/forgot-password', strictLoginLimiter, async (req, res) => {
     });
 
     res.json({
-      message: 'Short-lived reset token generated (valid for 15 minutes).',
-      resetTokenDemo: resetToken
+      message: 'If that email address is registered, password reset instructions have been dispatched.',
+      ...(!IS_PRODUCTION && process.env.ALLOW_DEV_DEMO_CODES === 'true'
+        ? { resetTokenDemo: resetToken }
+        : {})
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
