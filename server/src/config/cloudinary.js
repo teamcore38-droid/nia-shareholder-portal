@@ -62,6 +62,7 @@ function getCloudinaryStatus() {
 async function uploadToCloudinary(fileBuffer, originalName, mimeType, subFolder = 'general') {
   configureCloudinary();
   const safeExt = path.extname(originalName || '') || '.bin';
+  const cleanSubFolder = String(subFolder || 'general').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
   const baseName = path
     .basename(originalName || 'file', safeExt)
     .replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -70,7 +71,7 @@ async function uploadToCloudinary(fileBuffer, originalName, mimeType, subFolder 
 
   if (isCloudinaryConfigured()) {
     try {
-      const folderPath = `${runtimeCloudinaryConfig.folder}/${subFolder}`;
+      const folderPath = `${runtimeCloudinaryConfig.folder}/${cleanSubFolder}`;
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
@@ -100,7 +101,7 @@ async function uploadToCloudinary(fileBuffer, originalName, mimeType, subFolder 
   }
 
   // Fallback local storage so file/image uploads always succeed even before Cloudinary keys are entered
-  const fileName = `${subFolder}_${baseName}_${uniqueSuffix}${safeExt}`;
+  const fileName = `${cleanSubFolder}_${baseName}_${uniqueSuffix}${safeExt}`;
   const filePath = path.join(UPLOADS_DIR, fileName);
   fs.writeFileSync(filePath, fileBuffer);
 

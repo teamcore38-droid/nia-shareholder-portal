@@ -143,6 +143,82 @@ if (healthRouteHandler) {
 }
 
 // =============================================================================
+// TEST SUITE 5: Admin Route Authorization & Privilege Enforcement
+// =============================================================================
+console.log('\n--- 5. Admin Route Authorization & Privilege Enforcement ---');
+
+const { requireStaff, requireRoles } = require('../server/src/middleware/auth');
+
+// Test 1: Unauthenticated request rejected by requireStaff with 401
+let staffBlocked = false;
+let staffStatus = null;
+const unauthReq = { user: null };
+const mockResAuth = {
+  status: (code) => {
+    staffStatus = code;
+    return mockResAuth;
+  },
+  json: () => {
+    staffBlocked = true;
+    return mockResAuth;
+  }
+};
+requireStaff(unauthReq, mockResAuth, () => {});
+assert(staffBlocked && staffStatus === 401, 'requireStaff blocks unauthenticated requests with 401 Unauthorized');
+
+// Test 2: Shareholder role rejected from admin workspace with 403 Forbidden
+let shareholderBlocked = false;
+let shareholderStatus = null;
+const shareholderReq = { user: { role: 'Shareholder', email: 'shareholder@test.com' } };
+const mockResRole = {
+  status: (code) => {
+    shareholderStatus = code;
+    return mockResRole;
+  },
+  json: () => {
+    shareholderBlocked = true;
+    return mockResRole;
+  }
+};
+requireStaff(shareholderReq, mockResRole, () => {});
+assert(
+  shareholderBlocked && shareholderStatus === 403,
+  'requireStaff strictly blocks Shareholder users with 403 Forbidden'
+);
+
+// Test 3: Authorized staff (Data officer, Approver, Administrator) permitted through requireStaff
+let staffPassed = false;
+const staffReq = { user: { role: 'Administrator', email: 'admin@test.com' } };
+requireStaff(staffReq, mockResRole, () => {
+  staffPassed = true;
+});
+assert(staffPassed, 'requireStaff allows valid staff roles through');
+
+// Test 4: Administrator-only route strictly blocks Data officer with 403
+const adminOnlyMiddleware = requireRoles('Administrator');
+let dataOfficerBlocked = false;
+let dataOfficerStatus = null;
+const dataOfficerReq = { user: { role: 'Data officer', email: 'officer@test.com' } };
+adminOnlyMiddleware(
+  dataOfficerReq,
+  {
+    status: (code) => {
+      dataOfficerStatus = code;
+      return {
+        json: () => {
+          dataOfficerBlocked = true;
+        }
+      };
+    }
+  },
+  () => {}
+);
+assert(
+  dataOfficerBlocked && dataOfficerStatus === 403,
+  'requireRoles("Administrator") strictly blocks non-Admin staff (e.g. Data officer) with 403 Forbidden'
+);
+
+// =============================================================================
 // SUMMARY
 // =============================================================================
 console.log('\n=============================================================================');

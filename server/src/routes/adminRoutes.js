@@ -59,6 +59,11 @@ const ALLOWED_EXTENSIONS = new Set([
 ]);
 
 const router = express.Router();
+
+// Fail-Safe Defense-in-Depth: Enforce authentication & authorised staff role across ALL admin routes
+router.use(authenticate);
+router.use(requireStaff);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
