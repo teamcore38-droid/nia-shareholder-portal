@@ -79,7 +79,8 @@ export default function ScrollImageSequenceCanvas({
       if (!canvas || !container) return;
 
       const rect = container.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
 
       const width = Math.max(rect.width, window.innerWidth);
       const height = Math.max(rect.height, window.innerHeight);
@@ -90,6 +91,8 @@ export default function ScrollImageSequenceCanvas({
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = isMobile ? 'medium' : 'high';
         needsRedrawRef.current = true;
       }
     };
@@ -158,10 +161,21 @@ export default function ScrollImageSequenceCanvas({
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
 
-      const lerpSpeed = isReducedMotion.current ? 1.0 : 0.14;
       const delta = target - current;
+      const absDelta = Math.abs(delta);
 
-      if (Math.abs(delta) > 0.005) {
+      // Adaptive lerp:
+      // When scrolling actively, track the scroll position faster (up to 0.42) to eliminate lag
+      // When nearing the target, ease gently into the final frame with 0.22 for silkiness
+      let lerpSpeed = 0.22;
+      if (absDelta > 1.5) {
+        lerpSpeed = Math.min(0.42, 0.22 + (absDelta - 1.5) * 0.04);
+      }
+      if (isReducedMotion.current) {
+        lerpSpeed = 1.0;
+      }
+
+      if (absDelta > 0.005) {
         currentFrameRef.current += delta * lerpSpeed;
       } else {
         currentFrameRef.current = target;
@@ -209,7 +223,9 @@ export default function ScrollImageSequenceCanvas({
           left: 0,
           width: '100%',
           height: '100%',
-          display: 'block'
+          display: 'block',
+          transform: 'translateZ(0)',
+          willChange: 'transform'
         }}
       />
 
