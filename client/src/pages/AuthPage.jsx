@@ -264,10 +264,30 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
       </header>
 
       {/* Main Split Content */}
-      <main className="relative z-20 flex-1 max-w-7xl w-full mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
-        {/* Left Hero Column */}
-        <div className="w-full lg:w-6/12 space-y-6 text-center lg:text-left">
-          <div>
+      <main className="relative z-20 flex-1 max-w-7xl w-full mx-auto px-6 sm:px-10 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+        {/* Mobile Header (Shown on mobile above the login card) */}
+        <div className="lg:hidden w-full text-center space-y-2.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121827]/90 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold uppercase tracking-wider">
+            <span>Nexus International Alliance • E-STD 2022</span>
+          </div>
+          <h1
+            className="text-3xl font-extrabold tracking-tight leading-[1.14] text-white drop-shadow-xs uppercase"
+            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+          >
+            NIA Group
+            <br />
+            <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+              Shareholder Portal
+            </span>
+          </h1>
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-[#D4AF37]">
+            — Building A Better Tomorrow Together —
+          </p>
+        </div>
+
+        {/* Left Hero Column (Desktop: left column; Mobile: beneath auth card) */}
+        <div className="w-full lg:w-6/12 space-y-6 text-center lg:text-left order-2 lg:order-1">
+          <div className="hidden lg:block">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121827]/90 border border-[#D4AF37]/40 text-[#FDE047] text-xs font-bold mb-3 uppercase tracking-wider">
               <span>Nexus International Alliance • E-STD 2022</span>
             </div>
@@ -340,7 +360,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
         </div>
 
         {/* Right Floating Authentication Card with Gold Border Accent */}
-        <div className="w-full max-w-[430px] shrink-0">
+        <div className="w-full max-w-[430px] shrink-0 order-1 lg:order-2">
           {/* CARD 1: Sign in to your account (Default) */}
           {mode === 'signin' && (
             <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
