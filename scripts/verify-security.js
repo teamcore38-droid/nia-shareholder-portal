@@ -32,7 +32,12 @@ try {
   const trackedEnvFiles = execSync('git ls-files "*env*"', { encoding: 'utf8' })
     .split('\n')
     .map((f) => f.trim())
-    .filter((f) => f && !f.endsWith('.example'));
+    .filter((f) => {
+      if (!f || f.endsWith('.example')) return false;
+      const base = path.basename(f);
+      // Only match actual env configuration files like .env, .env.local, .env.prod
+      return base === '.env' || base.startsWith('.env.');
+    });
 
   assert(
     trackedEnvFiles.length === 0,

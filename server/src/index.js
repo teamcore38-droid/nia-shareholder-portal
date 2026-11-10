@@ -226,7 +226,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && require.main === module) {
   ensureInitialized().then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Apex Link Shareholder Portal API running on http://localhost:${PORT}`);
