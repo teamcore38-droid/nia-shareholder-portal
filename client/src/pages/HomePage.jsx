@@ -66,7 +66,7 @@ const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
     transform: `translate3d(0, ${translateY.toFixed(1)}px, 0)`,
     pointerEvents: opacity > 0.2 ? 'auto' : 'none',
     visibility: opacity > 0.005 ? 'visible' : 'hidden',
-    transition: 'opacity 0.15s ease-out, transform 0.15s ease-out'
+    willChange: 'transform, opacity'
   };
 };
 
@@ -89,16 +89,25 @@ export default function HomePage({ onNavigateToAuth }) {
   const chapter3Style = getStageStyle(heroScrollProgress, 0.70, 0.78, 0.94, 1.00);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const el = heroTrackRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const totalScrollable = el.offsetHeight - window.innerHeight;
-      if (totalScrollable <= 0) return;
+    let ticking = false;
 
-      const scrolled = -rect.top;
-      const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
-      setHeroScrollProgress(progress);
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          const el = heroTrackRef.current;
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            const totalScrollable = el.offsetHeight - window.innerHeight;
+            if (totalScrollable > 0) {
+              const scrolled = -rect.top;
+              const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
+              setHeroScrollProgress(progress);
+            }
+          }
+          ticking = false;
+        });
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
