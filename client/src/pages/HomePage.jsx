@@ -38,16 +38,16 @@ import { ApexBrandLogo } from '../components/ApexBrandLogo';
 // Helper to compute smooth opacity and subtle translate transitions across scroll stages
 const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
   let opacity = 0;
-  let translateY = 24;
+  let translateY = 18;
 
   if (progress <= enterStart) {
     opacity = 0;
-    translateY = 24;
+    translateY = 18;
   } else if (progress < enterEnd) {
     const t = (progress - enterStart) / (enterEnd - enterStart);
     const ease = t * t * (3 - 2 * t);
     opacity = ease;
-    translateY = (1 - ease) * 24;
+    translateY = (1 - ease) * 18;
   } else if (progress <= exitStart) {
     opacity = 1;
     translateY = 0;
@@ -55,17 +55,17 @@ const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
     const t = (progress - exitStart) / (exitEnd - exitStart);
     const ease = t * t * (3 - 2 * t);
     opacity = 1 - ease;
-    translateY = -ease * 24;
+    translateY = -ease * 18;
   } else {
     opacity = 0;
-    translateY = -24;
+    translateY = -18;
   }
 
   return {
-    opacity,
+    opacity: Number(opacity.toFixed(3)),
     transform: `translate3d(0, ${translateY.toFixed(1)}px, 0)`,
-    pointerEvents: opacity > 0.2 ? 'auto' : 'none',
-    visibility: opacity > 0.005 ? 'visible' : 'hidden',
+    pointerEvents: opacity > 0.35 ? 'auto' : 'none',
+    visibility: opacity > 0.01 ? 'visible' : 'hidden',
     willChange: 'transform, opacity'
   };
 };
@@ -83,13 +83,77 @@ export default function HomePage({ onNavigateToAuth }) {
   const heroTrackRef = useRef(null);
   const [heroScrollProgress, setHeroScrollProgress] = useState(0);
 
-  // Smooth stage transitions: appear and vanish as the 3D sequence scrolls
-  const chapter1Style = getStageStyle(heroScrollProgress, -0.1, 0.0, 0.22, 0.32);
-  const chapter2Style = getStageStyle(heroScrollProgress, 0.35, 0.44, 0.60, 0.68);
-  const chapter3Style = getStageStyle(heroScrollProgress, 0.70, 0.78, 0.94, 1.00);
+  // Programmatic scroll flag to prevent snap fighting during link navigation
+  const isProgrammaticScrollRef = useRef(false);
+
+  // Distinct stage plateaus with dedicated clean 3D motion showcase zones:
+  // - Stage 1 (Details): 0.00 to 0.16 (exits by 0.23)
+  // - Clean 3D Motion Only: 0.23 to 0.40 (all cards hidden, snap at 0.31)
+  // - Stage 2 (Details): 0.46 to 0.58 (enters 0.40, exits 0.64, snap at 0.52)
+  // - Clean 3D Motion Only: 0.64 to 0.77 (all cards hidden, snap at 0.70)
+  // - Stage 3 (Details): 0.83 to 0.92 (enters 0.77, exits 0.98, snap at 0.87)
+  const chapter1Style = getStageStyle(heroScrollProgress, -0.1, 0.0, 0.16, 0.23);
+  const chapter2Style = getStageStyle(heroScrollProgress, 0.40, 0.46, 0.58, 0.64);
+  const chapter3Style = getStageStyle(heroScrollProgress, 0.77, 0.83, 0.92, 0.98);
 
   useEffect(() => {
     let ticking = false;
+    let snapTimeout = null;
+    let isTouchActive = false;
+
+    // Defined clean resting targets within the hero track:
+    // 0.00: Stage 1 (Full Details: Title, CTA Buttons, Digital Network card)
+    // 0.31: Clean 3D Motion Only (Pure visual, all cards hidden)
+    // 0.52: Stage 2 (Full Details: Nationwide Digital Network & 3 frosted cards)
+    // 0.70: Clean 3D Motion Only (Pure visual, all cards hidden)
+    // 0.87: Stage 3 (Full Details: 6 Diversified Sectors & Action CTAs)
+    // 1.00: Exit Hero (Transition smoothly into Metrics Strip & rest of page)
+    const SNAP_TARGETS = [0.00, 0.31, 0.52, 0.70, 0.87, 1.00];
+
+    const evaluateSnap = () => {
+      if (isTouchActive || isProgrammaticScrollRef.current) return;
+
+      const el = heroTrackRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const totalScrollable = el.offsetHeight - window.innerHeight;
+      if (totalScrollable <= 0) return;
+
+      const scrolled = -rect.top;
+      const progress = scrolled / totalScrollable;
+
+      // Only snap if the user has stopped inside the active hero track
+      // If user has scrolled into the rest of the website (progress >= 0.985), do not interfere
+      if (progress < 0.015 || progress > 0.985) return;
+
+      // Find the closest clean resting state (either full cards or clean motion)
+      let closest = SNAP_TARGETS[0];
+      let minDiff = 999;
+      for (const target of SNAP_TARGETS) {
+        const diff = Math.abs(target - progress);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = target;
+        }
+      }
+
+      // If user landed in an awkward in-between transition zone, smoothly glide to the clean target
+      if (minDiff > 0.018) {
+        const targetScrolled = totalScrollable * closest;
+        const deltaY = targetScrolled - scrolled;
+
+        window.scrollBy({
+          top: deltaY,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    const scheduleSnap = () => {
+      clearTimeout(snapTimeout);
+      snapTimeout = setTimeout(evaluateSnap, 140);
+    };
 
     const handleScroll = () => {
       if (!ticking) {
@@ -108,14 +172,35 @@ export default function HomePage({ onNavigateToAuth }) {
           ticking = false;
         });
       }
+
+      scheduleSnap();
+    };
+
+    const onTouchStart = () => {
+      isTouchActive = true;
+      clearTimeout(snapTimeout);
+    };
+
+    const onTouchEnd = () => {
+      isTouchActive = false;
+      scheduleSnap();
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
     handleScroll();
+
     return () => {
+      clearTimeout(snapTimeout);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
     };
   }, []);
 
@@ -184,10 +269,14 @@ export default function HomePage({ onNavigateToAuth }) {
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
+    isProgrammaticScrollRef.current = true;
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+    setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 1000);
   };
 
   return (
@@ -208,7 +297,13 @@ export default function HomePage({ onNavigateToAuth }) {
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-200">
             {/* Active Link: Home with Gold Underline */}
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                isProgrammaticScrollRef.current = true;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                  isProgrammaticScrollRef.current = false;
+                }, 1000);
+              }}
               className="text-[#FDE047] font-bold cursor-pointer relative pb-1 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FDE047] transition-all"
             >
               Home
