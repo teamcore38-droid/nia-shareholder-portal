@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 const API_BASE = rawApiUrl.startsWith('http') && !rawApiUrl.endsWith('/api') ? `${rawApiUrl}/api` : rawApiUrl;
+const BACKEND_ORIGIN = API_BASE.startsWith('http') ? API_BASE.replace(/\/api$/, '') : '';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -39,6 +40,22 @@ export function getDownloadUrl(pathWithQuery) {
   const token = localStorage.getItem('apex_portal_token');
   const separator = pathWithQuery.includes('?') ? '&' : '?';
   return `${API_BASE}${pathWithQuery}${token ? `${separator}token=${encodeURIComponent(token)}` : ''}`;
+}
+
+export function resolveUploadUrl(url, { includeToken = true } = {}) {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const normalized = url.startsWith('/') ? url : `/${url}`;
+  const fullUrl = normalized.startsWith('/uploads/')
+    ? `${BACKEND_ORIGIN}${normalized}`
+    : normalized;
+  if (!includeToken || !normalized.startsWith('/uploads/') || normalized.includes('/company_branding/')) {
+    return fullUrl;
+  }
+  const token = localStorage.getItem('apex_portal_token');
+  if (!token) return fullUrl;
+  const separator = fullUrl.includes('?') ? '&' : '?';
+  return `${fullUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
 export default api;

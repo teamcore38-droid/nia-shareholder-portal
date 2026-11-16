@@ -21,7 +21,7 @@ import {
   Percent,
   Sparkles
 } from 'lucide-react';
-import api, { getDownloadUrl } from '../../api/client';
+import api, { getDownloadUrl, resolveUploadUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import SteppedValuationChart from '../../components/SteppedValuationChart';
 import PasswordInput from '../../components/PasswordInput';
@@ -897,7 +897,7 @@ export default function ShareholderWorkspace({
                             </div>
                             {row.supportingDocumentUrl && (
                               <a
-                                href={row.supportingDocumentUrl}
+                                href={resolveUploadUrl(row.supportingDocumentUrl)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-[#9A7B2C] hover:underline mt-0.5"
@@ -1268,7 +1268,7 @@ export default function ShareholderWorkspace({
 
               {doc.fileUrl ? (
                 <a
-                  href={doc.fileUrl}
+                  href={resolveUploadUrl(doc.fileUrl)}
                   target="_blank"
                   rel="noreferrer"
                   title="Download PDF"

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileText, CheckCircle2, Loader2, ExternalLink, X } from 'lucide-react';
-import { uploadFileToServer } from '../api/client';
+import { uploadFileToServer, resolveUploadUrl } from '../api/client';
 
 export default function FileUploader({
   folder = 'documents',
@@ -71,7 +71,7 @@ export default function FileUploader({
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span className="truncate max-w-[180px]">{currentName || 'Attached file'}</span>
             <a
-              href={currentUrl}
+              href={resolveUploadUrl(currentUrl)}
               target="_blank"
               rel="noreferrer"
               className="text-emerald-700 hover:text-emerald-950 underline inline-flex items-center gap-0.5"
