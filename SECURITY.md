@@ -33,8 +33,8 @@ This application adheres to enterprise defense-in-depth principles and OWASP Top
                      ┌─────────────────────┴─────────────────────┐
                      ▼                                           ▼
          ┌───────────────────────┐                   ┌───────────────────────┐
-         │     MongoDB Atlas     │                   │   Cloudinary Storage  │
-         │  - SCRAM-SHA-256 Auth │                   │  - API Key & Secret   │
+         │     MongoDB Atlas     │                   │ Cloudflare R2 Storage │
+         │  - SCRAM-SHA-256 Auth │                   │  - Access Key & Secret│
          │  - Least Privilege DB │                   │  - Private Credentials│
          │  - IP Whitelist Gate  │                   │  - Server-Side Only   │
          └───────────────────────┘                   └───────────────────────┘
@@ -51,8 +51,8 @@ This application adheres to enterprise defense-in-depth principles and OWASP Top
 
 ### 2. Client-Side Decoupling (Vite / React)
 - In Vite, only variables explicitly prefixed with `VITE_` are bundled into client JavaScript.
-- **Never** prefix backend keys (`MONGODB_URI`, `JWT_SECRET`, `CLOUDINARY_API_SECRET`) with `VITE_`.
-- Frontend code only knows the relative `/api` path. All external API calls (Cloudinary upload, database transactions, PDF generation) are handled exclusively server-side.
+- **Never** prefix backend keys (`MONGODB_URI`, `JWT_SECRET`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY`) with `VITE_`.
+- Frontend code only knows the relative `/api` path. All external API calls (Cloudflare R2 upload, database transactions, PDF generation) are handled exclusively server-side.
 
 ### 3. Fail-Fast Production Environment Validation
 - In production (`NODE_ENV=production` or running on Vercel), `server/src/config/env.js` validates all required secrets before processing requests.
@@ -60,7 +60,7 @@ This application adheres to enterprise defense-in-depth principles and OWASP Top
 
 ### 4. Zero Data Leakage via Diagnostics & Health Endpoints
 - Public endpoints (`/`, `/api/health`, `/api/bootstrap-status`) are strictly sanitized.
-- Internal connection strings (`mongodb+srv://...`), database usernames, cluster hosts, and Cloudinary keys are never included in API responses or HTTP headers.
+- Internal connection strings (`mongodb+srv://...`), database usernames, cluster hosts, and Cloudflare R2 keys are never included in API responses or HTTP headers.
 
 ### 5. Multi-Layer Rate Limiting & DoS Mitigation
 - **Global API Rate Limiter**: 500 requests per 15-minute window per IP address across all `/api/*` endpoints.
@@ -90,10 +90,12 @@ When deploying to Vercel, configure your encrypted environment variables via the
 | `MONGODB_URI` | MongoDB Atlas Connection String | `mongodb+srv://<user>:<password>@cluster0.abcde.mongodb.net/apex_shareholder_portal?retryWrites=true&w=majority` |
 | `JWT_SECRET` | 64-char random cryptographic hex string | *Generate using command below* |
 | `ALLOWED_ORIGINS` | Comma-separated list of your official production URLs | `https://shareholder.niagroup.com,https://your-deployment.vercel.app` |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary Cloud Name (optional) | *From your Cloudinary dashboard* |
-| `CLOUDINARY_API_KEY` | Cloudinary API Key (optional) | *From your Cloudinary dashboard* |
-| `CLOUDINARY_API_SECRET` | Cloudinary API Secret (optional) | *From your Cloudinary dashboard* |
-| `CLOUDINARY_FOLDER` | Destination folder for uploads | `apex_shareholder_portal` |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID (optional) | *From your Cloudflare dashboard* |
+| `CLOUDFLARE_R2_ACCESS_KEY_ID` | Cloudflare R2 Access Key ID (optional) | *From your Cloudflare R2 API Tokens* |
+| `CLOUDFLARE_R2_SECRET_ACCESS_KEY` | Cloudflare R2 Secret Access Key (optional) | *From your Cloudflare R2 API Tokens* |
+| `CLOUDFLARE_R2_BUCKET_NAME` | Cloudflare R2 Bucket Name (optional) | `apex-shareholder-portal` |
+| `CLOUDFLARE_R2_PUBLIC_URL` | Optional R2 public URL / custom domain | *Leave blank for authenticated proxy* |
+| `CLOUDFLARE_R2_FOLDER` | Destination folder prefix for uploads | `apex_shareholder_portal` |
 
 ### How to Generate a Strong `JWT_SECRET`:
 Run this command in terminal to generate a 256-bit cryptographically secure secret:

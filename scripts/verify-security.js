@@ -134,8 +134,11 @@ if (healthRouteHandler) {
   );
 
   assert(
-    !serialized.includes('api_secret') && !serialized.includes('api_key'),
-    '/api/health does NOT expose Cloudinary API secrets or keys',
+    !serialized.includes('secretAccessKey') &&
+      !serialized.includes('accessKeyId') &&
+      !serialized.includes('api_secret') &&
+      !serialized.includes('api_key'),
+    '/api/health does NOT expose Cloudflare R2 API secrets or keys',
     `Response: ${serialized}`
   );
 } else {

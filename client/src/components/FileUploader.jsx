@@ -4,7 +4,7 @@ import { uploadFileToServer } from '../api/client';
 
 export default function FileUploader({
   folder = 'documents',
-  label = 'Upload supporting document or image (Cloudinary)',
+  label = 'Upload supporting document or image (Cloudflare R2)',
   accept = '.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx',
   currentUrl = '',
   currentName = '',
@@ -56,7 +56,7 @@ export default function FileUploader({
           {uploading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-[#B8860B]" />
-              Uploading to Cloudinary...
+              Uploading to Cloudflare R2...
             </>
           ) : (
             <>

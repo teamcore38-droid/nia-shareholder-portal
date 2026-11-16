@@ -1,4 +1,4 @@
-# Apex Link — Shareholder Portal Web Application (MERN + Cloudinary)
+# Apex Link — Shareholder Portal Web Application (MERN + Cloudflare R2)
 
 Prepared for **NIA Group of Company** (`Proposal Reference: ALG-SP-2026-16`).
 
@@ -6,7 +6,7 @@ Prepared for **NIA Group of Company** (`Proposal Reference: ALG-SP-2026-16`).
 - **Frontend**: React 19, Vite 6, Tailwind CSS v4, Lucide Icons, Custom Interactive SVG Step-After Financial Charts with Accessible Tabular Toggle.
 - **Backend**: Node.js, Express.js, JWT Authentication with Multi-Factor Staff Verification & Session Version Revocation, PDFKit Dated Statement & Report Generator.
 - **Database**: MongoDB & Mongoose (`server/src/models/index.js`) with automatic Persistent Local JSON-Document Engine (`server/data/portal_db.json`) fallback when local `mongod` is not running.
-- **Media & Document Storage**: Cloudinary v2 SDK (`server/src/config/cloudinary.js`) with runtime credential configuration in **Settings (Interface 21)** or `server/.env` and safe local fallback (`server/uploads/`).
+- **Media & Document Storage**: Cloudflare R2 S3-compatible SDK (`@aws-sdk/client-s3` in `server/src/config/cloudflare.js`) with runtime credential configuration in **Settings (Interface 21)** or `server/.env`, authenticated private proxy delivery (`/uploads/r2/*`) or optional custom domain (`CLOUDFLARE_R2_PUBLIC_URL`), and safe local fallback (`server/uploads/`).
 - **Zero Unwanted Seed Data**: Starts completely clean of any fake/unwanted records. On first visit, initialize your primary Administrator account directly from the Sign-In screen.
 
 ## Running the Application

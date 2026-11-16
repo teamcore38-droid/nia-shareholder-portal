@@ -955,7 +955,7 @@ export default function AdminCoreTabs({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Identity / KYC verification document (Cloudinary)
+                  Identity / KYC verification document (Cloudflare R2)
                 </label>
                 <FileUploader
                   folder="shareholder_kyc"
@@ -1372,7 +1372,7 @@ export default function AdminCoreTabs({
               />
               <FileUploader
                 folder="share_movements"
-                label="Attach supporting document (PDF / Image via Cloudinary)"
+                label="Attach supporting document (PDF / Image via Cloudflare R2)"
                 currentUrl={movForm.supportingDocumentUrl}
                 currentName={movForm.supportingDocumentName}
                 onUploaded={(file) =>
@@ -1697,7 +1697,7 @@ export default function AdminCoreTabs({
               {/* Supporting Document Uploader (Step 2 or always accessible) */}
               <div className="pt-1">
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Valuation Evidence / Board Resolution (Cloudinary) — Reference: {valForm.reference || nextRef}
+                  Valuation Evidence / Board Resolution (Cloudflare R2) — Reference: {valForm.reference || nextRef}
                 </label>
                 <FileUploader
                   folder="valuations"

@@ -2,6 +2,7 @@ const {
   PORT,
   IS_PRODUCTION,
   ALLOWED_ORIGINS,
+  CLOUDFLARE_R2,
   isOriginAllowed
 } = require('./config/env');
 const express = require('express');
@@ -15,7 +16,12 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const { connectDB, dbState } = require('./config/db');
-const { configureCloudinary, getCloudinaryStatus, UPLOADS_DIR } = require('./config/cloudinary');
+const {
+  configureCloudflare,
+  getCloudflareStatus,
+  getCloudflareObject,
+  UPLOADS_DIR
+} = require('./config/cloudflare');
 const { ensureCoreSystemConfig } = require('./utils/ledgerEngine');
 const { authenticate } = require('./middleware/auth');
 const { Publication, ShareMovement } = require('./models');
@@ -23,6 +29,15 @@ const { Publication, ShareMovement } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const shareholderPortalRoutes = require('./routes/shareholderPortalRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+
+let r2PublicOrigin = '';
+if (CLOUDFLARE_R2.publicUrl) {
+  try {
+    r2PublicOrigin = new URL(CLOUDFLARE_R2.publicUrl).origin;
+  } catch {
+    r2PublicOrigin = '';
+  }
+}
 
 const app = express();
 
@@ -39,8 +54,21 @@ app.use(
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
-        connectSrc: ["'self'", 'https://res.cloudinary.com', ...ALLOWED_ORIGINS],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://*.r2.dev',
+          'https://*.r2.cloudflarestorage.com',
+          ...(r2PublicOrigin ? [r2PublicOrigin] : [])
+        ],
+        connectSrc: [
+          "'self'",
+          'https://*.r2.dev',
+          'https://*.r2.cloudflarestorage.com',
+          ...(r2PublicOrigin ? [r2PublicOrigin] : []),
+          ...ALLOWED_ORIGINS
+        ],
         frameAncestors: ["'none'"]
       }
     },
@@ -79,8 +107,12 @@ async function ensureInitialized() {
   if (!initPromise) {
     initPromise = (async () => {
       await connectDB();
-      configureCloudinary();
-      await ensureCoreSystemConfig();
+      const settings = await ensureCoreSystemConfig();
+      configureCloudflare({
+        accountId: CLOUDFLARE_R2.accountId || settings?.cloudflareAccountId || '',
+        bucketName: CLOUDFLARE_R2.bucketName || settings?.cloudflareR2Bucket || '',
+        publicUrl: CLOUDFLARE_R2.publicUrl || settings?.cloudflareR2PublicUrl || ''
+      });
     })().catch((err) => {
       initPromise = null;
       console.error('Initialization error:', err.message);
@@ -94,28 +126,15 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Protected private file delivery
-app.get('/uploads/:filename', async (req, res) => {
-  const safeFilename = path.basename(req.params.filename || '');
-  const filePath = path.join(UPLOADS_DIR, safeFilename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: 'Requested file not found.' });
-  }
-
-  if (safeFilename.startsWith('company_branding_')) {
-    return res.sendFile(filePath);
-  }
-
+function authorizeUploadRequest(req, res, targetUrl, onAuthorized) {
   authenticate(req, res, async () => {
     try {
       const isStaff = ['Administrator', 'Data officer', 'Approver'].includes(req.user.role);
       if (isStaff) {
-        return res.sendFile(filePath);
+        return onAuthorized();
       }
 
       const shId = req.user.shareholderId;
-      const targetUrl = `/uploads/${safeFilename}`;
 
       const pub = await Publication.findOne({ fileUrl: targetUrl, status: 'Published' });
       if (pub) {
@@ -123,7 +142,7 @@ app.get('/uploads/:filename', async (req, res) => {
           pub.audienceType === 'All shareholders' ||
           (pub.audienceType === 'Specific shareholder' && pub.targetShareholderId === shId)
         ) {
-          return res.sendFile(filePath);
+          return onAuthorized();
         }
         return res.status(403).json({
           message: 'Access denied: You are not authorised to access another shareholder’s private document.'
@@ -136,7 +155,7 @@ app.get('/uploads/:filename', async (req, res) => {
       });
       if (mov) {
         if (mov.fromShareholderId === shId || mov.toShareholderId === shId) {
-          return res.sendFile(filePath);
+          return onAuthorized();
         }
         return res.status(403).json({
           message: 'Access denied: Supporting movement document belongs to another shareholder.'
@@ -150,6 +169,62 @@ app.get('/uploads/:filename', async (req, res) => {
       return res.status(500).json({ message: 'Error verifying file access permissions.' });
     }
   });
+}
+
+// Protected Cloudflare R2 proxy delivery (when no public R2 custom domain / r2.dev URL is set)
+app.get('/uploads/r2/*', async (req, res) => {
+  const rawKey = req.params[0] || '';
+  const objectKey = rawKey.replace(/^\/+/, '');
+  const segments = objectKey.split('/');
+  if (
+    !objectKey ||
+    objectKey.includes('\0') ||
+    objectKey.includes('\\') ||
+    segments.some((seg) => !seg || seg === '.' || seg === '..')
+  ) {
+    return res.status(400).json({ message: 'Invalid file key.' });
+  }
+
+  const serveFromR2 = async (isPublicBranding = false) => {
+    try {
+      const obj = await getCloudflareObject(objectKey);
+      if (!obj) {
+        return res.status(404).json({ message: 'Requested file not found.' });
+      }
+      const safeName = path.basename(objectKey).replace(/"/g, '');
+      res.setHeader('Content-Type', obj.contentType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+      res.setHeader('Cache-Control', isPublicBranding ? 'public, max-age=3600' : 'private, no-store');
+      return res.send(obj.buffer);
+    } catch (err) {
+      if (err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404) {
+        return res.status(404).json({ message: 'Requested file not found.' });
+      }
+      return res.status(500).json({ message: 'Unable to retrieve file from Cloudflare R2 storage.' });
+    }
+  };
+
+  if (segments.length >= 2 && segments[segments.length - 2] === 'company_branding') {
+    return serveFromR2(true);
+  }
+
+  return authorizeUploadRequest(req, res, `/uploads/r2/${objectKey}`, () => serveFromR2(false));
+});
+
+// Protected private local-fallback file delivery
+app.get('/uploads/:filename', async (req, res) => {
+  const safeFilename = path.basename(req.params.filename || '');
+  const filePath = path.join(UPLOADS_DIR, safeFilename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: 'Requested file not found.' });
+  }
+
+  if (safeFilename.startsWith('company_branding_')) {
+    return res.sendFile(filePath);
+  }
+
+  return authorizeUploadRequest(req, res, `/uploads/${safeFilename}`, () => res.sendFile(filePath));
 });
 
 // Global rate limiter across all API routes to mitigate DoS & scanning attacks
@@ -183,7 +258,7 @@ app.get('/', (req, res) => {
 
 // Sanitized Health & Diagnostics Endpoint (CWE-200 Prevention: zero internal URI or secret exposure)
 app.get('/api/health', (req, res) => {
-  const clStatus = getCloudinaryStatus();
+  const cfStatus = getCloudflareStatus();
   res.json({
     status: 'healthy',
     service: 'Nexus International Alliance (NIA) — Digital Shareholder Portal API',
@@ -193,8 +268,8 @@ app.get('/api/health', (req, res) => {
       mode: dbState.mode
     },
     storage: {
-      configured: Boolean(clStatus.configured),
-      provider: clStatus.mode === 'cloudinary-cloud' ? 'cloudinary' : 'local-storage'
+      configured: Boolean(cfStatus.configured),
+      provider: cfStatus.mode === 'cloudflare-r2' ? 'cloudflare-r2' : 'local-storage'
     },
     timestamp: new Date().toISOString()
   });

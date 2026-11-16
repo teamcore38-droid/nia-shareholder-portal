@@ -23,10 +23,10 @@ const {
 const path = require('path');
 const { authenticate, requireStaff, requireRoles, checkRolePermission } = require('../middleware/auth');
 const {
-  configureCloudinary,
-  getCloudinaryStatus,
-  uploadToCloudinary
-} = require('../config/cloudinary');
+  configureCloudflare,
+  getCloudflareStatus,
+  uploadToCloudflare
+} = require('../config/cloudflare');
 const { dbState } = require('../config/db');
 const { generateAdminReportPDF } = require('../utils/pdfGenerator');
 const {
@@ -80,7 +80,7 @@ const upload = multer({
   }
 });
 
-// Cloudinary File / Image Upload Route (with file-type validation per Page 34)
+// Cloudflare R2 File / Image Upload Route (with file-type validation per Page 34)
 router.post('/upload', authenticate, requireStaff, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) {
@@ -94,7 +94,7 @@ router.post('/upload', authenticate, requireStaff, (req, res, next) => {
       return res.status(400).json({ message: 'No file provided for upload.' });
     }
     const folder = req.body.folder || 'documents';
-    const result = await uploadToCloudinary(
+    const result = await uploadToCloudflare(
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype,
@@ -112,7 +112,7 @@ router.post('/upload', authenticate, requireStaff, (req, res, next) => {
     });
 
     res.json({
-      message: `File uploaded successfully via ${result.provider === 'cloudinary' ? 'Cloudinary Cloud' : 'Local Storage'}.`,
+      message: `File uploaded successfully via ${result.provider === 'cloudflare-r2' ? 'Cloudflare R2 Storage' : 'Local Storage'}.`,
       file: result
     });
   } catch (err) {
@@ -421,7 +421,7 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
       },
       settings: {
         settings,
-        cloudinaryStatus: getCloudinaryStatus(),
+        cloudflareStatus: getCloudflareStatus(),
         databaseStatus: dbState,
         seedStatus
       }
@@ -2256,7 +2256,7 @@ router.get('/settings', authenticate, requireStaff, async (req, res) => {
     ]);
     res.json({
       settings,
-      cloudinaryStatus: getCloudinaryStatus(),
+      cloudflareStatus: getCloudflareStatus(),
       databaseStatus: dbState,
       seedStatus
     });
@@ -2280,9 +2280,11 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
       issuedSharesTotal,
       votingRights,
       materialValuationChangeThresholdPercent,
-      cloudinaryCloudName,
-      cloudinaryApiKey,
-      cloudinaryApiSecret
+      cloudflareAccountId,
+      cloudflareR2Bucket,
+      cloudflareR2PublicUrl,
+      cloudflareR2AccessKeyId,
+      cloudflareR2SecretAccessKey
     } = req.body;
 
     if (companyDisplayName !== undefined) settings.companyDisplayName = companyDisplayName.trim();
@@ -2299,14 +2301,32 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
       settings.materialValuationChangeThresholdPercent = Number(materialValuationChangeThresholdPercent) || 10;
     }
 
-    // Dynamic Cloudinary configuration if provided
-    if (cloudinaryCloudName || cloudinaryApiKey || cloudinaryApiSecret) {
-      configureCloudinary({
-        cloud_name: cloudinaryCloudName,
-        api_key: cloudinaryApiKey,
-        api_secret: cloudinaryApiSecret
+    // Dynamic Cloudflare R2 configuration if provided
+    if (
+      cloudflareAccountId !== undefined ||
+      cloudflareR2Bucket !== undefined ||
+      cloudflareR2PublicUrl !== undefined ||
+      cloudflareR2AccessKeyId ||
+      cloudflareR2SecretAccessKey
+    ) {
+      configureCloudflare({
+        accountId: cloudflareAccountId,
+        bucketName: cloudflareR2Bucket,
+        publicUrl: cloudflareR2PublicUrl,
+        accessKeyId: cloudflareR2AccessKeyId,
+        secretAccessKey: cloudflareR2SecretAccessKey
       });
-      if (cloudinaryCloudName) settings.cloudinaryCloudName = cloudinaryCloudName;
+      if (typeof cloudflareAccountId === 'string' && cloudflareAccountId.trim()) {
+        settings.cloudflareAccountId = cloudflareAccountId.trim();
+      }
+      if (typeof cloudflareR2Bucket === 'string' && cloudflareR2Bucket.trim()) {
+        settings.cloudflareR2Bucket = cloudflareR2Bucket.trim();
+      }
+      if (cloudflareR2PublicUrl !== undefined) {
+        settings.cloudflareR2PublicUrl = String(cloudflareR2PublicUrl || '')
+          .trim()
+          .replace(/\/+$/, '');
+      }
     }
 
     await settings.save();
@@ -2324,7 +2344,7 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
     res.json({
       message: 'Permitted company settings saved.',
       settings,
-      cloudinaryStatus: getCloudinaryStatus()
+      cloudflareStatus: getCloudflareStatus()
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -113,11 +113,13 @@ const envConfig = {
   PORT: parseInt(process.env.PORT, 10) || 5000,
   JWT_SECRET: resolvedJwtSecret,
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal',
-  CLOUDINARY: {
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
-    api_key: process.env.CLOUDINARY_API_KEY || '',
-    api_secret: process.env.CLOUDINARY_API_SECRET || '',
-    folder: process.env.CLOUDINARY_FOLDER || 'apex_shareholder_portal'
+  CLOUDFLARE_R2: {
+    accountId: (process.env.CLOUDFLARE_ACCOUNT_ID || process.env.R2_ACCOUNT_ID || '').trim(),
+    accessKeyId: (process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID || '').trim(),
+    secretAccessKey: (process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY || '').trim(),
+    bucketName: (process.env.CLOUDFLARE_R2_BUCKET_NAME || process.env.R2_BUCKET_NAME || '').trim(),
+    publicUrl: (process.env.CLOUDFLARE_R2_PUBLIC_URL || process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, ''),
+    folder: (process.env.CLOUDFLARE_R2_FOLDER || process.env.R2_FOLDER || 'apex_shareholder_portal').trim()
   },
   ALLOWED_ORIGINS: Array.from(allowedOriginsSet),
   isOriginAllowed,

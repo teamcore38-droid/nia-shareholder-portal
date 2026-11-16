@@ -226,14 +226,17 @@ export default function AdminGovernanceTabs({
     companyLogoPublicId: '',
     issuedSharesTotal: 0,
     votingRights: '',
-    cloudinaryCloudName: '',
-    cloudinaryApiKey: '',
-    cloudinaryApiSecret: ''
+    cloudflareAccountId: '',
+    cloudflareR2Bucket: '',
+    cloudflareR2PublicUrl: '',
+    cloudflareR2AccessKeyId: '',
+    cloudflareR2SecretAccessKey: ''
   });
 
   useEffect(() => {
     if (settingsData?.settings) {
       const s = settingsData.settings;
+      const cf = settingsData?.cloudflareStatus || {};
       setSettingsForm({
         companyDisplayName: s.companyDisplayName || 'NIA Group of Company',
         legalName: s.legalName || 'NIA Group of Company Ltd',
@@ -245,9 +248,11 @@ export default function AdminGovernanceTabs({
         companyLogoPublicId: s.companyLogoPublicId || '',
         issuedSharesTotal: s.issuedSharesTotal || 0,
         votingRights: s.votingRights || 'Per company rules',
-        cloudinaryCloudName: s.cloudinaryCloudName || settingsData?.cloudinaryStatus?.cloudName || '',
-        cloudinaryApiKey: '',
-        cloudinaryApiSecret: ''
+        cloudflareAccountId: s.cloudflareAccountId || cf.accountId || '',
+        cloudflareR2Bucket: s.cloudflareR2Bucket || cf.bucketName || '',
+        cloudflareR2PublicUrl: s.cloudflareR2PublicUrl || cf.publicUrl || '',
+        cloudflareR2AccessKeyId: '',
+        cloudflareR2SecretAccessKey: ''
       });
     }
   }, [settingsData]);
@@ -492,11 +497,11 @@ export default function AdminGovernanceTabs({
 
           <div className="mt-4">
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              File and publication attachment (Cloudinary)
+              File and publication attachment (Cloudflare R2)
             </label>
             <FileUploader
               folder="publications"
-              label="Upload document / PDF / image to Cloudinary"
+              label="Upload document / PDF / image to Cloudflare R2"
               currentUrl={pubForm.fileUrl}
               currentName={pubForm.fileName}
               onUploaded={(file) =>
@@ -1352,7 +1357,7 @@ export default function AdminGovernanceTabs({
   // ============================================================================
   // TAB 11: SETTINGS (Desktop Interface 21)
   // ============================================================================
-  const clStatus = settingsData?.cloudinaryStatus || {};
+  const cfStatus = settingsData?.cloudflareStatus || {};
   const dbStatus = settingsData?.databaseStatus || {};
 
   return (
@@ -1360,11 +1365,11 @@ export default function AdminGovernanceTabs({
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900">Settings</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Company identity, display preferences, Cloudinary image storage and operational policy
+          Company identity, display preferences, Cloudflare R2 object storage and operational policy
         </p>
       </div>
 
-      {/* Infrastructure Status Banner (MongoDB + Cloudinary) */}
+      {/* Infrastructure Status Banner (MongoDB + Cloudflare R2) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-2xs">
           <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 text-[#9A7B2C] flex items-center justify-center shrink-0">
@@ -1372,12 +1377,12 @@ export default function AdminGovernanceTabs({
           </div>
           <div>
             <div className="text-xs font-bold text-slate-900">
-              Cloudinary Media & Document Storage
+              Cloudflare R2 Media & Document Storage
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">
-              {clStatus.configured
-                ? `Connected to Cloudinary Cloud (${clStatus.cloudName})`
-                : 'Ready — Enter Cloudinary API credentials below or in server/.env (using safe local fallback until configured)'}
+              {cfStatus.configured
+                ? `Connected to Cloudflare R2 Bucket (${cfStatus.bucketName})`
+                : 'Ready — Enter Cloudflare R2 credentials below or in server/.env (using safe local fallback until configured)'}
             </div>
           </div>
         </div>
@@ -1510,10 +1515,10 @@ export default function AdminGovernanceTabs({
           </div>
         </div>
 
-        {/* Company Logo Upload via Cloudinary */}
+        {/* Company Logo Upload via Cloudflare R2 */}
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1.5">
-            Company logo and brand identity (Uploaded via Cloudinary)
+            Company logo and brand identity (Uploaded via Cloudflare R2)
           </label>
           <FileUploader
             folder="company_branding"
@@ -1531,36 +1536,62 @@ export default function AdminGovernanceTabs({
           />
         </div>
 
-        {/* Optional Runtime Cloudinary Credentials Config */}
+        {/* Optional Runtime Cloudflare R2 Credentials Config */}
         <div className="pt-4 border-t border-slate-100">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-            Cloudinary API Configuration (Optional runtime override for server/.env)
+            Cloudflare R2 Configuration (Optional runtime override for server/.env)
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <input
               type="text"
-              placeholder="Cloud Name"
-              value={settingsForm.cloudinaryCloudName}
+              placeholder="Cloudflare Account ID"
+              value={settingsForm.cloudflareAccountId}
               onChange={(e) =>
-                setSettingsForm({ ...settingsForm, cloudinaryCloudName: e.target.value })
+                setSettingsForm({ ...settingsForm, cloudflareAccountId: e.target.value })
               }
               className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono-num"
             />
             <input
               type="text"
-              placeholder="API Key"
-              value={settingsForm.cloudinaryApiKey}
+              placeholder="R2 Bucket Name"
+              value={settingsForm.cloudflareR2Bucket}
               onChange={(e) =>
-                setSettingsForm({ ...settingsForm, cloudinaryApiKey: e.target.value })
+                setSettingsForm({ ...settingsForm, cloudflareR2Bucket: e.target.value })
+              }
+              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono-num"
+            />
+            <input
+              type="text"
+              placeholder="Public URL (optional, e.g. https://pub-xxx.r2.dev)"
+              value={settingsForm.cloudflareR2PublicUrl}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, cloudflareR2PublicUrl: e.target.value })
+              }
+              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono-num"
+            />
+            <input
+              type="text"
+              placeholder={
+                cfStatus.configured
+                  ? 'R2 Access Key ID (leave blank to keep existing)'
+                  : 'R2 Access Key ID'
+              }
+              value={settingsForm.cloudflareR2AccessKeyId}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, cloudflareR2AccessKeyId: e.target.value })
               }
               className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono-num"
             />
             <PasswordInput
-              placeholder="API Secret"
+              placeholder={
+                cfStatus.configured
+                  ? 'R2 Secret Access Key (leave blank to keep existing)'
+                  : 'R2 Secret Access Key'
+              }
               autoComplete="off"
-              value={settingsForm.cloudinaryApiSecret}
+              value={settingsForm.cloudflareR2SecretAccessKey}
               onChange={(e) =>
-                setSettingsForm({ ...settingsForm, cloudinaryApiSecret: e.target.value })
+                setSettingsForm({ ...settingsForm, cloudflareR2SecretAccessKey: e.target.value })
               }
               inputClassName="py-2 text-xs font-mono-num border-slate-200"
             />
