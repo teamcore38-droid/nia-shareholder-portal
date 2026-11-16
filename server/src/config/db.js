@@ -4,14 +4,16 @@ const path = require('path');
 const crypto = require('crypto');
 const dns = require('dns');
 
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (err) {
-  // Ignore if DNS servers cannot be set
-}
-
 const os = require('os');
-const { MONGODB_URI, IS_PRODUCTION, sanitizeMongoUri } = require('./env');
+const { MONGODB_URI, IS_PRODUCTION, IS_VERCEL, sanitizeMongoUri } = require('./env');
+
+if (!IS_PRODUCTION && !IS_VERCEL) {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch (err) {
+    // Ignore if DNS servers cannot be set
+  }
+}
 const DATA_DIR = process.env.VERCEL
   ? path.join(os.tmpdir(), 'apex_portal_data')
   : path.join(__dirname, '../../data');
@@ -43,7 +45,8 @@ let localStore = {
   publications: [],
   supportRequests: [],
   auditLogs: [],
-  notifications: []
+  notifications: [],
+  counters: []
 };
 
 function loadLocalStore() {
@@ -96,6 +99,7 @@ function matchesQuery(doc, query = {}) {
         if (cond.$nin.map(String).includes(String(val))) return false;
       }
       if ('$ne' in cond) {
+        if (cond.$ne === null && (val === null || val === undefined)) return false;
         if (String(val) === String(cond.$ne)) return false;
       }
       if ('$lte' in cond) {
@@ -125,9 +129,28 @@ function matchesQuery(doc, query = {}) {
   return true;
 }
 
+function applyFieldSelection(doc, selectSpec) {
+  if (!doc || !selectSpec) return doc;
+  const excludes = selectSpec.filter((f) => f.startsWith('-')).map((f) => f.slice(1));
+  const includes = selectSpec.filter((f) => !f.startsWith('-'));
+  const copy = { ...doc };
+  if (includes.length > 0) {
+    const picked = { _id: copy._id };
+    for (const f of includes) {
+      if (f in copy) picked[f] = copy[f];
+    }
+    return picked;
+  }
+  for (const f of excludes) {
+    delete copy[f];
+  }
+  return copy;
+}
+
 class LocalQueryChain {
   constructor(items) {
     this.items = [...items];
+    this._selectSpec = null;
   }
   sort(sortObj = {}) {
     const entries = Object.entries(sortObj);
@@ -169,17 +192,49 @@ class LocalQueryChain {
     }
     return this;
   }
-  select() {
+  select(spec) {
+    if (typeof spec === 'string' && spec.trim()) {
+      this._selectSpec = spec.trim().split(/\s+/);
+    }
     return this;
   }
   lean() {
     return this;
   }
+  _applySelect() {
+    if (!this._selectSpec) return this.items;
+    return this.items.map((item) => applyFieldSelection(item, this._selectSpec));
+  }
   exec() {
-    return Promise.resolve(this.items);
+    return Promise.resolve(this._applySelect());
   }
   then(resolve, reject) {
-    return Promise.resolve(this.items).then(resolve, reject);
+    return Promise.resolve(this._applySelect()).then(resolve, reject);
+  }
+}
+
+class LocalSingleQueryChain {
+  constructor(doc) {
+    this.doc = doc;
+    this._selectSpec = null;
+  }
+  select(spec) {
+    if (typeof spec === 'string' && spec.trim()) {
+      this._selectSpec = spec.trim().split(/\s+/);
+    }
+    return this;
+  }
+  lean() {
+    return this;
+  }
+  _applySelect() {
+    return applyFieldSelection(this.doc, this._selectSpec);
+  }
+  exec() {
+    return Promise.resolve(this._applySelect());
+  }
+  then(resolve, reject) {
+    return Promise.resolve(this._applySelect()).then(resolve, reject);
   }
 }
 
@@ -223,16 +278,16 @@ function createHybridModel(collectionKey, mongooseModel, defaults = {}) {
       const list = (localStore[collectionKey] || []).filter((doc) => matchesQuery(doc, query)).map(wrapDoc);
       return new LocalQueryChain(list);
     },
-    async findOne(query = {}) {
+    findOne(query = {}) {
       if (this.isMongo) return mongooseModel.findOne(query);
       const found = (localStore[collectionKey] || []).find((doc) => matchesQuery(doc, query));
-      return found ? wrapDoc(found) : null;
+      return new LocalSingleQueryChain(found ? wrapDoc(found) : null);
     },
-    async findById(id) {
-      if (!id) return null;
+    findById(id) {
+      if (!id) return new LocalSingleQueryChain(null);
       if (this.isMongo) return mongooseModel.findById(id);
       const found = (localStore[collectionKey] || []).find((doc) => String(doc._id) === String(id));
-      return found ? wrapDoc(found) : null;
+      return new LocalSingleQueryChain(found ? wrapDoc(found) : null);
     },
     async create(data) {
       if (this.isMongo) return mongooseModel.create(data);
@@ -262,6 +317,7 @@ function createHybridModel(collectionKey, mongooseModel, defaults = {}) {
       const current = { ...list[idx] };
       const setFields = update.$set ? update.$set : update;
       const incFields = update.$inc || {};
+      const addToSetFields = update.$addToSet || {};
       const next = {
         ...current,
         ...setFields,
@@ -270,8 +326,15 @@ function createHybridModel(collectionKey, mongooseModel, defaults = {}) {
       };
       delete next.$set;
       delete next.$inc;
+      delete next.$addToSet;
+      delete next.$setOnInsert;
       for (const [k, v] of Object.entries(incFields)) {
         next[k] = (Number(next[k]) || 0) + Number(v);
+      }
+      for (const [k, v] of Object.entries(addToSetFields)) {
+        const arr = Array.isArray(next[k]) ? [...next[k]] : [];
+        if (!arr.includes(v)) arr.push(v);
+        next[k] = arr;
       }
       list[idx] = next;
       saveLocalStore();
@@ -283,12 +346,22 @@ function createHybridModel(collectionKey, mongooseModel, defaults = {}) {
       const idx = list.findIndex((doc) => matchesQuery(doc, query));
       if (idx === -1) {
         if (options.upsert) {
-          const setFields = update.$set ? update.$set : update;
-          return this.create({ ...query, ...setFields });
+          const setFields = update.$set ? { ...update.$set } : {};
+          const setOnInsert = update.$setOnInsert ? { ...update.$setOnInsert } : {};
+          const incFields = update.$inc || {};
+          const initial = { ...query, ...setOnInsert, ...setFields };
+          for (const [k, v] of Object.entries(incFields)) {
+            initial[k] = (Number(initial[k]) || 0) + Number(v);
+          }
+          return this.create(initial);
         }
         return null;
       }
-      return this.findByIdAndUpdate(list[idx]._id, update, options);
+      const existing = list[idx];
+      if (update.$setOnInsert && !update.$set && !update.$inc && !update.$addToSet) {
+        return wrapDoc(existing);
+      }
+      return this.findByIdAndUpdate(existing._id, update, options);
     },
     async findByIdAndDelete(id) {
       if (this.isMongo) return mongooseModel.findByIdAndDelete(id);
@@ -324,7 +397,13 @@ async function connectDB(customUri) {
 
   try {
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: uri.includes('127.0.0.1') || uri.includes('localhost') ? 2500 : 10000
+      maxPoolSize: IS_VERCEL ? 10 : 50,
+      minPoolSize: IS_VERCEL ? 1 : 5,
+      maxIdleTimeMS: 30000,
+      socketTimeoutMS: 20000,
+      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: uri.includes('127.0.0.1') || uri.includes('localhost') ? 2500 : 10000,
+      family: 4
     });
     dbState.status = 'connected';
     dbState.mode = 'mongodb';
@@ -333,6 +412,13 @@ async function connectDB(customUri) {
     console.log('✅ Connected to MongoDB via Mongoose:', sanitizeMongoUri(uri));
     return dbState;
   } catch (err) {
+    if (IS_PRODUCTION && !customUri) {
+      dbState.status = 'error';
+      dbState.mode = 'disconnected';
+      dbState.lastError = 'Database connection unavailable';
+      console.error('❌ MongoDB connection failed in production:', err.message);
+      throw err;
+    }
     dbState.status = 'connected';
     dbState.mode = 'persistent-local';
     dbState.connectedAt = new Date().toISOString();

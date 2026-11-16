@@ -29,6 +29,9 @@ import api, { getDownloadUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import PasswordInput from '../../components/PasswordInput';
+import TablePagination from '../../components/TablePagination';
+
+const AUDIT_PAGE_SIZE = 50;
 
 const DEMO_ACCOUNTS = [
   {
@@ -210,6 +213,7 @@ export default function AdminGovernanceTabs({
   // ============================================================================
   const [auditActorFilter, setAuditActorFilter] = useState('All');
   const [auditSearch, setAuditSearch] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
   const [selectedAuditEvent, setSelectedAuditEvent] = useState(null);
 
   // ============================================================================
@@ -1256,7 +1260,10 @@ export default function AdminGovernanceTabs({
             <span className="font-bold text-slate-700">Filters:</span>
             <select
               value={auditActorFilter}
-              onChange={(e) => setAuditActorFilter(e.target.value)}
+              onChange={(e) => {
+                setAuditActorFilter(e.target.value);
+                setAuditPage(1);
+              }}
               className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold"
             >
               <option value="All">All users</option>
@@ -1271,7 +1278,10 @@ export default function AdminGovernanceTabs({
             type="text"
             placeholder="Filter by action or reference (e.g. VAL-001, TR-014)..."
             value={auditSearch}
-            onChange={(e) => setAuditSearch(e.target.value)}
+            onChange={(e) => {
+              setAuditSearch(e.target.value);
+              setAuditPage(1);
+            }}
             className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg border border-slate-200"
           />
         </div>
@@ -1294,7 +1304,9 @@ export default function AdminGovernanceTabs({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {logs.map((log) => (
+                  {logs
+                    .slice((auditPage - 1) * AUDIT_PAGE_SIZE, auditPage * AUDIT_PAGE_SIZE)
+                    .map((log) => (
                     <tr
                       key={log._id}
                       onClick={() => setSelectedAuditEvent(log)}
@@ -1321,6 +1333,12 @@ export default function AdminGovernanceTabs({
                   ))}
                 </tbody>
               </table>
+              <TablePagination
+                page={auditPage}
+                totalItems={logs.length}
+                pageSize={AUDIT_PAGE_SIZE}
+                onPageChange={setAuditPage}
+              />
             </div>
           )}
         </div>

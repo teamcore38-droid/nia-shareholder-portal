@@ -7,6 +7,20 @@ const { User, Shareholder, RolePermission } = require('../models');
 const { ensureCoreSystemConfig, logAuditEvent } = require('../utils/ledgerEngine');
 const { IS_PRODUCTION } = require('../config/env');
 const {
+  CACHE_KEYS,
+  del,
+  getOrCompute,
+  invalidateCompanyCaches,
+  invalidateLedgerCaches,
+  invalidateAuthUserCache
+} = require('../utils/cache');
+const {
+  isPlainString,
+  validatePasswordPolicy,
+  sanitizePublicCompanySettings,
+  sendSafeError
+} = require('../utils/security');
+const {
   JWT_SECRET,
   signAuthToken,
   setAuthCookie,
@@ -16,31 +30,52 @@ const {
 } = require('../middleware/auth');
 
 const router = express.Router();
+const BCRYPT_ROUNDS = 10;
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
 
-// Dedicated strict rate limiter for credential & verification endpoints (Page 34: sign-in rate limiting)
-const strictLoginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+// Layered login rate limiting: protects individual accounts while allowing 1,500-3,000 users behind shared corporate/AGM NATs
+const perAccountLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const id = String(req.body?.email || '').toLowerCase().trim().slice(0, 64);
+    return `${req.ip}:${id || 'anon'}`;
+  },
   message: {
-    message: 'Too many sign-in or verification attempts from this address. Please wait 15 minutes before retrying.'
+    message: 'Too many failed sign-in or verification attempts for this account. Please wait 15 minutes before retrying.'
   }
 });
 
-function validatePasswordPolicy(password) {
-  if (!password || typeof password !== 'string' || password.length < 8) {
-    return 'Password must be at least 8 characters long.';
+const ipSprayLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 250,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Too many failed authentication attempts from this network address. Please wait 15 minutes before retrying.'
   }
-  return null;
+});
+
+const strictLoginLimiter = [ipSprayLoginLimiter, perAccountLoginLimiter];
+
+async function getRolePermissionsCached(role) {
+  const allPerms = await getOrCompute(CACHE_KEYS.ROLE_PERMISSIONS, 30000, () =>
+    RolePermission.find({}).lean()
+  );
+  return allPerms.find((item) => item.role === role) || null;
 }
 
 // Check system bootstrap status & public company identity for Sign-In page
 router.get('/bootstrap-status', async (req, res) => {
   try {
     const [settings, userCount] = await Promise.all([
-      ensureCoreSystemConfig(),
-      User.countDocuments({})
+      ensureCoreSystemConfig(null, { lean: true }),
+      getOrCompute(CACHE_KEYS.BOOTSTRAP_USER_COUNT, 15000, () => User.countDocuments({}))
     ]);
     res.json({
       initialized: userCount > 0,
@@ -55,7 +90,7 @@ router.get('/bootstrap-status', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to check system initialization status.');
   }
 });
 
@@ -68,7 +103,7 @@ router.post('/setup-initial-admin', strictLoginLimiter, async (req, res) => {
     }
 
     const { fullName, email, password, companyDisplayName } = req.body;
-    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+    if (!isPlainString(email, 254) || !email.trim() || !isPlainString(password, 128)) {
       return res.status(400).json({ message: 'Valid email and password strings are required.' });
     }
     const pwdError = validatePasswordPolicy(password);
@@ -77,23 +112,28 @@ router.post('/setup-initial-admin', strictLoginLimiter, async (req, res) => {
     }
 
     const settings = await ensureCoreSystemConfig();
-    if (companyDisplayName && companyDisplayName.trim()) {
+    if (isPlainString(companyDisplayName, 160) && companyDisplayName.trim()) {
       settings.companyDisplayName = companyDisplayName.trim();
       await settings.save();
+      invalidateCompanyCaches();
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const verificationCode = String(crypto.randomInt(100000, 999999));
+    const recoveryCode = `NIA-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
     const adminUser = await User.create({
       email: email.toLowerCase().trim(),
-      fullName: (fullName || 'Primary Administrator').trim(),
+      fullName: isPlainString(fullName, 120) && fullName.trim() ? fullName.trim() : 'Primary Administrator',
       passwordHash,
       role: 'Administrator',
       status: 'Active',
       verificationEnabled: true,
-      verificationCode: '246810',
-      recoveryCode: 'APEX-RECOVERY-2026',
+      verificationCode,
+      recoveryCode,
       lastLoginAt: new Date().toISOString()
     });
+    del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
 
     await logAuditEvent({
       actor: adminUser.fullName,
@@ -107,7 +147,7 @@ router.post('/setup-initial-admin', strictLoginLimiter, async (req, res) => {
 
     const token = signAuthToken(adminUser, true);
     setAuthCookie(res, token);
-    const rolePerm = await RolePermission.findOne({ role: adminUser.role });
+    const rolePerm = await getRolePermissionsCached(adminUser.role);
 
     res.status(201).json({
       token,
@@ -120,11 +160,13 @@ router.post('/setup-initial-admin', strictLoginLimiter, async (req, res) => {
         shareholderId: null,
         verificationEnabled: adminUser.verificationEnabled
       },
+      generatedStaffVerificationCode: verificationCode,
+      generatedRecoveryCode: recoveryCode,
       permissions: rolePerm ? rolePerm.permissions : null,
-      company: settings
+      company: sanitizePublicCompanySettings(settings)
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to initialize administrator account.');
   }
 });
 
@@ -133,10 +175,8 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (
-      !email ||
-      !password ||
-      typeof email !== 'string' ||
-      typeof password !== 'string' ||
+      !isPlainString(email, 254) ||
+      !isPlainString(password, 128) ||
       !email.trim() ||
       !password.trim()
     ) {
@@ -189,24 +229,45 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
       });
     }
 
+    if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+      return res.status(429).json({
+        message: 'Account temporarily locked due to repeated failed sign-in attempts. Please try again in 15 minutes or reset your password.'
+      });
+    }
+
     const validPassword = await bcrypt.compare(password, user.passwordHash || '');
     if (!validPassword) {
+      const nextAttempts = (user.failedLoginAttempts || 0) + 1;
+      user.failedLoginAttempts = nextAttempts;
+      if (nextAttempts >= MAX_FAILED_ATTEMPTS) {
+        user.lockUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
+      }
+      await user.save();
+
       // Never log the password in audit logs (Page 22 & 34)
       await logAuditEvent({
         actor: user.fullName,
         actorEmail: user.email,
         actorRole: user.role,
-        action: 'Failed sign-in attempt (invalid credentials)',
+        action:
+          nextAttempts >= MAX_FAILED_ATTEMPTS
+            ? 'Account temporarily locked after repeated failed sign-ins'
+            : 'Failed sign-in attempt (invalid credentials)',
         reference: user.shareholderId || 'AUTH-FAIL',
         entityType: 'Session'
       });
-      return res.status(401).json({ message: 'Invalid email address or password.' });
+      return res.status(401).json({ message: 'Invalid Shareholder ID / email address or password.' });
     }
 
     const isStaff = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
 
     // Staff verification flow (Interface M08 & D01: "Additional verification required for staff")
     if (isStaff && user.verificationEnabled) {
+      if (user.failedLoginAttempts || user.lockUntil) {
+        user.failedLoginAttempts = 0;
+        user.lockUntil = null;
+        await user.save();
+      }
       const preAuthToken = jwt.sign(
         {
           userId: user._id,
@@ -233,11 +294,14 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
     }
 
     user.lastLoginAt = new Date().toISOString();
+    user.failedLoginAttempts = 0;
+    user.failed2faAttempts = 0;
+    user.lockUntil = null;
 
     const [, settings, rolePerm] = await Promise.all([
       user.save(),
-      ensureCoreSystemConfig(),
-      RolePermission.findOne({ role: user.role }),
+      ensureCoreSystemConfig(null, { lean: true }),
+      getRolePermissionsCached(user.role),
       logAuditEvent({
         actor: user.fullName,
         actorEmail: user.email,
@@ -248,6 +312,7 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
         newValue: `${user.role} workspace`
       })
     ]);
+    invalidateAuthUserCache(user._id);
     const token = signAuthToken(user, true);
     setAuthCookie(res, token);
 
@@ -263,10 +328,10 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
         verificationEnabled: user.verificationEnabled
       },
       permissions: rolePerm ? rolePerm.permissions : null,
-      company: settings
+      company: sanitizePublicCompanySettings(settings)
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to complete sign-in. Please try again.');
   }
 });
 
@@ -274,12 +339,12 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
 router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
   try {
     const { preAuthToken, code, recoveryCode } = req.body;
-    if (!preAuthToken) {
+    if (!isPlainString(preAuthToken, 2048) || !preAuthToken.trim()) {
       return res.status(400).json({ message: 'Verification session missing. Please sign in again.' });
     }
 
     const decoded = jwt.verify(preAuthToken, JWT_SECRET);
-    if (decoded.step !== 'staff-2fa') {
+    if (decoded.step !== 'staff-2fa' || decoded.type !== 'pre-auth') {
       return res.status(400).json({ message: 'Invalid verification token.' });
     }
 
@@ -288,14 +353,31 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Account is not active.' });
     }
 
+    if ((user.sessionVersion || 1) !== (decoded.sessionVersion || 1)) {
+      return res.status(401).json({ message: 'Verification session was revoked. Please sign in again.' });
+    }
+
+    if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+      return res.status(429).json({
+        message: 'Too many failed verification attempts. Account temporarily locked for 15 minutes.'
+      });
+    }
+
     const expectedCode = String(user.verificationCode || '246810').trim();
     const expectedRecovery = String(user.recoveryCode || 'APEX-RECOVERY-2026').trim();
 
-    const cleanCode = String(code || '').trim();
-    const cleanRecovery = String(recoveryCode || '').trim();
+    const cleanCode = isPlainString(code, 20) ? code.trim() : '';
+    const cleanRecovery = isPlainString(recoveryCode, 64) ? recoveryCode.trim() : '';
 
     if (cleanCode) {
       if (!safeCompare(cleanCode, expectedCode)) {
+        const next2fa = (user.failed2faAttempts || 0) + 1;
+        user.failed2faAttempts = next2fa;
+        if (next2fa >= MAX_FAILED_ATTEMPTS) {
+          user.lockUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
+          user.failed2faAttempts = 0;
+        }
+        await user.save();
         await logAuditEvent({
           actor: user.fullName,
           actorEmail: user.email,
@@ -308,6 +390,13 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
       }
     } else if (cleanRecovery) {
       if (!safeCompare(cleanRecovery, expectedRecovery)) {
+        const next2fa = (user.failed2faAttempts || 0) + 1;
+        user.failed2faAttempts = next2fa;
+        if (next2fa >= MAX_FAILED_ATTEMPTS) {
+          user.lockUntil = new Date(Date.now() + LOCKOUT_MS).toISOString();
+          user.failed2faAttempts = 0;
+        }
+        await user.save();
         await logAuditEvent({
           actor: user.fullName,
           actorEmail: user.email,
@@ -323,11 +412,14 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
     }
 
     user.lastLoginAt = new Date().toISOString();
+    user.failedLoginAttempts = 0;
+    user.failed2faAttempts = 0;
+    user.lockUntil = null;
 
     const [, settings, rolePerm] = await Promise.all([
       user.save(),
-      ensureCoreSystemConfig(),
-      RolePermission.findOne({ role: user.role }),
+      ensureCoreSystemConfig(null, { lean: true }),
+      getRolePermissionsCached(user.role),
       logAuditEvent({
         actor: user.fullName,
         actorEmail: user.email,
@@ -337,6 +429,97 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
         entityType: 'Session',
         newValue: cleanRecovery ? 'Recovery code verified' : '6-digit verification code verified'
       })
+    ]);
+    invalidateAuthUserCache(user._id);
+    const token = signAuthToken(user, true);
+    setAuthCookie(res, token);
+
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        status: user.status,
+        shareholderId: user.shareholderId,
+        verificationEnabled: user.verificationEnabled
+      },
+      permissions: rolePerm ? rolePerm.permissions : null,
+      company: sanitizePublicCompanySettings(settings)
+    });
+  } catch (err) {
+    res.status(401).json({ message: 'Verification session expired or invalid. Please sign in again.' });
+  }
+});
+
+// Activate Invited Account (Shareholder or Staff) — strictly validates non-empty inviteCode & expiration
+router.post('/activate-invite', strictLoginLimiter, async (req, res) => {
+  try {
+    const { email, inviteCode, password } = req.body;
+    const pwdError = validatePasswordPolicy(password);
+    if (!isPlainString(email, 254) || !email.trim() || !isPlainString(inviteCode, 64) || !inviteCode.trim() || pwdError) {
+      return res.status(400).json({ message: pwdError || 'Valid email, invitation code, and password (min 8 chars) are required.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: 'No invited account found for this email address.' });
+    }
+
+    if (user.status === 'Suspended' || user.status === 'Inactive') {
+      return res.status(403).json({ message: 'This account has been suspended or deactivated.' });
+    }
+
+    if (user.status !== 'Invited' || !user.inviteToken) {
+      return res.status(400).json({ message: 'This account does not have a pending invitation code.' });
+    }
+
+    if (user.inviteExpiresAt && new Date() > new Date(user.inviteExpiresAt)) {
+      return res.status(400).json({
+        message: 'This invitation link/code has expired. Please ask an administrator to reset your invitation.'
+      });
+    }
+
+    if (!safeCompare(inviteCode.trim().toUpperCase(), user.inviteToken.trim().toUpperCase())) {
+      return res.status(400).json({ message: 'Invalid invitation code.' });
+    }
+
+    user.passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    user.status = 'Active';
+    user.inviteToken = null;
+    user.inviteExpiresAt = null;
+    user.failedLoginAttempts = 0;
+    user.failed2faAttempts = 0;
+    user.lockUntil = null;
+    user.sessionVersion = (user.sessionVersion || 1) + 1;
+    user.lastLoginAt = new Date().toISOString();
+    await user.save();
+    invalidateAuthUserCache(user._id);
+
+    if (user.shareholderId) {
+      const sh = await Shareholder.findOne({ shareholderId: user.shareholderId });
+      if (sh && sh.accountStatus === 'Invited') {
+        sh.accountStatus = 'Active';
+        await sh.save();
+        invalidateLedgerCaches();
+      }
+    }
+
+    await logAuditEvent({
+      actor: user.fullName,
+      actorEmail: user.email,
+      actorRole: user.role,
+      action: 'Activated invited account',
+      reference: user.shareholderId || 'INVITE',
+      entityType: 'User',
+      previousValue: 'Invited',
+      newValue: 'Active'
+    });
+
+    const [settings, rolePerm] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      getRolePermissionsCached(user.role)
     ]);
     const token = signAuthToken(user, true);
     setAuthCookie(res, token);
@@ -353,89 +536,10 @@ router.post('/verify-staff', strictLoginLimiter, async (req, res) => {
         verificationEnabled: user.verificationEnabled
       },
       permissions: rolePerm ? rolePerm.permissions : null,
-      company: settings
+      company: sanitizePublicCompanySettings(settings)
     });
   } catch (err) {
-    res.status(401).json({ message: 'Verification session expired or invalid. Please sign in again.' });
-  }
-});
-
-// Activate Invited Account (Shareholder or Staff) — enforces expiring invitation (Page 6 & 31)
-router.post('/activate-invite', strictLoginLimiter, async (req, res) => {
-  try {
-    const { email, inviteCode, password } = req.body;
-    const pwdError = validatePasswordPolicy(password);
-    if (!email || pwdError) {
-      return res.status(400).json({ message: pwdError || 'Valid email and password are required.' });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return res.status(404).json({ message: 'No invited account found for this email address.' });
-    }
-
-    if (user.status === 'Suspended' || user.status === 'Inactive') {
-      return res.status(403).json({ message: 'This account has been suspended or deactivated.' });
-    }
-
-    if (user.inviteExpiresAt && new Date() > new Date(user.inviteExpiresAt)) {
-      return res.status(400).json({
-        message: 'This invitation link/code has expired. Please ask an administrator to reset your invitation.'
-      });
-    }
-
-    if (user.inviteToken && inviteCode && !safeCompare(inviteCode.trim().toUpperCase(), user.inviteToken.trim().toUpperCase())) {
-      return res.status(400).json({ message: 'Invalid invitation code.' });
-    }
-
-    user.passwordHash = await bcrypt.hash(password, 12);
-    user.status = 'Active';
-    user.inviteToken = null;
-    user.inviteExpiresAt = null;
-    user.sessionVersion = (user.sessionVersion || 1) + 1;
-    user.lastLoginAt = new Date().toISOString();
-    await user.save();
-
-    if (user.shareholderId) {
-      const sh = await Shareholder.findOne({ shareholderId: user.shareholderId });
-      if (sh && sh.accountStatus === 'Invited') {
-        sh.accountStatus = 'Active';
-        await sh.save();
-      }
-    }
-
-    await logAuditEvent({
-      actor: user.fullName,
-      actorEmail: user.email,
-      actorRole: user.role,
-      action: 'Activated invited account',
-      reference: user.shareholderId || 'INVITE',
-      entityType: 'User',
-      previousValue: 'Invited',
-      newValue: 'Active'
-    });
-
-    const settings = await ensureCoreSystemConfig();
-    const rolePerm = await RolePermission.findOne({ role: user.role });
-    const token = signAuthToken(user, true);
-    setAuthCookie(res, token);
-
-    res.json({
-      token,
-      user: {
-        _id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        status: user.status,
-        shareholderId: user.shareholderId,
-        verificationEnabled: user.verificationEnabled
-      },
-      permissions: rolePerm ? rolePerm.permissions : null,
-      company: settings
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to activate invitation.');
   }
 });
 
@@ -443,7 +547,7 @@ router.post('/activate-invite', strictLoginLimiter, async (req, res) => {
 router.post('/forgot-password', strictLoginLimiter, async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email || typeof email !== 'string' || !email.trim()) {
+    if (!isPlainString(email, 254) || !email.trim()) {
       return res.status(400).json({ message: 'Valid email address is required.' });
     }
 
@@ -454,7 +558,7 @@ router.post('/forgot-password', strictLoginLimiter, async (req, res) => {
       });
     }
 
-    const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const resetToken = crypto.randomBytes(4).toString('hex').toUpperCase();
     user.resetToken = resetToken;
     user.resetExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15-minute short-lived expiry
     await user.save();
@@ -475,7 +579,7 @@ router.post('/forgot-password', strictLoginLimiter, async (req, res) => {
         : {})
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to process password reset request.');
   }
 });
 
@@ -483,7 +587,7 @@ router.post('/reset-password', strictLoginLimiter, async (req, res) => {
   try {
     const { email, resetToken, newPassword } = req.body;
     const pwdError = validatePasswordPolicy(newPassword);
-    if (!email || !resetToken || pwdError) {
+    if (!isPlainString(email, 254) || !email.trim() || !isPlainString(resetToken, 64) || !resetToken.trim() || pwdError) {
       return res.status(400).json({
         message: pwdError || 'Email, reset token, and a valid new password (min 8 chars) are required.'
       });
@@ -506,12 +610,16 @@ router.post('/reset-password', strictLoginLimiter, async (req, res) => {
       return res.status(400).json({ message: 'Invalid password reset token.' });
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     user.resetToken = null;
     user.resetExpiresAt = null;
+    user.failedLoginAttempts = 0;
+    user.failed2faAttempts = 0;
+    user.lockUntil = null;
     user.sessionVersion = (user.sessionVersion || 1) + 1;
     if (user.status === 'Invited') user.status = 'Active';
     await user.save();
+    invalidateAuthUserCache(user._id);
 
     await logAuditEvent({
       actor: user.fullName,
@@ -524,7 +632,7 @@ router.post('/reset-password', strictLoginLimiter, async (req, res) => {
 
     res.json({ message: 'Password updated successfully. You may now sign in.' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to reset password.');
   }
 });
 
@@ -532,6 +640,7 @@ router.post('/reset-password', strictLoginLimiter, async (req, res) => {
 router.post('/logout', authenticate, async (req, res) => {
   try {
     clearAuthCookie(res);
+    invalidateAuthUserCache(req.user._id);
     await logAuditEvent({
       actor: req.user.fullName,
       actorEmail: req.user.email,
@@ -552,10 +661,10 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = req.user;
     const [settings, rolePerm, shareholderProfile] = await Promise.all([
-      ensureCoreSystemConfig(),
-      RolePermission.findOne({ role: user.role }),
+      ensureCoreSystemConfig(null, { lean: true }),
+      getRolePermissionsCached(user.role),
       user.shareholderId
-        ? Shareholder.findOne({ shareholderId: user.shareholderId })
+        ? Shareholder.findOne({ shareholderId: user.shareholderId }).lean()
         : Promise.resolve(null)
     ]);
 
@@ -572,10 +681,10 @@ router.get('/me', authenticate, async (req, res) => {
       },
       shareholderProfile,
       permissions: rolePerm ? rolePerm.permissions : null,
-      company: settings
+      company: sanitizePublicCompanySettings(settings)
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to load current user session.');
   }
 });
 
@@ -584,7 +693,7 @@ router.post('/change-password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const pwdError = validatePasswordPolicy(newPassword);
-    if (!currentPassword || pwdError) {
+    if (!isPlainString(currentPassword, 128) || !currentPassword || pwdError) {
       return res.status(400).json({
         message: pwdError || 'Current password and a valid new password (min 8 chars) are required.'
       });
@@ -596,9 +705,10 @@ router.post('/change-password', authenticate, async (req, res) => {
       return res.status(400).json({ message: 'Current password is incorrect.' });
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     user.sessionVersion = (user.sessionVersion || 1) + 1;
     await user.save();
+    invalidateAuthUserCache(user._id);
 
     const freshToken = signAuthToken(user, true);
     setAuthCookie(res, freshToken);
@@ -617,7 +727,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       token: freshToken
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to change password.');
   }
 });
 
@@ -627,6 +737,7 @@ router.post('/revoke-other-sessions', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     user.sessionVersion = (user.sessionVersion || 1) + 1;
     await user.save();
+    invalidateAuthUserCache(user._id);
 
     const freshToken = signAuthToken(user, true);
     setAuthCookie(res, freshToken);
@@ -645,7 +756,7 @@ router.post('/revoke-other-sessions', authenticate, async (req, res) => {
       token: freshToken
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to revoke other sessions.');
   }
 });
 
@@ -655,6 +766,7 @@ router.post('/toggle-verification', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     user.verificationEnabled = !user.verificationEnabled;
     await user.save();
+    invalidateAuthUserCache(user._id);
 
     await logAuditEvent({
       actor: user.fullName,
@@ -671,7 +783,7 @@ router.post('/toggle-verification', authenticate, async (req, res) => {
       verificationEnabled: user.verificationEnabled
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Unable to update verification setting.');
   }
 });
 

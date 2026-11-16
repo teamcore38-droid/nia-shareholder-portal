@@ -62,9 +62,11 @@ This application adheres to enterprise defense-in-depth principles and OWASP Top
 - Public endpoints (`/`, `/api/health`, `/api/bootstrap-status`) are strictly sanitized.
 - Internal connection strings (`mongodb+srv://...`), database usernames, cluster hosts, and Cloudflare R2 keys are never included in API responses or HTTP headers.
 
-### 5. Multi-Layer Rate Limiting & DoS Mitigation
-- **Global API Rate Limiter**: 500 requests per 15-minute window per IP address across all `/api/*` endpoints.
-- **Authentication Rate Limiter**: Max 20 attempts per 15-minute window on sensitive endpoints (`/api/auth/login`, `/api/auth/reset-password`, `/api/auth/setup-initial-admin`, `/api/auth/activate-invite`).
+### 5. Multi-Layer Rate Limiting, Brute-Force Lockout & DoS Mitigation
+- **Global API Rate Limiter**: 2,000 requests per 15-minute window per IP across `/api/*` endpoints (excluding `/api/health`) to accommodate shared corporate/AGM NATs.
+- **Authentication & Brute-Force Protection**: Layered per-account + IP rate limiting (`15` failed attempts / 15 min per `IP + account` and `250` failed attempts / 15 min per IP, `skipSuccessfulRequests: true`), plus a database-backed 5-strike 15-minute account lockout on repeated invalid passwords or 2FA codes.
+- **Export & Upload Throttling**: Dedicated limits on CPU-heavy PDF/CSV exports (`30` / 5 min per user) and file uploads (`60` / 15 min per user), with JSON payloads capped at `1mb`.
+- **NoSQL & XSS Payload Sanitization**: Global middleware strips `$`-prefixed MongoDB operators, dotted keys, and prototype-pollution keys from `req.body` and `req.query`, while document/logo URLs reject `javascript:` and `data:` schemes.
 
 ### 6. Strict Cross-Origin Resource Sharing (CORS) Whitelist
 - In production, cross-origin requests with credentials (`withCredentials: true`) are strictly restricted to trusted origins specified in `ALLOWED_ORIGINS` (or preview deployments on `.vercel.app`).

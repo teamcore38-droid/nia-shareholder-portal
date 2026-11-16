@@ -30,6 +30,9 @@ import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import SteppedValuationChart from '../../components/SteppedValuationChart';
 import PasswordInput from '../../components/PasswordInput';
+import TablePagination from '../../components/TablePagination';
+
+const TABLE_PAGE_SIZE = 50;
 
 const DEMO_ACCOUNTS = [
   {
@@ -98,6 +101,7 @@ export default function AdminCoreTabs({
   // ============================================================================
   const [shSearch, setShSearch] = useState('');
   const [shStatusFilter, setShStatusFilter] = useState('All');
+  const [shPage, setShPage] = useState(1);
   const [showShForm, setShowShForm] = useState(false);
   const [editingSh, setEditingSh] = useState(null);
   const [selectedShForActions, setSelectedShForActions] = useState(null);
@@ -119,6 +123,7 @@ export default function AdminCoreTabs({
   // ============================================================================
   const [movStatusFilter, setMovStatusFilter] = useState('All');
   const [movTypeFilter, setMovTypeFilter] = useState('All');
+  const [movPage, setMovPage] = useState(1);
   const [showMovForm, setShowMovForm] = useState(false);
   const [movForm, setMovForm] = useState({
     reference: '',
@@ -1002,7 +1007,10 @@ export default function AdminCoreTabs({
                   type="text"
                   placeholder="Search by name, Shareholder ID or email..."
                   value={shSearch}
-                  onChange={(e) => setShSearch(e.target.value)}
+                  onChange={(e) => {
+                    setShSearch(e.target.value);
+                    setShPage(1);
+                  }}
                   className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 />
               </div>
@@ -1011,7 +1019,10 @@ export default function AdminCoreTabs({
                   <button
                     key={st}
                     type="button"
-                    onClick={() => setShStatusFilter(st)}
+                    onClick={() => {
+                      setShStatusFilter(st);
+                      setShPage(1);
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                       shStatusFilter === st
                         ? 'bg-[#080C16] text-[#FDE047] border border-[#D4AF37]/40'
@@ -1047,7 +1058,9 @@ export default function AdminCoreTabs({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {filteredShareholders.map((sh) => (
+                      {filteredShareholders
+                        .slice((shPage - 1) * TABLE_PAGE_SIZE, shPage * TABLE_PAGE_SIZE)
+                        .map((sh) => (
                         <tr
                           key={sh._id}
                           onClick={() => setSelectedShForActions(sh)}
@@ -1119,6 +1132,12 @@ export default function AdminCoreTabs({
                       ))}
                     </tbody>
                   </table>
+                  <TablePagination
+                    page={shPage}
+                    totalItems={filteredShareholders.length}
+                    pageSize={TABLE_PAGE_SIZE}
+                    onPageChange={setShPage}
+                  />
                 </div>
               )}
             </div>
@@ -1459,7 +1478,10 @@ export default function AdminCoreTabs({
                   <span className="font-bold text-slate-600">Status:</span>
                   <select
                     value={movStatusFilter}
-                    onChange={(e) => setMovStatusFilter(e.target.value)}
+                    onChange={(e) => {
+                      setMovStatusFilter(e.target.value);
+                      setMovPage(1);
+                    }}
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold"
                   >
                     <option value="All">All statuses</option>
@@ -1474,7 +1496,10 @@ export default function AdminCoreTabs({
                   <span className="font-bold text-slate-600">Type:</span>
                   <select
                     value={movTypeFilter}
-                    onChange={(e) => setMovTypeFilter(e.target.value)}
+                    onChange={(e) => {
+                      setMovTypeFilter(e.target.value);
+                      setMovPage(1);
+                    }}
                     className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold"
                   >
                     <option value="All">All types</option>
@@ -1512,7 +1537,9 @@ export default function AdminCoreTabs({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {movements.map((m) => (
+                      {movements
+                        .slice((movPage - 1) * TABLE_PAGE_SIZE, movPage * TABLE_PAGE_SIZE)
+                        .map((m) => (
                         <tr key={m._id} className="hover:bg-amber-50/30">
                           <td className="py-3.5 px-6">
                             <div className="font-mono-num font-bold text-slate-900">
@@ -1552,6 +1579,12 @@ export default function AdminCoreTabs({
                       ))}
                     </tbody>
                   </table>
+                  <TablePagination
+                    page={movPage}
+                    totalItems={movements.length}
+                    pageSize={TABLE_PAGE_SIZE}
+                    onPageChange={setMovPage}
+                  />
                 </div>
               )}
             </div>

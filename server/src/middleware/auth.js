@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { User, RolePermission } = require('../models');
 const { JWT_SECRET, IS_PRODUCTION } = require('../config/env');
+const { CACHE_KEYS, getOrCompute } = require('../utils/cache');
 
 function signAuthToken(user, staffVerified = true) {
   return jwt.sign(
@@ -62,14 +63,18 @@ async function authenticate(req, res, next) {
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Prevent pre-auth 2FA tokens from being used as full session tokens (Page 30 & 34)
-    if (decoded.step === 'staff-2fa' || decoded.type === 'pre-auth') {
+    // Prevent pre-auth 2FA tokens or unknown token types from being used as full session tokens
+    if (decoded.step === 'staff-2fa' || decoded.type === 'pre-auth' || (decoded.type && decoded.type !== 'access')) {
       return res.status(401).json({
         message: 'Multi-factor staff verification is incomplete. Please enter your 6-digit verification code.'
       });
     }
 
-    const user = await User.findById(decoded.userId);
+    const user = await getOrCompute(`${CACHE_KEYS.AUTH_USER_PREFIX}${String(decoded.userId)}`, 5000, () =>
+      User.findById(decoded.userId)
+        .select('_id email fullName role status shareholderId companyId verificationEnabled sessionVersion lastLoginAt')
+        .lean()
+    );
     if (!user) {
       return res.status(401).json({ message: 'Account no longer exists.' });
     }
@@ -105,7 +110,8 @@ async function authenticate(req, res, next) {
       companyId: user.companyId || 'COMP-NIA-01',
       verificationEnabled: user.verificationEnabled !== false,
       staffVerified: decoded.staffVerified !== false,
-      sessionVersion: user.sessionVersion || 1
+      sessionVersion: user.sessionVersion || 1,
+      lastLoginAt: user.lastLoginAt || null
     };
 
     next();
@@ -141,7 +147,10 @@ function requireRoles(...allowedRoles) {
  * Checks dynamic role permissions configured in Interface 15 (RolePermission collection)
  */
 async function checkRolePermission(role, resourceKey, actionKey) {
-  const rp = await RolePermission.findOne({ role });
+  const allPerms = await getOrCompute(CACHE_KEYS.ROLE_PERMISSIONS, 30000, () =>
+    RolePermission.find({}).lean()
+  );
+  const rp = allPerms.find((item) => item.role === role);
   if (!rp || !rp.permissions || !rp.permissions[resourceKey]) {
     return role === 'Administrator';
   }

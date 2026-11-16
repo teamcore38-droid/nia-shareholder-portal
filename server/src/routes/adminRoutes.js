@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const {
   CompanySettings,
   User,
@@ -11,7 +12,8 @@ const {
   ShareValuation,
   Publication,
   SupportRequest,
-  AuditLog
+  AuditLog,
+  getNextReference
 } = require('../models');
 const {
   ensureCoreSystemConfig,
@@ -36,6 +38,42 @@ const {
   insertSeedData,
   DEMO_ACCOUNTS
 } = require('../utils/seedData');
+const {
+  CACHE_KEYS,
+  del,
+  invalidateCompanyCaches,
+  invalidateLedgerCaches,
+  invalidateValuationCaches,
+  invalidatePublicationCaches,
+  invalidateRolePermissionCaches,
+  invalidateAuthUserCache
+} = require('../utils/cache');
+const {
+  isPlainString,
+  validatePasswordPolicy,
+  sanitizeSafeUrl,
+  sendSafeError
+} = require('../utils/security');
+
+const BCRYPT_ROUNDS = 10;
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.user?._id || req.ip),
+  message: { message: 'Upload rate limit exceeded. Please wait before uploading more files.' }
+});
+
+const adminExportLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.user?._id || req.ip),
+  message: { message: 'Too many report export requests. Please wait a few minutes.' }
+});
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -81,7 +119,7 @@ const upload = multer({
 });
 
 // Cloudflare R2 File / Image Upload Route (with file-type validation per Page 34)
-router.post('/upload', authenticate, requireStaff, (req, res, next) => {
+router.post('/upload', authenticate, requireStaff, uploadLimiter, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) {
       return res.status(400).json({ message: err.message || 'File upload rejected by security check.' });
@@ -132,17 +170,21 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
       allSupportRequests,
       allUsers,
       rolePermissions,
-      auditLogs
+      auditLogs,
+      auditLogsTotalCount
     ] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}).sort({ shareholderId: 1 }),
-      ShareMovement.find({}).sort({ createdAt: -1 }),
-      ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 }),
-      Publication.find({}).sort({ createdAt: -1 }),
-      SupportRequest.find({}).sort({ createdAt: -1 }),
-      User.find({}),
-      RolePermission.find({}),
-      AuditLog.find({}).sort({ createdAt: -1 })
+      ensureCoreSystemConfig(null, { lean: true }),
+      Shareholder.find({}).sort({ shareholderId: 1 }).lean(),
+      ShareMovement.find({}).sort({ createdAt: -1 }).lean(),
+      ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 }).lean(),
+      Publication.find({}).sort({ createdAt: -1 }).lean(),
+      SupportRequest.find({}).sort({ createdAt: -1 }).limit(500).lean(),
+      User.find({})
+        .select('_id email fullName role status shareholderId inviteToken verificationEnabled lastLoginAt createdAt isSeed')
+        .lean(),
+      RolePermission.find({}).lean(),
+      AuditLog.find({}).sort({ createdAt: -1 }).limit(200).lean(),
+      AuditLog.countDocuments({})
     ]);
 
     const [registerState, valuationState, seedStatus] = await Promise.all([
@@ -417,7 +459,8 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
         supportRequests: allSupportRequests
       },
       auditLogs: {
-        auditLogs
+        auditLogs,
+        totalCount: auditLogsTotalCount
       },
       settings: {
         settings,
@@ -427,7 +470,7 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load administration workspace.');
   }
 });
 
@@ -443,13 +486,13 @@ router.get('/overview', authenticate, requireStaff, async (req, res) => {
       allSupportRequests,
       allUsers
     ] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}),
-      ShareMovement.find({}),
-      ShareValuation.find({}),
-      Publication.find({}),
-      SupportRequest.find({}),
-      User.find({})
+      ensureCoreSystemConfig(null, { lean: true }),
+      Shareholder.find({}).lean(),
+      ShareMovement.find({}).lean(),
+      ShareValuation.find({}).lean(),
+      Publication.find({}).lean(),
+      SupportRequest.find({}).lean(),
+      User.find({}).select('_id role status isSeed').lean()
     ]);
 
     const [registerState, valuationState, seedStatus] = await Promise.all([
@@ -560,11 +603,13 @@ router.get('/shareholders', authenticate, requireStaff, async (req, res) => {
   try {
     const { search, status } = req.query;
     const [settings, allShareholders, allMovements, allValuations, allUsers] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}).sort({ shareholderId: 1 }),
-      ShareMovement.find({}),
-      ShareValuation.find({}),
-      User.find({})
+      ensureCoreSystemConfig(null, { lean: true }),
+      Shareholder.find({}).sort({ shareholderId: 1 }).lean(),
+      ShareMovement.find({}).lean(),
+      ShareValuation.find({}).lean(),
+      User.find({ shareholderId: { $ne: null } })
+        .select('shareholderId inviteToken status isSeed')
+        .lean()
     ]);
 
     const [registerState, valuationState] = await Promise.all([
@@ -658,6 +703,13 @@ router.get('/shareholders', authenticate, requireStaff, async (req, res) => {
 // Create Shareholder Profile (Interface 10)
 router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
   try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareholderProfiles', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to create shareholder profiles.`
+      });
+    }
+
     const {
       shareholderId,
       fullName,
@@ -672,30 +724,34 @@ router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
       initialPassword
     } = req.body;
 
-    if (!fullName || !email) {
+    if (!isPlainString(fullName, 160) || !fullName.trim() || !isPlainString(email, 254) || !email.trim()) {
       return res.status(400).json({ message: 'Full name/entity name and email address are required.' });
     }
 
+    const safeKycUrl = sanitizeSafeUrl(kycDocumentUrl);
+    if (safeKycUrl === null) {
+      return res.status(400).json({ message: 'Invalid KYC document URL format.' });
+    }
+
+    if (initialPassword) {
+      const pwdError = validatePasswordPolicy(initialPassword);
+      if (pwdError) return res.status(400).json({ message: pwdError });
+    }
+
     const cleanEmail = email.toLowerCase().trim();
-    const existingEmail = await Shareholder.findOne({ email: cleanEmail });
+    const existingEmail = await Shareholder.findOne({ email: cleanEmail }).select('shareholderId').lean();
     if (existingEmail) {
       return res.status(400).json({
         message: `A shareholder profile with email ${cleanEmail} already exists (${existingEmail.shareholderId}).`
       });
     }
 
-    // Generate or validate shareholderId
-    let finalId = shareholderId ? shareholderId.trim().toUpperCase() : '';
+    // Generate or validate shareholderId atomically
+    let finalId = isPlainString(shareholderId, 40) ? shareholderId.trim().toUpperCase() : '';
     if (!finalId) {
-      const all = await Shareholder.find({});
-      let maxNum = 0;
-      for (const s of all) {
-        const m = String(s.shareholderId || '').match(/SH-(\d+)/i);
-        if (m && parseInt(m[1], 10) > maxNum) maxNum = parseInt(m[1], 10);
-      }
-      finalId = `SH-${String(maxNum + 1).padStart(3, '0')}`;
+      finalId = await getNextReference('shareholder_SH', 'SH', 3, Shareholder, 'shareholderId', /SH-(\d+)/i);
     } else {
-      const existingId = await Shareholder.findOne({ shareholderId: finalId });
+      const existingId = await Shareholder.findOne({ shareholderId: finalId }).select('_id').lean();
       if (existingId) {
         return res.status(400).json({ message: `Shareholder ID ${finalId} is already in use.` });
       }
@@ -709,13 +765,13 @@ router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
       shareholderId: finalId,
       fullName: fullName.trim(),
       email: cleanEmail,
-      phone: (phone || '').trim(),
-      postalAddress: (postalAddress || '').trim(),
+      phone: isPlainString(phone, 50) ? phone.trim() : '',
+      postalAddress: isPlainString(postalAddress, 500) ? postalAddress.trim() : '',
       shareholderType: shareholderType || 'Individual',
       accountStatus,
-      votingRights: votingRights || 'Per company rules',
-      kycDocumentUrl: kycDocumentUrl || '',
-      kycDocumentName: kycDocumentName || '',
+      votingRights: isPlainString(votingRights, 160) && votingRights ? votingRights : 'Per company rules',
+      kycDocumentUrl: safeKycUrl,
+      kycDocumentName: isPlainString(kycDocumentName, 255) ? kycDocumentName : '',
       enteredBy: req.user.role,
       enteredByEmail: req.user.email
     });
@@ -723,9 +779,9 @@ router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
     // Create or update corresponding User login account if Invited or Active
     let inviteToken = null;
     if (isInvite || isActive) {
-      inviteToken = `INV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-      const existingUser = await User.findOne({ email: cleanEmail });
-      const passwordHash = initialPassword ? await bcrypt.hash(initialPassword, 12) : '';
+      inviteToken = `INV-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      const existingUser = await User.findOne({ email: cleanEmail }).select('_id').lean();
+      const passwordHash = initialPassword ? await bcrypt.hash(initialPassword, BCRYPT_ROUNDS) : '';
       if (!existingUser) {
         await User.create({
           email: cleanEmail,
@@ -738,8 +794,11 @@ router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
           inviteExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           verificationEnabled: false
         });
+        del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
       }
     }
+
+    invalidateLedgerCaches();
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -759,13 +818,20 @@ router.post('/shareholders', authenticate, requireStaff, async (req, res) => {
       inviteToken
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to create shareholder profile.');
   }
 });
 
 // Update Shareholder Profile or Account Status (Interface 09 & 10)
 router.put('/shareholders/:id', authenticate, requireStaff, async (req, res) => {
   try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareholderProfiles', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to update shareholder profiles.`
+      });
+    }
+
     const shareholder = await Shareholder.findById(req.params.id);
     if (!shareholder) {
       return res.status(404).json({ message: 'Shareholder not found.' });
@@ -793,33 +859,46 @@ router.put('/shareholders/:id', authenticate, requireStaff, async (req, res) => 
       newPassword
     } = req.body;
 
-    if (fullName !== undefined) shareholder.fullName = fullName.trim();
-    if (email !== undefined) shareholder.email = email.toLowerCase().trim();
-    if (phone !== undefined) shareholder.phone = phone.trim();
-    if (postalAddress !== undefined) shareholder.postalAddress = postalAddress.trim();
+    if (kycDocumentUrl !== undefined) {
+      const safeKycUrl = sanitizeSafeUrl(kycDocumentUrl);
+      if (safeKycUrl === null) {
+        return res.status(400).json({ message: 'Invalid KYC document URL format.' });
+      }
+      shareholder.kycDocumentUrl = safeKycUrl;
+    }
+
+    if (newPassword) {
+      const pwdError = validatePasswordPolicy(newPassword);
+      if (pwdError) return res.status(400).json({ message: pwdError });
+    }
+
+    if (isPlainString(fullName, 160)) shareholder.fullName = fullName.trim();
+    if (isPlainString(email, 254)) shareholder.email = email.toLowerCase().trim();
+    if (isPlainString(phone, 50)) shareholder.phone = phone.trim();
+    if (isPlainString(postalAddress, 500)) shareholder.postalAddress = postalAddress.trim();
     if (shareholderType !== undefined) shareholder.shareholderType = shareholderType;
     if (accountStatus !== undefined) shareholder.accountStatus = accountStatus;
     if (votingRights !== undefined) shareholder.votingRights = votingRights;
-    if (kycDocumentUrl !== undefined) shareholder.kycDocumentUrl = kycDocumentUrl;
-    if (kycDocumentName !== undefined) shareholder.kycDocumentName = kycDocumentName;
+    if (isPlainString(kycDocumentName, 255)) shareholder.kycDocumentName = kycDocumentName;
 
     await shareholder.save();
 
     // Sync linked User login record
     let linkedUser = await User.findOne({ shareholderId: shareholder.shareholderId });
     if (!linkedUser && ['Active', 'Invited'].includes(shareholder.accountStatus)) {
-      const inviteToken = `INV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      const inviteToken = `INV-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       linkedUser = await User.create({
         email: shareholder.email,
         fullName: shareholder.fullName,
         role: 'Shareholder',
         status: newPassword ? 'Active' : 'Invited',
         shareholderId: shareholder.shareholderId,
-        passwordHash: newPassword ? await bcrypt.hash(newPassword, 12) : '',
+        passwordHash: newPassword ? await bcrypt.hash(newPassword, BCRYPT_ROUNDS) : '',
         inviteToken: newPassword ? null : inviteToken,
         inviteExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         verificationEnabled: false
       });
+      del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
     } else if (linkedUser) {
       linkedUser.fullName = shareholder.fullName;
       linkedUser.email = shareholder.email;
@@ -831,16 +910,20 @@ router.put('/shareholders/:id', authenticate, requireStaff, async (req, res) => 
         linkedUser.status = 'Active';
       }
       if (resetInvite) {
-        linkedUser.inviteToken = `INV-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+        linkedUser.inviteToken = `INV-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
         linkedUser.inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         linkedUser.status = 'Invited';
       }
-      if (newPassword && newPassword.length >= 6) {
-        linkedUser.passwordHash = await bcrypt.hash(newPassword, 12);
+      if (newPassword) {
+        linkedUser.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
         linkedUser.status = 'Active';
+        linkedUser.sessionVersion = (linkedUser.sessionVersion || 1) + 1;
       }
       await linkedUser.save();
+      invalidateAuthUserCache(linkedUser._id);
     }
+
+    invalidateLedgerCaches();
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -859,7 +942,7 @@ router.put('/shareholders/:id', authenticate, requireStaff, async (req, res) => 
       inviteToken: linkedUser ? linkedUser.inviteToken : null
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update shareholder profile.');
   }
 });
 
@@ -884,8 +967,12 @@ router.delete('/shareholders/:id', authenticate, requireRoles('Administrator'), 
       });
     }
 
+    const linkedUsers = await User.find({ shareholderId: shareholder.shareholderId }).select('_id').lean();
     await User.deleteMany({ shareholderId: shareholder.shareholderId });
+    for (const u of linkedUsers) invalidateAuthUserCache(u._id);
     await Shareholder.findByIdAndDelete(shareholder._id);
+    invalidateLedgerCaches();
+    del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -900,7 +987,7 @@ router.delete('/shareholders/:id', authenticate, requireRoles('Administrator'), 
 
     res.json({ message: `Unused profile ${shareholder.shareholderId} deleted.` });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to delete shareholder profile.');
   }
 });
 
@@ -935,6 +1022,13 @@ router.get('/movements', authenticate, requireStaff, async (req, res) => {
 
 router.post('/movements', authenticate, requireStaff, async (req, res) => {
   try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareMovements', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to create share movements.`
+      });
+    }
+
     const {
       reference,
       movementType, // 'Opening' | 'Allocation' | 'Transfer' | 'Correction' | 'Cancellation'
@@ -950,6 +1044,11 @@ router.post('/movements', authenticate, requireStaff, async (req, res) => {
       affectsIssuedTotal,
       submitForApproval // boolean: true -> 'Submitted', false -> 'Draft'
     } = req.body;
+
+    const safeDocUrl = sanitizeSafeUrl(supportingDocumentUrl);
+    if (safeDocUrl === null) {
+      return res.status(400).json({ message: 'Invalid supporting document URL format.' });
+    }
 
     const numQty = Number(quantity);
     if (!movementType || !effectiveDate || !numQty || numQty <= 0 || !Number.isInteger(numQty)) {
@@ -1006,7 +1105,7 @@ router.post('/movements', authenticate, requireStaff, async (req, res) => {
       }
     }
 
-    // Generate reference if not supplied
+    // Generate atomic reference if not supplied
     const prefixMap = {
       Opening: 'OPEN',
       Allocation: 'AL',
@@ -1015,19 +1114,27 @@ router.post('/movements', authenticate, requireStaff, async (req, res) => {
       Cancellation: 'CAN'
     };
     const prefix = prefixMap[movementType] || 'MOV';
-    let finalRef = reference ? reference.trim().toUpperCase() : '';
+    let finalRef = isPlainString(reference, 40) ? reference.trim().toUpperCase() : '';
     if (!finalRef) {
-      const count = await ShareMovement.countDocuments({});
-      finalRef = `${prefix}-${String(count + 1).padStart(3, '0')}`;
+      finalRef = await getNextReference(
+        `mov_${prefix}`,
+        prefix,
+        3,
+        ShareMovement,
+        'reference',
+        new RegExp(`${prefix}-(\\d+)`, 'i')
+      );
     } else {
-      const dup = await ShareMovement.findOne({ reference: finalRef });
+      const dup = await ShareMovement.findOne({ reference: finalRef }).select('_id').lean();
       if (dup) {
         return res.status(400).json({ message: `Movement reference ${finalRef} already exists.` });
       }
     }
 
-    const fromSh = fromShareholderId ? await Shareholder.findOne({ shareholderId: fromShareholderId }) : null;
-    const toSh = toShareholderId ? await Shareholder.findOne({ shareholderId: toShareholderId }) : null;
+    const [fromSh, toSh] = await Promise.all([
+      fromShareholderId ? Shareholder.findOne({ shareholderId: fromShareholderId }).select('fullName').lean() : Promise.resolve(null),
+      toShareholderId ? Shareholder.findOne({ shareholderId: toShareholderId }).select('fullName').lean() : Promise.resolve(null)
+    ]);
 
     const fromBefore = fromShareholderId ? holdings[fromShareholderId] || 0 : null;
     const toBefore = toShareholderId ? holdings[toShareholderId] || 0 : null;
@@ -1063,10 +1170,10 @@ router.post('/movements', authenticate, requireStaff, async (req, res) => {
       toShareholderName: toSh ? toSh.fullName : '',
       quantity: numQty,
       effectiveDate,
-      reason: (reason || '').trim(),
-      linkedReference: (linkedReference || '').trim(),
-      supportingDocumentUrl: supportingDocumentUrl || '',
-      supportingDocumentName: supportingDocumentName || '',
+      reason: isPlainString(reason, 1000) ? reason.trim() : '',
+      linkedReference: isPlainString(linkedReference, 80) ? linkedReference.trim() : '',
+      supportingDocumentUrl: safeDocUrl,
+      supportingDocumentName: isPlainString(supportingDocumentName, 255) ? supportingDocumentName : '',
       status,
       affectsIssuedTotal: willAffectIssued,
       snapshotBefore: {
@@ -1104,13 +1211,20 @@ router.post('/movements', authenticate, requireStaff, async (req, res) => {
       movement
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to create share movement.');
   }
 });
 
 // Update Draft/Returned Movement
 router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
   try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareMovements', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to modify share movements.`
+      });
+    }
+
     const mov = await ShareMovement.findById(req.params.id);
     if (!mov) return res.status(404).json({ message: 'Movement record not found.' });
 
@@ -1127,12 +1241,35 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
     }
 
     const { quantity, effectiveDate, reason, supportingDocumentUrl, supportingDocumentName, submitForApproval } = req.body;
-    if (quantity !== undefined) mov.quantity = Number(quantity);
+    if (quantity !== undefined) {
+      const numQty = Number(quantity);
+      if (!numQty || numQty <= 0 || !Number.isInteger(numQty)) {
+        return res.status(400).json({ message: 'Quantity must be a positive whole integer.' });
+      }
+      mov.quantity = numQty;
+    }
     if (effectiveDate !== undefined) mov.effectiveDate = effectiveDate;
-    if (reason !== undefined) mov.reason = reason;
-    if (supportingDocumentUrl !== undefined) mov.supportingDocumentUrl = supportingDocumentUrl;
-    if (supportingDocumentName !== undefined) mov.supportingDocumentName = supportingDocumentName;
+    if (reason !== undefined && isPlainString(reason, 1000)) mov.reason = reason;
+    if (supportingDocumentUrl !== undefined) {
+      const safeDocUrl = sanitizeSafeUrl(supportingDocumentUrl);
+      if (safeDocUrl === null) {
+        return res.status(400).json({ message: 'Invalid supporting document URL format.' });
+      }
+      mov.supportingDocumentUrl = safeDocUrl;
+    }
+    if (supportingDocumentName !== undefined && isPlainString(supportingDocumentName, 255)) {
+      mov.supportingDocumentName = supportingDocumentName;
+    }
     if (submitForApproval !== undefined) {
+      if (submitForApproval && ['Transfer', 'Cancellation', 'Correction'].includes(mov.movementType) && mov.fromShareholderId) {
+        const registerState = await calculateRegisterState();
+        const currentBal = registerState.holdingsByShareholder[mov.fromShareholderId] || 0;
+        if (Number(mov.quantity) > currentBal) {
+          return res.status(400).json({
+            message: `Insufficient balance: ${mov.fromShareholderId} currently holds ${currentBal.toLocaleString()} shares.`
+          });
+        }
+      }
       mov.status = submitForApproval ? 'Submitted' : 'Draft';
       if (submitForApproval) mov.submittedAt = new Date().toISOString();
     }
@@ -1151,7 +1288,7 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
 
     res.json({ message: `Movement ${mov.reference} updated.`, movement: mov });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update share movement.');
   }
 });
 
@@ -1189,6 +1326,13 @@ router.get('/valuations', authenticate, requireStaff, async (req, res) => {
 
 router.post('/valuations', authenticate, requireStaff, async (req, res) => {
   try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareValues', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to create share valuations.`
+      });
+    }
+
     const {
       reference,
       shareClass,
@@ -1200,33 +1344,39 @@ router.post('/valuations', authenticate, requireStaff, async (req, res) => {
       submitForApproval
     } = req.body;
 
+    const safeDocUrl = sanitizeSafeUrl(supportingDocumentUrl);
+    if (safeDocUrl === null) {
+      return res.status(400).json({ message: 'Invalid supporting document URL format.' });
+    }
+
     const numVal = Number(valuePerShare);
-    if (!effectiveDate || !basis || isNaN(numVal) || numVal <= 0) {
+    if (!effectiveDate || !isPlainString(basis, 2000) || !basis.trim() || isNaN(numVal) || numVal <= 0) {
       return res.status(400).json({
         message: 'A positive value per share, effective date, and valuation basis/rationale are required.'
       });
     }
 
-    const valuationState = await getEffectiveValuationState();
-    const settings = await ensureCoreSystemConfig();
+    const [valuationState, settings] = await Promise.all([
+      getEffectiveValuationState(),
+      ensureCoreSystemConfig(null, { lean: true })
+    ]);
 
     // Check duplicate effectiveDate for published/active valuation (Page 32: duplicate dates are rejected)
     const existingSameDate = await ShareValuation.findOne({
       effectiveDate,
       status: { $in: ['Submitted', 'Approved', 'Scheduled', 'Published'] }
-    });
+    }).select('reference').lean();
     if (existingSameDate) {
       return res.status(400).json({
         message: `A valuation (${existingSameDate.reference}) already exists for effective date ${effectiveDate}.`
       });
     }
 
-    let finalRef = reference ? reference.trim().toUpperCase() : '';
+    let finalRef = isPlainString(reference, 40) ? reference.trim().toUpperCase() : '';
     if (!finalRef) {
-      const count = await ShareValuation.countDocuments({});
-      finalRef = `VAL-${String(count + 1).padStart(3, '0')}`;
+      finalRef = await getNextReference('val_VAL', 'VAL', 3, ShareValuation, 'reference', /VAL-(\d+)/i);
     } else {
-      const dup = await ShareValuation.findOne({ reference: finalRef });
+      const dup = await ShareValuation.findOne({ reference: finalRef }).select('_id').lean();
       if (dup) {
         return res.status(400).json({ message: `Valuation reference ${finalRef} already exists.` });
       }
@@ -1250,8 +1400,8 @@ router.post('/valuations', authenticate, requireStaff, async (req, res) => {
       changePercent,
       effectiveDate,
       basis: basis.trim(),
-      supportingDocumentUrl: supportingDocumentUrl || '',
-      supportingDocumentName: supportingDocumentName || '',
+      supportingDocumentUrl: safeDocUrl,
+      supportingDocumentName: isPlainString(supportingDocumentName, 255) ? supportingDocumentName : '',
       status,
       enteredBy: req.user.fullName,
       enteredByEmail: req.user.email,
@@ -1278,7 +1428,7 @@ router.post('/valuations', authenticate, requireStaff, async (req, res) => {
       valuation
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to create share valuation.');
   }
 });
 
@@ -1287,11 +1437,11 @@ router.get('/approvals', authenticate, requireStaff, async (req, res) => {
   try {
     const [settings, allShareholders, allMovements, allValuations, allPublications] =
       await Promise.all([
-        ensureCoreSystemConfig(),
-        Shareholder.find({}).sort({ createdAt: -1 }),
-        ShareMovement.find({}).sort({ createdAt: -1 }),
-        ShareValuation.find({}).sort({ createdAt: -1 }),
-        Publication.find({}).sort({ createdAt: -1 })
+        ensureCoreSystemConfig(null, { lean: true }),
+        Shareholder.find({}).sort({ createdAt: -1 }).lean(),
+        ShareMovement.find({}).sort({ createdAt: -1 }).lean(),
+        ShareValuation.find({}).sort({ createdAt: -1 }).lean(),
+        Publication.find({}).sort({ createdAt: -1 }).lean()
       ]);
 
     const [registerState, valuationState] = await Promise.all([
@@ -1487,13 +1637,16 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
           if (['Opening', 'Allocation'].includes(mov.movementType)) {
             settings.issuedSharesTotal = Number(settings.issuedSharesTotal) + Number(mov.quantity);
             await settings.save();
+            invalidateCompanyCaches();
           } else if (mov.movementType === 'Cancellation') {
             settings.issuedSharesTotal = Math.max(0, Number(settings.issuedSharesTotal) - Number(mov.quantity));
             await settings.save();
+            invalidateCompanyCaches();
           }
         }
       }
       await mov.save();
+      invalidateLedgerCaches();
 
       await logAuditEvent({
         actor: req.user.fullName,
@@ -1597,9 +1750,9 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
         val.publishedAt = new Date().toISOString();
 
         // Automatically publish an in-app Announcement for shareholders (Page 11 Example)
-        const pubCount = await Publication.countDocuments({});
+        const noticeRef = await getNextReference('pub_NOTICE', 'NOTICE', 3, Publication, 'reference', /NOTICE-(\d+)/i);
         await Publication.create({
-          reference: `NOTICE-${String(pubCount + 1).padStart(3, '0')}`,
+          reference: noticeRef,
           contentType: 'Announcement',
           category: 'Share value update',
           title: 'Latest share value published',
@@ -1611,8 +1764,10 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
           reviewedBy: req.user.fullName,
           publishedDate: val.effectiveDate
         });
+        invalidatePublicationCaches();
       }
       await val.save();
+      invalidateValuationCaches();
 
       await logAuditEvent({
         actor: req.user.fullName,
@@ -1643,6 +1798,7 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
       pub.reviewerComment = (reviewerComment || '').trim();
       if (decision === 'approve') pub.publishedDate = getTodayDateString();
       await pub.save();
+      invalidatePublicationCaches();
 
       await logAuditEvent({
         actor: req.user.fullName,
@@ -1665,6 +1821,7 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
       sh.reviewedBy = req.user.fullName;
       sh.reviewerComment = (reviewerComment || '').trim();
       await sh.save();
+      invalidateLedgerCaches();
 
       await logAuditEvent({
         actor: req.user.fullName,
@@ -1681,55 +1838,51 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
 
     res.status(400).json({ message: 'Unsupported approval itemType.' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to process approval decision.');
   }
 });
 
 // Desktop Interfaces 15 & 19: Staff Accounts & Role Permissions Matrix
 router.get('/staff', authenticate, requireStaff, async (req, res) => {
   try {
-    const [allUsers, rolePermissions] = await Promise.all([
-      User.find({}),
-      RolePermission.find({})
+    const [staffUsers, rolePermissions] = await Promise.all([
+      User.find({ role: { $in: ['Administrator', 'Data officer', 'Approver'] } })
+        .select('_id email fullName role status verificationEnabled lastLoginAt createdAt')
+        .lean(),
+      RolePermission.find({}).lean()
     ]);
-    // Never expose passwords, tokens, or verification codes of other users (Page 31 & 34)
-    const staffMembers = allUsers
-      .filter((u) => ['Administrator', 'Data officer', 'Approver'].includes(u.role))
-      .map((u) => ({
-        _id: u._id,
-        email: u.email,
-        fullName: u.fullName,
-        role: u.role,
-        status: u.status,
-        verificationEnabled: u.verificationEnabled !== false,
-        lastLoginAt: u.lastLoginAt,
-        createdAt: u.createdAt
-      }));
 
     res.json({
-      staffMembers,
+      staffMembers: staffUsers,
       rolePermissions
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load staff directory.');
   }
 });
 
 router.post('/staff/invite', authenticate, requireRoles('Administrator'), async (req, res) => {
   try {
     const { fullName, email, role, initialPassword } = req.body;
-    if (!fullName || !email || !['Administrator', 'Data officer', 'Approver'].includes(role)) {
+    if (!isPlainString(fullName, 160) || !fullName.trim() || !isPlainString(email, 254) || !email.trim() || !['Administrator', 'Data officer', 'Approver'].includes(role)) {
       return res.status(400).json({ message: 'Full name, email, and a valid staff role are required.' });
     }
 
+    if (initialPassword) {
+      const pwdError = validatePasswordPolicy(initialPassword);
+      if (pwdError) return res.status(400).json({ message: pwdError });
+    }
+
     const cleanEmail = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: cleanEmail });
+    const existing = await User.findOne({ email: cleanEmail }).select('_id').lean();
     if (existing) {
       return res.status(400).json({ message: `An account with email ${cleanEmail} already exists.` });
     }
 
-    const inviteToken = `STAFF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-    const passwordHash = initialPassword ? await bcrypt.hash(initialPassword, 12) : '';
+    const inviteToken = `STAFF-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const verificationCode = String(crypto.randomInt(100000, 999999));
+    const recoveryCode = `NIA-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const passwordHash = initialPassword ? await bcrypt.hash(initialPassword, BCRYPT_ROUNDS) : '';
 
     const staffUser = await User.create({
       email: cleanEmail,
@@ -1740,9 +1893,10 @@ router.post('/staff/invite', authenticate, requireRoles('Administrator'), async 
       inviteToken: initialPassword ? null : inviteToken,
       inviteExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       verificationEnabled: true,
-      verificationCode: '246810',
-      recoveryCode: 'APEX-RECOVERY-2026'
+      verificationCode,
+      recoveryCode
     });
+    del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -1755,7 +1909,7 @@ router.post('/staff/invite', authenticate, requireRoles('Administrator'), async 
     });
 
     res.status(201).json({
-      message: `Staff account for ${staffUser.email} (${role}) created.`,
+      message: `Staff account for ${staffUser.email} (${role}) created. 2FA Code: ${verificationCode}`,
       staff: {
         _id: staffUser._id,
         fullName: staffUser.fullName,
@@ -1764,10 +1918,11 @@ router.post('/staff/invite', authenticate, requireRoles('Administrator'), async 
         status: staffUser.status,
         verificationEnabled: staffUser.verificationEnabled
       },
-      inviteToken
+      inviteToken,
+      staffVerificationCode: verificationCode
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to invite staff member.');
   }
 });
 
@@ -1779,14 +1934,19 @@ router.put('/staff/:id', authenticate, requireRoles('Administrator'), async (req
 
     const { role, status, verificationEnabled, revokeSessions, newPassword } = req.body;
 
+    if (newPassword) {
+      const pwdError = validatePasswordPolicy(newPassword);
+      if (pwdError) return res.status(400).json({ message: pwdError });
+    }
+
     // Page 24 rule: "Removing the final active administrator requires a replacement first."
     if (
       staffUser.role === 'Administrator' &&
       staffUser.status === 'Active' &&
       ((role && role !== 'Administrator') || (status && status !== 'Active'))
     ) {
-      const allUsers = await User.find({ role: 'Administrator', status: 'Active' });
-      if (allUsers.length <= 1) {
+      const activeAdminCount = await User.countDocuments({ role: 'Administrator', status: 'Active' });
+      if (activeAdminCount <= 1) {
         return res.status(400).json({
           message: 'Governance control: Removing or suspending the final active Administrator requires an active replacement first.'
         });
@@ -1810,12 +1970,17 @@ router.put('/staff/:id', authenticate, requireRoles('Administrator'), async (req
     if (revokeSessions) {
       staffUser.sessionVersion = (staffUser.sessionVersion || 1) + 1;
     }
-    if (newPassword && newPassword.length >= 6) {
-      staffUser.passwordHash = await bcrypt.hash(newPassword, 12);
+    if (newPassword) {
+      staffUser.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
       staffUser.status = 'Active';
+      staffUser.failedLoginAttempts = 0;
+      staffUser.failed2faAttempts = 0;
+      staffUser.lockUntil = null;
+      staffUser.sessionVersion = (staffUser.sessionVersion || 1) + 1;
     }
 
     await staffUser.save();
+    invalidateAuthUserCache(staffUser._id);
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -1840,21 +2005,49 @@ router.put('/staff/:id', authenticate, requireRoles('Administrator'), async (req
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update staff account.');
   }
 });
 
 // Save Role Permissions Matrix (Interface 15)
+const ALLOWED_PERMISSION_RESOURCES = new Set([
+  'shareholderProfiles',
+  'shareMovements',
+  'shareValues',
+  'staffAndRoles',
+  'reportsAndExports',
+  'auditHistory'
+]);
+const ALLOWED_PERMISSION_ACTIONS = new Set(['view', 'createEditDraft', 'approvePublish']);
+
 router.put('/role-permissions/:role', authenticate, requireRoles('Administrator'), async (req, res) => {
   try {
     const { role } = req.params;
+    if (!['Administrator', 'Data officer', 'Approver', 'Shareholder'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role name.' });
+    }
     const { permissions, scope } = req.body;
     const rp = await RolePermission.findOne({ role });
     if (!rp) return res.status(404).json({ message: 'Role permission record not found.' });
 
-    rp.permissions = { ...rp.permissions, ...permissions };
-    if (scope) rp.scope = scope;
+    const sanitizedPermissions = { ...(rp.permissions || {}) };
+    if (permissions && typeof permissions === 'object' && !Array.isArray(permissions)) {
+      for (const [resKey, actions] of Object.entries(permissions)) {
+        if (!ALLOWED_PERMISSION_RESOURCES.has(resKey) || !actions || typeof actions !== 'object') continue;
+        const cleanActions = { ...(sanitizedPermissions[resKey] || {}) };
+        for (const [actKey, val] of Object.entries(actions)) {
+          if (ALLOWED_PERMISSION_ACTIONS.has(actKey) && typeof val === 'string' && val.length <= 40) {
+            cleanActions[actKey] = val;
+          }
+        }
+        sanitizedPermissions[resKey] = cleanActions;
+      }
+    }
+
+    rp.permissions = sanitizedPermissions;
+    if (isPlainString(scope, 160) && scope.trim()) rp.scope = scope.trim();
     await rp.save();
+    invalidateRolePermissionCaches();
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -1863,7 +2056,7 @@ router.put('/role-permissions/:role', authenticate, requireRoles('Administrator'
       action: `Updated role permissions matrix for ${role}`,
       reference: `ROLE-${role.toUpperCase()}`,
       entityType: 'RolePermission',
-      newValue: JSON.stringify(permissions)
+      newValue: JSON.stringify(sanitizedPermissions)
     });
 
     res.json({
@@ -1871,7 +2064,7 @@ router.put('/role-permissions/:role', authenticate, requireRoles('Administrator'
       rolePermission: rp
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update role permissions.');
   }
 });
 
@@ -1879,9 +2072,11 @@ router.put('/role-permissions/:role', authenticate, requireRoles('Administrator'
 router.get('/reports/preview', authenticate, requireStaff, async (req, res) => {
   try {
     const asAtDate = req.query.asAtDate || getTodayDateString();
-    const registerState = await calculateRegisterState(asAtDate);
-    const valuationState = await getEffectiveValuationState(asAtDate);
-    const allShareholders = await Shareholder.find({});
+    const [registerState, valuationState, shareholdersCount] = await Promise.all([
+      calculateRegisterState(asAtDate),
+      getEffectiveValuationState(asAtDate),
+      Shareholder.countDocuments({})
+    ]);
 
     res.json({
       asAtDate,
@@ -1892,20 +2087,22 @@ router.get('/reports/preview', authenticate, requireStaff, async (req, res) => {
       difference: registerState.difference,
       isReconciled: registerState.isReconciled,
       hasNegativeBalances: registerState.hasNegativeBalances,
-      shareholdersCount: allShareholders.length,
+      shareholdersCount,
       applicableValuation: valuationState.currentPublishedValuation
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to preview report.');
   }
 });
 
-router.get('/reports/export', authenticate, requireStaff, async (req, res) => {
+router.get('/reports/export', authenticate, requireStaff, adminExportLimiter, async (req, res) => {
   try {
     const { reportType = 'shareholder-register', format = 'pdf', asAtDate = getTodayDateString() } = req.query;
-    const registerState = await calculateRegisterState(asAtDate);
-    const valuationState = await getEffectiveValuationState(asAtDate);
-    const allShareholders = await Shareholder.find({}).sort({ shareholderId: 1 });
+    const [registerState, valuationState, allShareholders] = await Promise.all([
+      calculateRegisterState(asAtDate),
+      getEffectiveValuationState(asAtDate),
+      Shareholder.find({}).sort({ shareholderId: 1 }).lean()
+    ]);
     const settings = registerState.settings;
     const valPerShare = valuationState.currentPublishedValuation
       ? Number(valuationState.currentPublishedValuation.valuePerShare)
@@ -2017,11 +2214,15 @@ router.get('/reports/export', authenticate, requireStaff, async (req, res) => {
   }
 });
 
-// Desktop Interface 17: Audit Log
+// Desktop Interface 17: Audit Log (Bounded & Paginated for High Scale)
 router.get('/audit-logs', authenticate, requireStaff, async (req, res) => {
   try {
     const { actor, action, search } = req.query;
-    let logs = await AuditLog.find({}).sort({ createdAt: -1 });
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 500);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
+
+    let logs = await AuditLog.find({}).sort({ createdAt: -1 }).limit(1000).lean();
 
     if (actor && actor !== 'All') {
       logs = logs.filter(
@@ -2044,9 +2245,11 @@ router.get('/audit-logs', authenticate, requireStaff, async (req, res) => {
       );
     }
 
-    res.json({ auditLogs: logs });
+    const total = logs.length;
+    const paginated = logs.slice(skip, skip + limit);
+    res.json({ auditLogs: paginated, total, page, limit });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load audit logs.');
   }
 });
 
@@ -2054,7 +2257,7 @@ router.get('/audit-logs', authenticate, requireStaff, async (req, res) => {
 router.get('/publications', authenticate, requireStaff, async (req, res) => {
   try {
     const [publications, activeShareholdersCount, totalShareholdersCount] = await Promise.all([
-      Publication.find({}).sort({ createdAt: -1 }),
+      Publication.find({}).sort({ createdAt: -1 }).lean(),
       Shareholder.countDocuments({ accountStatus: 'Active' }),
       Shareholder.countDocuments({})
     ]);
@@ -2065,7 +2268,7 @@ router.get('/publications', authenticate, requireStaff, async (req, res) => {
       totalShareholdersCount
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load publications.');
   }
 });
 
@@ -2085,16 +2288,17 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
       actionType // 'publish' | 'submit' | 'draft'
     } = req.body;
 
-    if (!contentType || !title) {
+    if (!contentType || !isPlainString(title, 200) || !title.trim()) {
       return res.status(400).json({ message: 'Content type and title are required.' });
     }
     if (audienceType === 'Specific shareholder' && !targetShareholderId) {
       return res.status(400).json({ message: 'Please select a target shareholder for a private publication.' });
     }
 
-    const count = await Publication.countDocuments({});
-    const prefix = contentType === 'Document' ? 'DOC' : 'ANN';
-    const reference = `${prefix}-${String(count + 1).padStart(3, '0')}`;
+    const safeFileUrl = sanitizeSafeUrl(fileUrl);
+    if (safeFileUrl === null) {
+      return res.status(400).json({ message: 'Invalid publication file URL format.' });
+    }
 
     if (actionType === 'publish') {
       const canPublish = await checkRolePermission(req.user.role, 'shareValues', 'approvePublish');
@@ -2104,6 +2308,16 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
         });
       }
     }
+
+    const prefix = contentType === 'Document' ? 'DOC' : 'ANN';
+    const reference = await getNextReference(
+      `pub_${prefix}`,
+      prefix,
+      3,
+      Publication,
+      'reference',
+      new RegExp(`${prefix}-(\\d+)`, 'i')
+    );
 
     const status =
       actionType === 'publish'
@@ -2117,18 +2331,20 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
       contentType,
       category: category || (contentType === 'Document' ? 'Holding confirmation' : 'General notice'),
       title: title.trim(),
-      summary: (summary || '').trim(),
+      summary: isPlainString(summary, 2000) ? summary.trim() : '',
       periodOrDate: periodOrDate || getTodayDateString(),
       audienceType: audienceType || 'All shareholders',
       targetShareholderId: audienceType === 'Specific shareholder' ? targetShareholderId : null,
-      fileUrl: fileUrl || '',
-      fileName: fileName || '',
-      fileProvider: fileProvider || '',
+      fileUrl: safeFileUrl,
+      fileName: isPlainString(fileName, 255) ? fileName : '',
+      fileProvider: isPlainString(fileProvider, 60) ? fileProvider : '',
       status,
       enteredBy: req.user.fullName,
       enteredByEmail: req.user.email,
       publishedDate: status === 'Published' ? getTodayDateString() : ''
     });
+
+    if (status === 'Published') invalidatePublicationCaches();
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -2145,7 +2361,7 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
       publication: pub
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to create publication.');
   }
 });
 
@@ -2153,7 +2369,7 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
 router.get('/support-requests', authenticate, requireStaff, async (req, res) => {
   try {
     const { status, owner, search } = req.query;
-    let requests = await SupportRequest.find({}).sort({ createdAt: -1 });
+    let requests = await SupportRequest.find({}).sort({ createdAt: -1 }).limit(500).lean();
 
     if (status && status !== 'All') {
       requests = requests.filter((r) => r.status === status);
@@ -2173,7 +2389,7 @@ router.get('/support-requests', authenticate, requireStaff, async (req, res) => 
 
     res.json({ supportRequests: requests });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load support requests.');
   }
 });
 
@@ -2219,7 +2435,9 @@ router.put('/support-requests/:id', authenticate, requireStaff, async (req, res)
           linkedUser.fullName = sh.fullName;
           linkedUser.email = sh.email;
           await linkedUser.save();
+          invalidateAuthUserCache(linkedUser._id);
         }
+        invalidateLedgerCaches();
       }
       ticket.status = 'Resolved';
     }
@@ -2287,18 +2505,37 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
       cloudflareR2SecretAccessKey
     } = req.body;
 
-    if (companyDisplayName !== undefined) settings.companyDisplayName = companyDisplayName.trim();
-    if (legalName !== undefined) settings.legalName = legalName.trim();
-    if (businessTimezone !== undefined) settings.businessTimezone = businessTimezone;
+    if (companyDisplayName !== undefined && isPlainString(companyDisplayName, 160)) {
+      settings.companyDisplayName = companyDisplayName.trim();
+    }
+    if (legalName !== undefined && isPlainString(legalName, 200)) settings.legalName = legalName.trim();
+    if (businessTimezone !== undefined && isPlainString(businessTimezone, 80)) {
+      settings.businessTimezone = businessTimezone;
+    }
     if (financialApprovalPolicy !== undefined) settings.financialApprovalPolicy = financialApprovalPolicy;
-    if (supportEmail !== undefined) settings.supportEmail = supportEmail.trim();
-    if (supportPhone !== undefined) settings.supportPhone = supportPhone.trim();
-    if (companyLogoUrl !== undefined) settings.companyLogoUrl = companyLogoUrl;
-    if (companyLogoPublicId !== undefined) settings.companyLogoPublicId = companyLogoPublicId;
+    if (supportEmail !== undefined && isPlainString(supportEmail, 254)) settings.supportEmail = supportEmail.trim();
+    if (supportPhone !== undefined && isPlainString(supportPhone, 50)) settings.supportPhone = supportPhone.trim();
+    if (companyLogoUrl !== undefined) {
+      const safeLogoUrl = sanitizeSafeUrl(companyLogoUrl);
+      if (safeLogoUrl === null) {
+        return res.status(400).json({ message: 'Invalid company logo URL format.' });
+      }
+      settings.companyLogoUrl = safeLogoUrl;
+    }
+    if (companyLogoPublicId !== undefined && isPlainString(companyLogoPublicId, 300)) {
+      settings.companyLogoPublicId = companyLogoPublicId;
+    }
     if (issuedSharesTotal !== undefined) settings.issuedSharesTotal = Number(issuedSharesTotal) || 0;
-    if (votingRights !== undefined) settings.votingRights = votingRights;
+    if (votingRights !== undefined && isPlainString(votingRights, 200)) settings.votingRights = votingRights;
     if (materialValuationChangeThresholdPercent !== undefined) {
       settings.materialValuationChangeThresholdPercent = Number(materialValuationChangeThresholdPercent) || 10;
+    }
+
+    if (cloudflareR2PublicUrl !== undefined && String(cloudflareR2PublicUrl || '').trim()) {
+      const safePublicUrl = sanitizeSafeUrl(cloudflareR2PublicUrl);
+      if (!safePublicUrl || !/^https?:\/\//i.test(safePublicUrl)) {
+        return res.status(400).json({ message: 'Cloudflare R2 Public URL must be a valid http(s) URL.' });
+      }
     }
 
     // Dynamic Cloudflare R2 configuration if provided
@@ -2330,6 +2567,7 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
     }
 
     await settings.save();
+    invalidateCompanyCaches();
 
     await logAuditEvent({
       actor: req.user.fullName,
@@ -2367,6 +2605,12 @@ router.get('/seed-data/status', authenticate, requireStaff, async (req, res) => 
 router.post('/seed-data/insert', authenticate, requireRoles('Administrator'), async (req, res) => {
   try {
     const result = await insertSeedData(req.user, req.body);
+    invalidateCompanyCaches();
+    invalidateLedgerCaches();
+    invalidateValuationCaches();
+    invalidatePublicationCaches();
+    invalidateAuthUserCache();
+    del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
     res.json(result);
   } catch (err) {
     const code = err.statusCode || 500;
@@ -2380,15 +2624,22 @@ router.post('/seed-data/insert', authenticate, requireRoles('Administrator'), as
 router.post('/seed-data/clear', authenticate, requireRoles('Administrator'), async (req, res) => {
   try {
     const result = await clearSeedData(req.user);
+    invalidateCompanyCaches();
+    invalidateLedgerCaches();
+    invalidateValuationCaches();
+    invalidatePublicationCaches();
+    invalidateAuthUserCache();
+    del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to clear seed data.');
   }
 });
 
 router.post('/seed-data/toggle-block', authenticate, requireRoles('Administrator'), async (req, res) => {
   try {
     const status = await toggleSeedBlock(req.user, req.body.blocked, req.body.reason);
+    invalidateCompanyCaches();
     res.json({
       message: req.body.blocked
         ? 'Seed data generation has been permanently blocked by Administrator.'
@@ -2396,7 +2647,7 @@ router.post('/seed-data/toggle-block', authenticate, requireRoles('Administrator
       status
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update seed data policy.');
   }
 });
 

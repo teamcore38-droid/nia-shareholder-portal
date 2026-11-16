@@ -66,11 +66,16 @@ const userSchema = new mongoose.Schema(
     sessionVersion: { type: Number, default: 1 },
     avatarUrl: { type: String, default: '' },
     lastLoginAt: { type: Date, default: null },
+    failedLoginAttempts: { type: Number, default: 0 },
+    failed2faAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date, default: null },
     isSeed: { type: Boolean, default: false },
     version: { type: Number, default: 1 }
   },
   { timestamps: true }
 );
+userSchema.index({ shareholderId: 1 });
+userSchema.index({ role: 1, status: 1 });
 
 // 3. Role Permissions Schema (Page 20 & 31)
 const rolePermissionSchema = new mongoose.Schema(
@@ -151,6 +156,9 @@ const shareholderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+shareholderSchema.index({ email: 1 });
+shareholderSchema.index({ accountStatus: 1 });
+shareholderSchema.index({ companyId: 1, shareholderId: 1 });
 
 // 5. Share Movement / Ledger Schema (Page 8, 16, 17, 19, 32, 33)
 const shareMovementSchema = new mongoose.Schema(
@@ -195,6 +203,10 @@ const shareMovementSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+shareMovementSchema.index({ status: 1, effectiveDate: 1, createdAt: 1 });
+shareMovementSchema.index({ fromShareholderId: 1, status: 1 });
+shareMovementSchema.index({ toShareholderId: 1, status: 1 });
+shareMovementSchema.index({ createdAt: -1 });
 
 // 6. Share Valuation Schema (Page 4, 7, 9, 18, 32, 33)
 const shareValuationSchema = new mongoose.Schema(
@@ -229,6 +241,8 @@ const shareValuationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+shareValuationSchema.index({ status: 1, effectiveDate: 1, createdAt: 1 });
+shareValuationSchema.index({ effectiveDate: -1, createdAt: -1 });
 
 // 7. Publications (Documents & Announcements) Schema (Page 10, 11, 23)
 const publicationSchema = new mongoose.Schema(
@@ -273,6 +287,8 @@ const publicationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+publicationSchema.index({ status: 1, contentType: 1, createdAt: -1 });
+publicationSchema.index({ status: 1, audienceType: 1, targetShareholderId: 1 });
 
 // 8. Support Requests Schema (Page 11, 12, 25)
 const supportRequestSchema = new mongoose.Schema(
@@ -313,6 +329,8 @@ const supportRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+supportRequestSchema.index({ shareholderId: 1, createdAt: -1 });
+supportRequestSchema.index({ status: 1, createdAt: -1 });
 
 // 9. Audit Log Schema (Page 22, 31, 32, 33)
 const auditLogSchema = new mongoose.Schema(
@@ -332,6 +350,18 @@ const auditLogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ actorRole: 1, createdAt: -1 });
+auditLogSchema.index({ reference: 1 });
+
+// 10. Atomic Sequence Counter Schema (prevents reference ID race conditions under concurrency)
+const counterSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true, unique: true },
+    seq: { type: Number, default: 0 }
+  },
+  { timestamps: true }
+);
 
 const CompanySettingsModel = mongoose.models.CompanySettings || mongoose.model('CompanySettings', companySettingsSchema);
 const UserModel = mongoose.models.User || mongoose.model('User', userSchema);
@@ -342,6 +372,41 @@ const ShareValuationModel = mongoose.models.ShareValuation || mongoose.model('Sh
 const PublicationModel = mongoose.models.Publication || mongoose.model('Publication', publicationSchema);
 const SupportRequestModel = mongoose.models.SupportRequest || mongoose.model('SupportRequest', supportRequestSchema);
 const AuditLogModel = mongoose.models.AuditLog || mongoose.model('AuditLog', auditLogSchema);
+const CounterModel = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
+
+const Counter = createHybridModel('counters', CounterModel, { seq: 0 });
+
+async function getNextReference(counterKey, prefix, padLength, Model, fieldName, regex) {
+  const existingCounter = await Counter.findOne({ key: counterKey }).lean();
+  if (!existingCounter) {
+    const existingDocs = await Model.find({}).select(fieldName).lean();
+    let maxNum = 0;
+    for (const doc of existingDocs) {
+      const m = String(doc[fieldName] || '').match(regex);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+    await Counter.findOneAndUpdate(
+      { key: counterKey },
+      { $setOnInsert: { key: counterKey, seq: maxNum } },
+      { upsert: true, new: true }
+    );
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const updated = await Counter.findOneAndUpdate(
+      { key: counterKey },
+      { $inc: { seq: 1 } },
+      { upsert: true, new: true }
+    );
+    const candidate = `${prefix}-${String(updated.seq).padStart(padLength, '0')}`;
+    const collision = await Model.findOne({ [fieldName]: candidate }).select('_id').lean();
+    if (!collision) return candidate;
+  }
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
+}
 
 module.exports = {
   CompanySettings: createHybridModel('companySettings', CompanySettingsModel, {
@@ -373,6 +438,9 @@ module.exports = {
     verificationCode: '246810',
     recoveryCode: 'APEX-RECOVERY-2026',
     sessionVersion: 1,
+    failedLoginAttempts: 0,
+    failed2faAttempts: 0,
+    lockUntil: null,
     isSeed: false
   }),
   RolePermission: createHybridModel('rolePermissions', RolePermissionModel, {
@@ -419,5 +487,7 @@ module.exports = {
   }),
   AuditLog: createHybridModel('auditLogs', AuditLogModel, {
     isSeed: false
-  })
+  }),
+  Counter,
+  getNextReference
 };

@@ -1,10 +1,10 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const {
   Shareholder,
-  ShareMovement,
-  ShareValuation,
   Publication,
-  SupportRequest
+  SupportRequest,
+  getNextReference
 } = require('../models');
 const {
   ensureCoreSystemConfig,
@@ -12,12 +12,48 @@ const {
   logAuditEvent,
   calculateRegisterState,
   getEffectiveValuationState,
+  getCachedPublishedRegisterState,
+  getCachedPublishedValuationState,
   getShareholderPersonalHistory
 } = require('../utils/ledgerEngine');
 const { authenticate } = require('../middleware/auth');
 const { generateHoldingStatementPDF } = require('../utils/pdfGenerator');
+const {
+  CACHE_KEYS,
+  getOrCompute,
+  invalidatePublicationCaches,
+  invalidateLedgerCaches
+} = require('../utils/cache');
+const {
+  isPlainString,
+  sanitizePublicCompanySettings,
+  sendSafeError
+} = require('../utils/security');
 
 const router = express.Router();
+
+const pdfExportLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.user?._id || req.ip),
+  message: { message: 'Too many statement PDF downloads in a short period. Please wait a few minutes.' }
+});
+
+async function getCachedPublishedPublications() {
+  return getOrCompute(CACHE_KEYS.PUBLISHED_PUBLICATIONS, 15000, () =>
+    Publication.find({ status: 'Published' }).sort({ createdAt: -1 }).lean()
+  );
+}
+
+function sanitizePublicationForShareholder(pub, shareholderId) {
+  const { readByShareholders, enteredByEmail, reviewedByEmail, ...safePub } = pub;
+  return {
+    ...safePub,
+    isRead: shareholderId ? (readByShareholders || []).includes(shareholderId) : false
+  };
+}
 
 // Resolve the target shareholderId with strict server-side privacy enforcement (Page 35)
 function resolvePermittedShareholderId(req) {
@@ -29,50 +65,35 @@ function resolvePermittedShareholderId(req) {
   return req.query.shareholderId || req.user.shareholderId || null;
 }
 
-// Combined Single-Request Endpoint for Shareholder Workspace (reduces 5 HTTP requests & 110+ DB queries to 1 parallel round-trip)
+// Combined Single-Request Endpoint for Shareholder Workspace (O(1) cached ledger/valuation + single-holder query)
 router.get('/workspace', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
+    const today = getTodayDateString();
     const [
       settings,
-      allShareholders,
-      allMovements,
-      allValuations,
+      shareholder,
+      registerState,
+      valuationState,
       allPubs,
       mySupportRequests
     ] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}),
-      ShareMovement.find({}),
-      ShareValuation.find({}),
-      Publication.find({ status: 'Published' }).sort({ createdAt: -1 }),
+      ensureCoreSystemConfig(null, { lean: true }),
+      shareholderId ? Shareholder.findOne({ shareholderId }).lean() : Promise.resolve(null),
+      getCachedPublishedRegisterState(today),
+      getCachedPublishedValuationState(today),
+      getCachedPublishedPublications(),
       shareholderId
-        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 })
+        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 }).limit(100).lean()
         : Promise.resolve([])
     ]);
 
-    const [registerState, valuationState] = await Promise.all([
-      calculateRegisterState(getTodayDateString(), {
-        settings,
-        allMovements,
-        allShareholders
-      }),
-      getEffectiveValuationState(getTodayDateString(), {
-        settings,
-        allValuations
-      })
-    ]);
-
     const personalHistory = shareholderId
-      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+      ? await getShareholderPersonalHistory(shareholderId, today, {
           registerState,
           valuationState
         })
       : [];
-
-    const shareholder = shareholderId
-      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
-      : null;
 
     const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
     const issuedShares = registerState.issuedSharesTotal || 0;
@@ -110,7 +131,7 @@ router.get('/workspace', authenticate, async (req, res) => {
       latestActivity.push({
         id: 'stmt-latest',
         activity: 'Statement available',
-        effectiveDate: currentValuation ? currentValuation.effectiveDate : getTodayDateString(),
+        effectiveDate: currentValuation ? currentValuation.effectiveDate : today,
         details: 'Download dated holding statement (PDF)',
         type: 'statement'
       });
@@ -134,21 +155,18 @@ router.get('/workspace', authenticate, async (req, res) => {
         !(p.readByShareholders || []).includes(shareholderId)
     ).length;
 
-    const supportingDocuments = myPubs.filter((p) => p.contentType === 'Document');
+    const supportingDocuments = myPubs
+      .filter((p) => p.contentType === 'Document')
+      .map((d) => sanitizePublicationForShareholder(d, shareholderId));
     const permittedAnnouncements = myPubs
       .filter((p) => p.contentType === 'Announcement')
-      .map((a) => {
-        const obj = a.toObject ? a.toObject() : a;
-        return {
-          ...obj,
-          isRead: shareholderId ? (obj.readByShareholders || []).includes(shareholderId) : false
-        };
-      });
+      .map((a) => sanitizePublicationForShareholder(a, shareholderId));
+    const publicCompany = sanitizePublicCompanySettings(settings);
 
     res.json({
       overview: {
         shareholder,
-        company: settings,
+        company: publicCompany,
         summary: {
           myShares,
           issuedCompanyShares: issuedShares,
@@ -168,7 +186,7 @@ router.get('/workspace', authenticate, async (req, res) => {
       },
       holdings: {
         shareholder,
-        company: settings,
+        company: publicCompany,
         summary: {
           ordinaryShares: myShares,
           issuedCompanyShares: issuedShares,
@@ -186,14 +204,14 @@ router.get('/workspace', authenticate, async (req, res) => {
         supportingDocuments
       },
       history: {
-        company: settings,
+        company: publicCompany,
         shareClass: settings.shareClass || 'Ordinary',
         currency: settings.baseCurrency || 'LKR',
         valueHistory: valuationState.publishedHistory,
         personalHistory
       },
       documents: {
-        company: settings,
+        company: publicCompany,
         shareholderId,
         documents: supportingDocuments
       },
@@ -203,7 +221,7 @@ router.get('/workspace', authenticate, async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load shareholder workspace.');
   }
 });
 
@@ -211,22 +229,14 @@ router.get('/workspace', authenticate, async (req, res) => {
 router.get('/overview', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const [settings, allShareholders, allMovements, allValuations, allPubs] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}),
-      ShareMovement.find({}),
-      ShareValuation.find({}),
-      Publication.find({ status: 'Published' })
+    const today = getTodayDateString();
+    const [settings, shareholder, registerState, valuationState, allPubs] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      shareholderId ? Shareholder.findOne({ shareholderId }).lean() : Promise.resolve(null),
+      getCachedPublishedRegisterState(today),
+      getCachedPublishedValuationState(today),
+      getCachedPublishedPublications()
     ]);
-
-    const [registerState, valuationState] = await Promise.all([
-      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
-      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
-    ]);
-
-    const shareholder = shareholderId
-      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
-      : null;
 
     const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
     const issuedShares = registerState.issuedSharesTotal || 0;
@@ -267,7 +277,7 @@ router.get('/overview', authenticate, async (req, res) => {
       latestActivity.push({
         id: 'stmt-latest',
         activity: 'Statement available',
-        effectiveDate: currentValuation ? currentValuation.effectiveDate : getTodayDateString(),
+        effectiveDate: currentValuation ? currentValuation.effectiveDate : today,
         details: 'Download dated holding statement (PDF)',
         type: 'statement'
       });
@@ -285,7 +295,7 @@ router.get('/overview', authenticate, async (req, res) => {
     }
 
     const personalHistory = shareholderId
-      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+      ? await getShareholderPersonalHistory(shareholderId, today, {
           registerState,
           valuationState
         })
@@ -300,7 +310,7 @@ router.get('/overview', authenticate, async (req, res) => {
 
     res.json({
       shareholder,
-      company: settings,
+      company: sanitizePublicCompanySettings(settings),
       summary: {
         myShares,
         issuedCompanyShares: issuedShares,
@@ -319,7 +329,7 @@ router.get('/overview', authenticate, async (req, res) => {
       unreadAnnouncementsCount
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load shareholder overview.');
   }
 });
 
@@ -327,22 +337,15 @@ router.get('/overview', authenticate, async (req, res) => {
 router.get('/holdings', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const [settings, allShareholders, allMovements, allValuations, allPubs] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}),
-      ShareMovement.find({}),
-      ShareValuation.find({}),
-      Publication.find({ status: 'Published', contentType: 'Document' })
+    const today = getTodayDateString();
+    const [settings, shareholder, registerState, valuationState, allPubs] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      shareholderId ? Shareholder.findOne({ shareholderId }).lean() : Promise.resolve(null),
+      getCachedPublishedRegisterState(today),
+      getCachedPublishedValuationState(today),
+      getCachedPublishedPublications()
     ]);
 
-    const [registerState, valuationState] = await Promise.all([
-      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
-      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
-    ]);
-
-    const shareholder = shareholderId
-      ? allShareholders.find((s) => s.shareholderId === shareholderId) || null
-      : null;
     const myShares = shareholderId ? registerState.holdingsByShareholder[shareholderId] || 0 : 0;
     const issuedShares = registerState.issuedSharesTotal || 0;
     const ownershipPercent =
@@ -350,16 +353,18 @@ router.get('/holdings', authenticate, async (req, res) => {
     const currentValuation = valuationState.currentPublishedValuation;
     const ledger = shareholderId ? registerState.ledgerByShareholder[shareholderId] || [] : [];
 
-    // Permitted supporting documents assigned to this shareholder
-    const supportingDocuments = allPubs.filter(
-      (p) =>
-        p.audienceType === 'All shareholders' ||
-        (p.audienceType === 'Specific shareholder' && p.targetShareholderId === shareholderId)
-    );
+    const supportingDocuments = allPubs
+      .filter(
+        (p) =>
+          p.contentType === 'Document' &&
+          (p.audienceType === 'All shareholders' ||
+            (p.audienceType === 'Specific shareholder' && p.targetShareholderId === shareholderId))
+      )
+      .map((d) => sanitizePublicationForShareholder(d, shareholderId));
 
     res.json({
       shareholder,
-      company: settings,
+      company: sanitizePublicCompanySettings(settings),
       summary: {
         ordinaryShares: myShares,
         issuedCompanyShares: issuedShares,
@@ -374,7 +379,7 @@ router.get('/holdings', authenticate, async (req, res) => {
       supportingDocuments
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load holdings.');
   }
 });
 
@@ -383,20 +388,15 @@ router.get('/history', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
     const { fromDate, toDate } = req.query;
-    const [settings, allShareholders, allMovements, allValuations] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Shareholder.find({}),
-      ShareMovement.find({}),
-      ShareValuation.find({})
-    ]);
-
-    const [registerState, valuationState] = await Promise.all([
-      calculateRegisterState(getTodayDateString(), { settings, allMovements, allShareholders }),
-      getEffectiveValuationState(getTodayDateString(), { settings, allValuations })
+    const today = getTodayDateString();
+    const [settings, registerState, valuationState] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      getCachedPublishedRegisterState(today),
+      getCachedPublishedValuationState(today)
     ]);
 
     const personalHistory = shareholderId
-      ? await getShareholderPersonalHistory(shareholderId, getTodayDateString(), {
+      ? await getShareholderPersonalHistory(shareholderId, today, {
           registerState,
           valuationState
         })
@@ -411,14 +411,14 @@ router.get('/history', authenticate, async (req, res) => {
     if (toDate) filteredPersonal = filteredPersonal.filter((p) => p.effectiveDate <= toDate);
 
     res.json({
-      company: settings,
+      company: sanitizePublicCompanySettings(settings),
       shareClass: settings.shareClass || 'Ordinary',
       currency: settings.baseCurrency || 'LKR',
       valueHistory,
       personalHistory: filteredPersonal
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load share history.');
   }
 });
 
@@ -426,46 +426,50 @@ router.get('/history', authenticate, async (req, res) => {
 router.get('/documents', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const [settings, allDocs] = await Promise.all([
-      ensureCoreSystemConfig(),
-      Publication.find({ status: 'Published', contentType: 'Document' }).sort({
-        createdAt: -1
-      })
+    const [settings, allPubs] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      getCachedPublishedPublications()
     ]);
 
-    // Strict privacy check: only documents for All shareholders or explicitly assigned to this shareholderId
-    const permittedDocs = allDocs.filter(
-      (doc) =>
-        doc.audienceType === 'All shareholders' ||
-        (doc.audienceType === 'Specific shareholder' && doc.targetShareholderId === shareholderId)
-    );
+    const permittedDocs = allPubs
+      .filter(
+        (doc) =>
+          doc.contentType === 'Document' &&
+          (doc.audienceType === 'All shareholders' ||
+            (doc.audienceType === 'Specific shareholder' && doc.targetShareholderId === shareholderId))
+      )
+      .map((d) => sanitizePublicationForShareholder(d, shareholderId));
 
     res.json({
-      company: settings,
+      company: sanitizePublicCompanySettings(settings),
       shareholderId,
       documents: permittedDocs
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load documents.');
   }
 });
 
 // Download Dated Holding Statement PDF (Interface 03, 05, M03)
-router.get('/statement-pdf', authenticate, async (req, res) => {
+router.get('/statement-pdf', authenticate, pdfExportLimiter, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
     if (!shareholderId) {
       return res.status(400).json({ message: 'No shareholder ID associated with this request.' });
     }
 
-    const shareholder = await Shareholder.findOne({ shareholderId });
+    const shareholder = await Shareholder.findOne({ shareholderId }).lean();
     if (!shareholder) {
       return res.status(404).json({ message: 'Shareholder profile not found.' });
     }
 
-    const asAtDate = req.query.asAtDate || getTodayDateString();
-    const registerState = await calculateRegisterState(asAtDate);
-    const valuationState = await getEffectiveValuationState(asAtDate);
+    const today = getTodayDateString();
+    const asAtDate = isPlainString(req.query.asAtDate, 20) && req.query.asAtDate ? req.query.asAtDate : today;
+    const isToday = asAtDate === today;
+    const [registerState, valuationState] = await Promise.all([
+      isToday ? getCachedPublishedRegisterState(today) : calculateRegisterState(asAtDate),
+      isToday ? getCachedPublishedValuationState(today) : getEffectiveValuationState(asAtDate)
+    ]);
 
     const sharesHeld = registerState.holdingsByShareholder[shareholderId] || 0;
     const issuedSharesTotal = registerState.issuedSharesTotal || 0;
@@ -498,7 +502,7 @@ router.get('/statement-pdf', authenticate, async (req, res) => {
       ledgerEntries
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to generate holding statement PDF.');
   }
 });
 
@@ -506,53 +510,61 @@ router.get('/statement-pdf', authenticate, async (req, res) => {
 router.get('/announcements', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const [allAnnouncements, mySupportRequests] = await Promise.all([
-      Publication.find({
-        status: 'Published',
-        contentType: 'Announcement'
-      }).sort({ createdAt: -1 }),
+    const [allPubs, mySupportRequests] = await Promise.all([
+      getCachedPublishedPublications(),
       shareholderId
-        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 })
+        ? SupportRequest.find({ shareholderId }).sort({ createdAt: -1 }).limit(100).lean()
         : Promise.resolve([])
     ]);
 
-    const permitted = allAnnouncements
+    const permitted = allPubs
       .filter(
         (a) =>
-          a.audienceType === 'All shareholders' ||
-          (a.audienceType === 'Specific shareholder' && a.targetShareholderId === shareholderId)
+          a.contentType === 'Announcement' &&
+          (a.audienceType === 'All shareholders' ||
+            (a.audienceType === 'Specific shareholder' && a.targetShareholderId === shareholderId))
       )
-      .map((a) => {
-        const obj = a.toObject ? a.toObject() : a;
-        return {
-          ...obj,
-          isRead: shareholderId ? (obj.readByShareholders || []).includes(shareholderId) : false
-        };
-      });
+      .map((a) => sanitizePublicationForShareholder(a, shareholderId));
 
     res.json({
       announcements: permitted,
       supportRequests: mySupportRequests
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to load announcements.');
   }
 });
 
 router.post('/announcements/:id/read', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
-    const pub = await Publication.findById(req.params.id);
-    if (!pub) return res.status(404).json({ message: 'Announcement not found.' });
-
-    if (shareholderId && !(pub.readByShareholders || []).includes(shareholderId)) {
-      pub.readByShareholders = [...(pub.readByShareholders || []), shareholderId];
-      await pub.save();
+    const pub = await Publication.findById(req.params.id).lean();
+    if (!pub || pub.status !== 'Published') {
+      return res.status(404).json({ message: 'Announcement not found.' });
     }
 
-    res.json({ message: 'Marked as read.', publication: pub });
+    const isPermitted =
+      pub.audienceType === 'All shareholders' ||
+      (pub.audienceType === 'Specific shareholder' && pub.targetShareholderId === shareholderId);
+    if (!isPermitted) {
+      return res.status(403).json({ message: 'Access denied: You are not authorised to view this announcement.' });
+    }
+
+    if (shareholderId && !(pub.readByShareholders || []).includes(shareholderId)) {
+      await Publication.findByIdAndUpdate(
+        req.params.id,
+        { $addToSet: { readByShareholders: shareholderId } },
+        { new: true }
+      );
+      invalidatePublicationCaches();
+    }
+
+    res.json({
+      message: 'Marked as read.',
+      publication: sanitizePublicationForShareholder(pub, shareholderId)
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to update announcement status.');
   }
 });
 
@@ -561,19 +573,20 @@ router.post('/support', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req) || 'SH-UNASSIGNED';
     const { subject, message, requestType } = req.body;
-    if (!subject || !message) {
-      return res.status(400).json({ message: 'Subject and message are required.' });
+    if (!isPlainString(subject, 200) || !subject.trim() || !isPlainString(message, 4000) || !message.trim()) {
+      return res.status(400).json({ message: 'Valid subject and message are required.' });
     }
 
-    const count = await SupportRequest.countDocuments({});
-    const reference = `Q-${String(count + 1).padStart(3, '0')}`;
+    const allowedTypes = new Set(['General query', 'Profile update request', 'Statement query']);
+    const safeType = allowedTypes.has(requestType) ? requestType : 'General query';
+    const reference = await getNextReference('support_Q', 'Q', 3, SupportRequest, 'reference', /Q-(\d+)/i);
 
     const ticket = await SupportRequest.create({
       reference,
       shareholderId,
       shareholderName: req.user.fullName,
       shareholderEmail: req.user.email,
-      requestType: requestType || 'General query',
+      requestType: safeType,
       subject: subject.trim(),
       message: message.trim(),
       owner: 'Shareholder support',
@@ -596,7 +609,7 @@ router.post('/support', authenticate, async (req, res) => {
       supportRequest: ticket
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to submit support request.');
   }
 });
 
@@ -615,20 +628,19 @@ router.post('/profile-update-request', authenticate, async (req, res) => {
 
     const { fullName, email, phone, postalAddress, reason } = req.body;
     const requestedChanges = {
-      fullName: fullName || shareholder.fullName,
-      email: email || shareholder.email,
-      phone: phone !== undefined ? phone : shareholder.phone,
-      postalAddress: postalAddress !== undefined ? postalAddress : shareholder.postalAddress,
-      reason: reason || 'Shareholder requested contact/identity detail update',
+      fullName: isPlainString(fullName, 160) && fullName.trim() ? fullName.trim() : shareholder.fullName,
+      email: isPlainString(email, 254) && email.trim() ? email.toLowerCase().trim() : shareholder.email,
+      phone: isPlainString(phone, 50) ? phone.trim() : shareholder.phone,
+      postalAddress: isPlainString(postalAddress, 500) ? postalAddress.trim() : shareholder.postalAddress,
+      reason: isPlainString(reason, 1000) && reason.trim() ? reason.trim() : 'Shareholder requested contact/identity detail update',
       requestedAt: new Date().toISOString()
     };
 
     shareholder.pendingProfileUpdate = requestedChanges;
     await shareholder.save();
+    invalidateLedgerCaches();
 
-    // Also create a linked Support Request in Interface 20 ("Track shareholder questions and verified profile changes")
-    const count = await SupportRequest.countDocuments({});
-    const reference = `Q-${String(count + 1).padStart(3, '0')}`;
+    const reference = await getNextReference('support_Q', 'Q', 3, SupportRequest, 'reference', /Q-(\d+)/i);
 
     const supportTicket = await SupportRequest.create({
       reference,
@@ -661,7 +673,7 @@ router.post('/profile-update-request', authenticate, async (req, res) => {
       supportRequest: supportTicket
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err, 'Failed to submit profile update request.');
   }
 });
 

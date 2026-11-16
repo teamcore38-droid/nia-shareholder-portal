@@ -6,6 +6,7 @@ const {
   ShareValuation,
   AuditLog
 } = require('../models');
+const { CACHE_KEYS, getOrCompute } = require('./cache');
 
 const DEFAULT_ROLE_PERMISSIONS = [
   {
@@ -60,19 +61,26 @@ const DEFAULT_ROLE_PERMISSIONS = [
 
 let rolePermissionsInitialized = false;
 
-async function ensureCoreSystemConfig(preloadedSettings = null) {
+async function ensureCoreSystemConfig(preloadedSettings = null, { lean = false } = {}) {
+  if (!preloadedSettings && lean) {
+    return getOrCompute(CACHE_KEYS.COMPANY_SETTINGS, 15000, async () => {
+      const doc = await ensureCoreSystemConfig(null, { lean: false });
+      return typeof doc?.toObject === 'function' ? doc.toObject() : doc;
+    });
+  }
+
   let settings = preloadedSettings;
   let existingRoles = null;
 
   if (!settings && !rolePermissionsInitialized) {
     [settings, existingRoles] = await Promise.all([
       CompanySettings.findOne({ companyId: 'COMP-NIA-01' }),
-      RolePermission.find({})
+      RolePermission.find({}).lean()
     ]);
   } else if (!settings) {
     settings = await CompanySettings.findOne({ companyId: 'COMP-NIA-01' });
   } else if (!rolePermissionsInitialized) {
-    existingRoles = await RolePermission.find({});
+    existingRoles = await RolePermission.find({}).lean();
   }
 
   if (!settings) {
@@ -159,9 +167,9 @@ async function logAuditEvent({
  */
 async function calculateRegisterState(asAtDate = null, preloaded = {}) {
   const [settings, allMovements, allShareholders] = await Promise.all([
-    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(),
-    preloaded.allMovements ? Promise.resolve(preloaded.allMovements) : ShareMovement.find({}),
-    preloaded.allShareholders ? Promise.resolve(preloaded.allShareholders) : Shareholder.find({})
+    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(null, { lean: true }),
+    preloaded.allMovements ? Promise.resolve(preloaded.allMovements) : ShareMovement.find({}).lean(),
+    preloaded.allShareholders ? Promise.resolve(preloaded.allShareholders) : Shareholder.find({}).lean()
   ]);
 
   const publishedMovements = allMovements
@@ -354,8 +362,8 @@ async function calculateRegisterState(asAtDate = null, preloaded = {}) {
  */
 async function getEffectiveValuationState(asAtDate = null, preloaded = {}) {
   const [settings, allValuations] = await Promise.all([
-    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(),
-    preloaded.allValuations ? Promise.resolve(preloaded.allValuations) : ShareValuation.find({})
+    preloaded.settings ? Promise.resolve(preloaded.settings) : ensureCoreSystemConfig(null, { lean: true }),
+    preloaded.allValuations ? Promise.resolve(preloaded.allValuations) : ShareValuation.find({}).lean()
   ]);
   const cutoffDate = asAtDate || getTodayDateString();
 
@@ -470,6 +478,44 @@ async function getShareholderPersonalHistory(shareholderId, asAtDate = null, pre
   return points;
 }
 
+/**
+ * Cached published-only register computation for high-concurrency shareholder reads.
+ * Fetches only Published movements and shareholderId keys (zero PII / non-published overhead),
+ * with 15s TTL + thundering-herd deduplication and instant invalidation on mutations.
+ */
+async function getCachedPublishedRegisterState(asAtDate = null) {
+  const cutoffDate = asAtDate || getTodayDateString();
+  return getOrCompute(`${CACHE_KEYS.REGISTER_STATE_PREFIX}${cutoffDate}`, 15000, async () => {
+    const [settings, publishedMovements, shareholderIds] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      ShareMovement.find({ status: 'Published' }).lean(),
+      Shareholder.find({}).select('shareholderId').lean()
+    ]);
+    return calculateRegisterState(cutoffDate, {
+      settings,
+      allMovements: publishedMovements,
+      allShareholders: shareholderIds
+    });
+  });
+}
+
+/**
+ * Cached published-only valuation computation for high-concurrency reads.
+ */
+async function getCachedPublishedValuationState(asAtDate = null) {
+  const cutoffDate = asAtDate || getTodayDateString();
+  return getOrCompute(`${CACHE_KEYS.VALUATION_STATE_PREFIX}${cutoffDate}`, 15000, async () => {
+    const [settings, publishedValuations] = await Promise.all([
+      ensureCoreSystemConfig(null, { lean: true }),
+      ShareValuation.find({ status: 'Published' }).lean()
+    ]);
+    return getEffectiveValuationState(cutoffDate, {
+      settings,
+      allValuations: publishedValuations
+    });
+  });
+}
+
 module.exports = {
   ensureCoreSystemConfig,
   getTodayDateString,
@@ -477,5 +523,7 @@ module.exports = {
   logAuditEvent,
   calculateRegisterState,
   getEffectiveValuationState,
+  getCachedPublishedRegisterState,
+  getCachedPublishedValuationState,
   getShareholderPersonalHistory
 };

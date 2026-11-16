@@ -222,6 +222,58 @@ assert(
 );
 
 // =============================================================================
+// TEST SUITE 6: Input Sanitization, XSS URL Prevention & Cache Safety
+// =============================================================================
+console.log('\n--- 6. NoSQL Injection, URL Safety & Public Sanitization ---');
+
+const {
+  stripUnsafeKeys,
+  sanitizeSafeUrl,
+  sanitizePublicCompanySettings,
+  validatePasswordPolicy
+} = require('../server/src/utils/security');
+
+const injectedPayload = {
+  email: 'user@example.com',
+  $where: 'malicious()',
+  nested: { $ne: '', ok: 'value' }
+};
+stripUnsafeKeys(injectedPayload);
+assert(
+  !('$where' in injectedPayload) && !('$ne' in injectedPayload.nested) && injectedPayload.nested.ok === 'value',
+  'stripUnsafeKeys removes MongoDB $ operators recursively'
+);
+
+assert(
+  sanitizeSafeUrl('javascript:alert(1)') === null &&
+    sanitizeSafeUrl('data:text/html,<script>alert(1)</script>') === null &&
+    sanitizeSafeUrl('/uploads/r2/apex/doc.pdf') === '/uploads/r2/apex/doc.pdf' &&
+    sanitizeSafeUrl('https://cdn.example.com/logo.png') === 'https://cdn.example.com/logo.png',
+  'sanitizeSafeUrl blocks javascript:/data: XSS schemes and allows safe upload/https URLs'
+);
+
+const sanitizedCompany = sanitizePublicCompanySettings({
+  companyDisplayName: 'NIA Group',
+  cloudflareAccountId: 'acct_internal_123',
+  cloudflareR2Bucket: 'internal-bucket',
+  seedDataBlockedBy: 'admin@test.com'
+});
+assert(
+  sanitizedCompany.companyDisplayName === 'NIA Group' &&
+    !('cloudflareAccountId' in sanitizedCompany) &&
+    !('cloudflareR2Bucket' in sanitizedCompany) &&
+    !('seedDataBlockedBy' in sanitizedCompany),
+  'sanitizePublicCompanySettings hides internal infrastructure metadata'
+);
+
+assert(
+  validatePasswordPolicy('short') !== null &&
+    validatePasswordPolicy('ValidPass123') === null &&
+    validatePasswordPolicy('x'.repeat(200)) !== null,
+  'validatePasswordPolicy enforces 8-128 character bounds'
+);
+
+// =============================================================================
 // SUMMARY
 // =============================================================================
 console.log('\n=============================================================================');

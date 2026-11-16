@@ -23,6 +23,7 @@ const {
   UPLOADS_DIR
 } = require('./config/cloudflare');
 const { ensureCoreSystemConfig } = require('./utils/ledgerEngine');
+const { sanitizeRequestInputs } = require('./utils/security');
 const { authenticate } = require('./middleware/auth');
 const { Publication, ShareMovement } = require('./models');
 
@@ -51,7 +52,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: [
@@ -72,6 +73,7 @@ app.use(
         frameAncestors: ["'none'"]
       }
     },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     frameguard: { action: 'deny' },
     noSniff: true,
     hsts: IS_PRODUCTION
@@ -97,9 +99,10 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+app.use(sanitizeRequestInputs);
 
 // Ensure DB & Core Config are initialized on every serverless cold start
 let initPromise = null;
@@ -107,7 +110,7 @@ async function ensureInitialized() {
   if (!initPromise) {
     initPromise = (async () => {
       await connectDB();
-      const settings = await ensureCoreSystemConfig();
+      const settings = await ensureCoreSystemConfig(null, { lean: true });
       configureCloudflare({
         accountId: CLOUDFLARE_R2.accountId || settings?.cloudflareAccountId || '',
         bucketName: CLOUDFLARE_R2.bucketName || settings?.cloudflareR2Bucket || '',
@@ -116,14 +119,19 @@ async function ensureInitialized() {
     })().catch((err) => {
       initPromise = null;
       console.error('Initialization error:', err.message);
+      throw err;
     });
   }
   return initPromise;
 }
 
 app.use(async (req, res, next) => {
-  await ensureInitialized();
-  next();
+  try {
+    await ensureInitialized();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 function authorizeUploadRequest(req, res, targetUrl, onAuthorized) {
@@ -136,7 +144,9 @@ function authorizeUploadRequest(req, res, targetUrl, onAuthorized) {
 
       const shId = req.user.shareholderId;
 
-      const pub = await Publication.findOne({ fileUrl: targetUrl, status: 'Published' });
+      const pub = await Publication.findOne({ fileUrl: targetUrl, status: 'Published' })
+        .select('audienceType targetShareholderId')
+        .lean();
       if (pub) {
         if (
           pub.audienceType === 'All shareholders' ||
@@ -152,7 +162,9 @@ function authorizeUploadRequest(req, res, targetUrl, onAuthorized) {
       const mov = await ShareMovement.findOne({
         supportingDocumentUrl: targetUrl,
         status: 'Published'
-      });
+      })
+        .select('fromShareholderId toShareholderId')
+        .lean();
       if (mov) {
         if (mov.fromShareholderId === shId || mov.toShareholderId === shId) {
           return onAuthorized();
@@ -227,19 +239,20 @@ app.get('/uploads/:filename', async (req, res) => {
   return authorizeUploadRequest(req, res, `/uploads/${safeFilename}`, () => res.sendFile(filePath));
 });
 
-// Global rate limiter across all API routes to mitigate DoS & scanning attacks
+// Global rate limiter scaled for 1,500-3,000 daily/simultaneous users (supports shared office/AGM NATs)
 const globalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500, // 500 requests per 15 minutes per IP
+  max: 2000,
+  skip: (req) => req.path === '/health',
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests from this address. Please try again shortly.' }
 });
 
-// Dedicated strict rate limiter for authentication endpoints
+// Auth endpoint ceiling (fine-grained per-account + spray limits live on login/verify routes)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many authentication requests, please try again shortly.' }
