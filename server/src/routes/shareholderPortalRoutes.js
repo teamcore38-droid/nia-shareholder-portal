@@ -21,6 +21,8 @@ const { generateHoldingStatementPDF } = require('../utils/pdfGenerator');
 const {
   CACHE_KEYS,
   getOrCompute,
+  invalidateAdminWorkspaceCache,
+  invalidatePortalWorkspaceCache,
   invalidatePublicationCaches,
   invalidateLedgerCaches
 } = require('../utils/cache');
@@ -31,6 +33,21 @@ const {
 } = require('../utils/security');
 
 const router = express.Router();
+
+// Automatically invalidate shareholder & admin workspace caches before any successful portal mutation responds
+router.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    const origJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode < 400) {
+        invalidatePortalWorkspaceCache(req.user?.shareholderId || null);
+        invalidateAdminWorkspaceCache();
+      }
+      return origJson(body);
+    };
+  }
+  next();
+});
 
 const pdfExportLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
@@ -70,6 +87,8 @@ router.get('/workspace', authenticate, async (req, res) => {
   try {
     const shareholderId = resolvePermittedShareholderId(req);
     const today = getTodayDateString();
+    const cacheKey = `${CACHE_KEYS.PORTAL_WORKSPACE_PREFIX}${shareholderId || 'none'}:${today}`;
+    const payload = await getOrCompute(cacheKey, 10000, async () => {
     const [
       settings,
       shareholder,
@@ -163,7 +182,7 @@ router.get('/workspace', authenticate, async (req, res) => {
       .map((a) => sanitizePublicationForShareholder(a, shareholderId));
     const publicCompany = sanitizePublicCompanySettings(settings);
 
-    res.json({
+    return {
       overview: {
         shareholder,
         company: publicCompany,
@@ -219,7 +238,9 @@ router.get('/workspace', authenticate, async (req, res) => {
         announcements: permittedAnnouncements,
         supportRequests: mySupportRequests
       }
+    };
     });
+    res.json(payload);
   } catch (err) {
     return sendSafeError(res, err, 'Failed to load shareholder workspace.');
   }

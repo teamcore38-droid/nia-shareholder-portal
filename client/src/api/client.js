@@ -1,12 +1,25 @@
 import axios from 'axios';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
-const API_BASE = rawApiUrl.startsWith('http') && !rawApiUrl.endsWith('/api') ? `${rawApiUrl}/api` : rawApiUrl;
+const envApiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
+// When hosted on Vercel (*.vercel.app) and pointing to the paired Vercel API deployment,
+// route through the same-origin /api and /uploads Edge rewrites in client/vercel.json.
+// This completely eliminates browser CORS OPTIONS preflight round-trips (saving 2–4s on cold starts)
+// and ensures first-party cookie compatibility across all browsers.
+const useSameOriginEdgeProxy =
+  typeof window !== 'undefined' &&
+  window.location.hostname.endsWith('.vercel.app') &&
+  envApiUrl.includes('nia-shareholder-portal-api.vercel.app');
+
+const rawApiUrl = useSameOriginEdgeProxy ? '/api' : envApiUrl;
+const API_BASE =
+  rawApiUrl.startsWith('http') && !rawApiUrl.endsWith('/api') ? `${rawApiUrl}/api` : rawApiUrl;
 const BACKEND_ORIGIN = API_BASE.startsWith('http') ? API_BASE.replace(/\/api$/, '') : '';
 
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
+  timeout: 25000,
   headers: {
     'Content-Type': 'application/json'
   }

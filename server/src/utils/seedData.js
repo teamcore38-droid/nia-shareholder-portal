@@ -685,6 +685,7 @@ async function insertSeedData(actorUser, options = {}) {
   await Promise.all([
     ...seedSupportRequests.map((sup) => SupportRequest.create(sup)),
     ...DEMO_ACCOUNTS.map(async (acc) => {
+      const isDirectShareholder = acc.role === 'Shareholder';
       const existing = await User.findOne({ email: acc.email.toLowerCase() });
       if (!existing) {
         const passwordHash = await bcrypt.hash(acc.password, 10);
@@ -695,11 +696,14 @@ async function insertSeedData(actorUser, options = {}) {
           role: acc.role,
           shareholderId: acc.shareholderId || null,
           status: 'Active',
-          verificationEnabled: true,
+          verificationEnabled: !isDirectShareholder,
           verificationCode: '246810',
           recoveryCode: 'APEX-RECOVERY-2026',
           isSeed: true
         });
+      } else if (isDirectShareholder && existing.verificationEnabled) {
+        existing.verificationEnabled = false;
+        await existing.save();
       }
     })
   ]);

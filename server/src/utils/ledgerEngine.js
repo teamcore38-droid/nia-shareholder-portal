@@ -1,12 +1,13 @@
 const {
   CompanySettings,
   RolePermission,
+  User,
   Shareholder,
   ShareMovement,
   ShareValuation,
   AuditLog
 } = require('../models');
-const { CACHE_KEYS, getOrCompute } = require('./cache');
+const { CACHE_KEYS, set, getOrCompute } = require('./cache');
 
 const DEFAULT_ROLE_PERMISSIONS = [
   {
@@ -108,8 +109,23 @@ async function ensureCoreSystemConfig(preloadedSettings = null, { lean = false }
     const missing = DEFAULT_ROLE_PERMISSIONS.filter((rp) => !existingSet.has(rp.role));
     if (missing.length > 0) {
       await Promise.all(missing.map((rp) => RolePermission.create(rp)));
+      const refreshedRoles = await RolePermission.find({}).lean();
+      set(CACHE_KEYS.ROLE_PERMISSIONS, refreshedRoles, 60000);
+    } else {
+      set(CACHE_KEYS.ROLE_PERMISSIONS, existingRoles, 60000);
     }
     rolePermissionsInitialized = true;
+
+    // Ensure seeded demo shareholder accounts (SH-001, SH-002) allow direct sign-in without 2FA prompt
+    Promise.all(
+      ['shareholder1@niagroup.com', 'shareholder2@niagroup.com'].map(async (demoEmail) => {
+        const u = await User.findOne({ email: demoEmail, role: 'Shareholder' });
+        if (u && u.isSeed && u.verificationEnabled) {
+          u.verificationEnabled = false;
+          await u.save();
+        }
+      })
+    ).catch(() => {});
   }
 
   return settings;

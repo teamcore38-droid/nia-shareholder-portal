@@ -388,44 +388,76 @@ function createHybridModel(collectionKey, mongooseModel, defaults = {}) {
   };
 }
 
+let activeConnectPromise = global.__apexMongoConnectPromise || null;
+
 async function connectDB(customUri) {
   if (mongoose.connection.readyState === 1 && dbState.mode === 'mongodb' && !customUri) {
     return dbState;
   }
-  const uri = customUri || MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal';
-  loadLocalStore();
-
-  try {
-    await mongoose.connect(uri, {
-      maxPoolSize: IS_VERCEL ? 10 : 50,
-      minPoolSize: IS_VERCEL ? 1 : 5,
-      maxIdleTimeMS: 30000,
-      socketTimeoutMS: 20000,
-      connectTimeoutMS: 10000,
-      serverSelectionTimeoutMS: uri.includes('127.0.0.1') || uri.includes('localhost') ? 2500 : 10000,
-      family: 4
-    });
-    dbState.status = 'connected';
-    dbState.mode = 'mongodb';
-    dbState.connectedAt = new Date().toISOString();
-    dbState.lastError = null;
-    console.log('✅ Connected to MongoDB via Mongoose:', sanitizeMongoUri(uri));
-    return dbState;
-  } catch (err) {
-    if (IS_PRODUCTION && !customUri) {
-      dbState.status = 'error';
-      dbState.mode = 'disconnected';
-      dbState.lastError = 'Database connection unavailable';
-      console.error('❌ MongoDB connection failed in production:', err.message);
-      throw err;
-    }
-    dbState.status = 'connected';
-    dbState.mode = 'persistent-local';
-    dbState.connectedAt = new Date().toISOString();
-    dbState.lastError = IS_PRODUCTION ? 'Database connection unavailable' : err.message;
-    console.log('ℹ️ MongoDB fallback active — using Persistent Local JSON-Document Engine. Configure MONGODB_URI for Atlas/remote MongoDB at any time.');
-    return dbState;
+  if (activeConnectPromise && !customUri) {
+    return activeConnectPromise;
   }
+
+  const uri = customUri || MONGODB_URI || 'mongodb://127.0.0.1:27017/apex_shareholder_portal';
+
+  const runConnect = async () => {
+    try {
+      await mongoose.connect(uri, {
+        // Serverless (Vercel): 10 max connections per isolated function container to stay within Atlas cluster limits.
+        // Dedicated / Paid Server: 100 max connections to support thousands of simultaneous daily users with burst headroom.
+        maxPoolSize: IS_VERCEL ? 10 : 100,
+        // Keep 1 warm socket in serverless containers (10 on dedicated servers) to eliminate TCP+TLS handshake latency on bursts.
+        minPoolSize: IS_VERCEL ? 1 : 10,
+        // Allow up to 4 parallel connection establishments during sudden traffic spikes.
+        maxConnecting: 4,
+        // Fail fast if pool wait queue exceeds 5s rather than stalling requests indefinitely.
+        waitQueueTimeoutMS: 5000,
+        // Release idle sockets after 30s in serverless (2 min on dedicated servers).
+        maxIdleTimeMS: IS_VERCEL ? 30000 : 120000,
+        // Prevent hanging OLTP queries while allowing complex report aggregations to finish.
+        socketTimeoutMS: 20000,
+        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS:
+          uri.includes('127.0.0.1') || uri.includes('localhost') ? 2500 : 8000,
+        // Compress wire payloads between Node.js and remote MongoDB Atlas over WAN.
+        compressors: ['zlib'],
+        family: 4
+      });
+      dbState.status = 'connected';
+      dbState.mode = 'mongodb';
+      dbState.connectedAt = new Date().toISOString();
+      dbState.lastError = null;
+      console.log('✅ Connected to MongoDB via Mongoose:', sanitizeMongoUri(uri));
+      return dbState;
+    } catch (err) {
+      activeConnectPromise = null;
+      global.__apexMongoConnectPromise = null;
+      if (IS_PRODUCTION && !customUri) {
+        dbState.status = 'error';
+        dbState.mode = 'disconnected';
+        dbState.lastError = 'Database connection unavailable';
+        console.error('❌ MongoDB connection failed in production:', err.message);
+        throw err;
+      }
+      // Only load local JSON fallback store when MongoDB is unavailable in local development
+      loadLocalStore();
+      dbState.status = 'connected';
+      dbState.mode = 'persistent-local';
+      dbState.connectedAt = new Date().toISOString();
+      dbState.lastError = IS_PRODUCTION ? 'Database connection unavailable' : err.message;
+      console.log(
+        'ℹ️ MongoDB fallback active — using Persistent Local JSON-Document Engine. Configure MONGODB_URI for Atlas/remote MongoDB at any time.'
+      );
+      return dbState;
+    }
+  };
+
+  if (!customUri) {
+    activeConnectPromise = runConnect();
+    global.__apexMongoConnectPromise = activeConnectPromise;
+    return activeConnectPromise;
+  }
+  return runConnect();
 }
 
 module.exports = {

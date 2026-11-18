@@ -41,6 +41,9 @@ const {
 const {
   CACHE_KEYS,
   del,
+  getOrCompute,
+  invalidateAdminWorkspaceCache,
+  invalidatePortalWorkspaceCache,
   invalidateCompanyCaches,
   invalidateLedgerCaches,
   invalidateValuationCaches,
@@ -103,6 +106,21 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireStaff);
 
+// Automatically invalidate workspace caches synchronously before any successful admin mutation responds
+router.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    const origJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode < 400) {
+        invalidateAdminWorkspaceCache();
+        invalidatePortalWorkspaceCache();
+      }
+      return origJson(body);
+    };
+  }
+  next();
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
@@ -159,34 +177,35 @@ router.post('/upload', authenticate, requireStaff, uploadLimiter, (req, res, nex
   }
 });
 
-// Combined Single-Request Endpoint for Administration Workspace (reduces 10 HTTP requests & 140+ DB queries to 1 parallel round-trip)
+// Combined Single-Request Endpoint for Administration Workspace (reduces 10 HTTP requests & 140+ DB queries to 1 parallel round-trip + thundering-herd cache)
 router.get('/workspace', authenticate, requireStaff, async (req, res) => {
   try {
-    const [
-      settings,
-      allShareholders,
-      allMovements,
-      allValuations,
-      allPublications,
-      allSupportRequests,
-      allUsers,
-      rolePermissions,
-      auditLogs,
-      auditLogsTotalCount
-    ] = await Promise.all([
-      ensureCoreSystemConfig(null, { lean: true }),
-      Shareholder.find({}).sort({ shareholderId: 1 }).lean(),
-      ShareMovement.find({}).sort({ createdAt: -1 }).lean(),
-      ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 }).lean(),
-      Publication.find({}).sort({ createdAt: -1 }).lean(),
-      SupportRequest.find({}).sort({ createdAt: -1 }).limit(500).lean(),
-      User.find({})
-        .select('_id email fullName role status shareholderId inviteToken verificationEnabled lastLoginAt createdAt isSeed')
-        .lean(),
-      RolePermission.find({}).lean(),
-      AuditLog.find({}).sort({ createdAt: -1 }).limit(200).lean(),
-      AuditLog.countDocuments({})
-    ]);
+    const payload = await getOrCompute(CACHE_KEYS.ADMIN_WORKSPACE, 10000, async () => {
+      const [
+        settings,
+        allShareholders,
+        allMovements,
+        allValuations,
+        allPublications,
+        allSupportRequests,
+        allUsers,
+        rolePermissions,
+        auditLogs,
+        auditLogsTotalCount
+      ] = await Promise.all([
+        ensureCoreSystemConfig(null, { lean: true }),
+        Shareholder.find({}).sort({ shareholderId: 1 }).lean(),
+        ShareMovement.find({}).select('-snapshotBefore -snapshotAfter').sort({ createdAt: -1 }).lean(),
+        ShareValuation.find({}).sort({ effectiveDate: -1, createdAt: -1 }).lean(),
+        Publication.find({}).sort({ createdAt: -1 }).lean(),
+        SupportRequest.find({}).sort({ createdAt: -1 }).limit(500).lean(),
+        User.find({})
+          .select('_id email fullName role status shareholderId inviteToken verificationEnabled lastLoginAt createdAt isSeed')
+          .lean(),
+        RolePermission.find({}).lean(),
+        AuditLog.find({}).sort({ createdAt: -1 }).limit(200).lean(),
+        AuditLog.countDocuments({})
+      ]);
 
     const [registerState, valuationState, seedStatus] = await Promise.all([
       calculateRegisterState(getTodayDateString(), {
@@ -393,7 +412,7 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
         createdAt: u.createdAt
       }));
 
-    res.json({
+    return {
       overview: {
         company: settings,
         summary: {
@@ -469,7 +488,9 @@ router.get('/workspace', authenticate, requireStaff, async (req, res) => {
         databaseStatus: dbState,
         seedStatus
       }
+    };
     });
+    res.json(payload);
   } catch (err) {
     return sendSafeError(res, err, 'Failed to load administration workspace.');
   }

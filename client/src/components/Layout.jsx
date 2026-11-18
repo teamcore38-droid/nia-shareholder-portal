@@ -385,7 +385,7 @@ export default function Layout({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen pt-14 lg:pt-0 pb-20 lg:pb-0">
+      <div className="flex-1 min-w-0 max-w-full overflow-x-hidden lg:pl-64 flex flex-col min-h-screen pt-14 lg:pt-0 pb-20 lg:pb-0">
         {/* Desktop Header Bar */}
         <header className="hidden lg:flex bg-white/95 backdrop-blur-md border-b border-[#D4AF37]/30 sticky top-0 z-20 px-8 py-3.5 items-center justify-between gap-4 shadow-2xs">
           {/* Left: Company Name & Portal Subtitle */}
@@ -571,7 +571,7 @@ export default function Layout({
         </header>
 
         {/* Main Workspace Body */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-7xl w-full mx-auto">
+        <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-7xl w-full mx-auto">
           {children}
         </main>
 

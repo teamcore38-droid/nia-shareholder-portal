@@ -24,6 +24,9 @@ export function ApexBrandLogo({
         <img
           src="/nia-logo.png"
           alt="NIA Group of Company - Nexus International Alliance"
+          width="64"
+          height="64"
+          decoding="async"
           className="w-full h-full object-contain rounded-full bg-[#080B12]"
         />
       </div>

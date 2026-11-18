@@ -158,7 +158,7 @@ const shareholderSchema = new mongoose.Schema(
 );
 shareholderSchema.index({ email: 1 });
 shareholderSchema.index({ accountStatus: 1 });
-shareholderSchema.index({ companyId: 1, shareholderId: 1 });
+shareholderSchema.index({ createdAt: -1 });
 
 // 5. Share Movement / Ledger Schema (Page 8, 16, 17, 19, 32, 33)
 const shareMovementSchema = new mongoose.Schema(
@@ -206,6 +206,7 @@ const shareMovementSchema = new mongoose.Schema(
 shareMovementSchema.index({ status: 1, effectiveDate: 1, createdAt: 1 });
 shareMovementSchema.index({ fromShareholderId: 1, status: 1 });
 shareMovementSchema.index({ toShareholderId: 1, status: 1 });
+shareMovementSchema.index({ supportingDocumentUrl: 1, status: 1 });
 shareMovementSchema.index({ createdAt: -1 });
 
 // 6. Share Valuation Schema (Page 4, 7, 9, 18, 32, 33)
@@ -287,8 +288,10 @@ const publicationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+publicationSchema.index({ status: 1, createdAt: -1 });
 publicationSchema.index({ status: 1, contentType: 1, createdAt: -1 });
 publicationSchema.index({ status: 1, audienceType: 1, targetShareholderId: 1 });
+publicationSchema.index({ fileUrl: 1, status: 1 });
 
 // 8. Support Requests Schema (Page 11, 12, 25)
 const supportRequestSchema = new mongoose.Schema(

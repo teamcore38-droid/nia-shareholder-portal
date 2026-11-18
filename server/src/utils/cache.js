@@ -1,4 +1,4 @@
-const MAX_CACHE_ENTRIES = 500;
+const MAX_CACHE_ENTRIES = 2000;
 
 const store = new Map();
 const inFlight = new Map();
@@ -10,7 +10,10 @@ const CACHE_KEYS = {
   VALUATION_STATE_PREFIX: 'valuation_state:',
   PUBLISHED_PUBLICATIONS: 'published_publications',
   BOOTSTRAP_USER_COUNT: 'bootstrap_user_count',
-  AUTH_USER_PREFIX: 'auth_user:'
+  AUTH_USER_PREFIX: 'auth_user:',
+  ADMIN_WORKSPACE: 'admin_workspace',
+  ADMIN_OVERVIEW: 'admin_overview',
+  PORTAL_WORKSPACE_PREFIX: 'portal_workspace:'
 };
 
 function evictIfNeeded() {
@@ -94,26 +97,48 @@ async function getOrCompute(key, ttlMs, computeFn) {
   return promise;
 }
 
+function invalidateAdminWorkspaceCache() {
+  del(CACHE_KEYS.ADMIN_WORKSPACE);
+  del(CACHE_KEYS.ADMIN_OVERVIEW);
+}
+
+function invalidatePortalWorkspaceCache(shareholderId = null) {
+  if (shareholderId) {
+    del(`${CACHE_KEYS.PORTAL_WORKSPACE_PREFIX}${String(shareholderId)}`);
+  } else {
+    invalidatePrefix(CACHE_KEYS.PORTAL_WORKSPACE_PREFIX);
+  }
+}
+
 function invalidateCompanyCaches() {
   del(CACHE_KEYS.COMPANY_SETTINGS);
   invalidatePrefix(CACHE_KEYS.REGISTER_STATE_PREFIX);
   invalidatePrefix(CACHE_KEYS.VALUATION_STATE_PREFIX);
+  invalidateAdminWorkspaceCache();
+  invalidatePortalWorkspaceCache();
 }
 
 function invalidateLedgerCaches() {
   invalidatePrefix(CACHE_KEYS.REGISTER_STATE_PREFIX);
+  invalidateAdminWorkspaceCache();
+  invalidatePortalWorkspaceCache();
 }
 
 function invalidateValuationCaches() {
   invalidatePrefix(CACHE_KEYS.VALUATION_STATE_PREFIX);
+  invalidateAdminWorkspaceCache();
+  invalidatePortalWorkspaceCache();
 }
 
 function invalidatePublicationCaches() {
   del(CACHE_KEYS.PUBLISHED_PUBLICATIONS);
+  invalidateAdminWorkspaceCache();
+  invalidatePortalWorkspaceCache();
 }
 
 function invalidateRolePermissionCaches() {
   del(CACHE_KEYS.ROLE_PERMISSIONS);
+  invalidateAdminWorkspaceCache();
 }
 
 function invalidateAuthUserCache(userId) {
@@ -122,6 +147,7 @@ function invalidateAuthUserCache(userId) {
   } else {
     invalidatePrefix(CACHE_KEYS.AUTH_USER_PREFIX);
   }
+  invalidateAdminWorkspaceCache();
 }
 
 module.exports = {
@@ -132,6 +158,8 @@ module.exports = {
   invalidatePrefix,
   clearAll,
   getOrCompute,
+  invalidateAdminWorkspaceCache,
+  invalidatePortalWorkspaceCache,
   invalidateCompanyCaches,
   invalidateLedgerCaches,
   invalidateValuationCaches,

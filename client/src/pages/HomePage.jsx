@@ -907,6 +907,8 @@ export default function HomePage({ onNavigateToAuth }) {
             <img
               src="/nia-building.jpg"
               alt="NIA Group of Company Digital Network"
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover object-center opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#060911] via-[#060911]/45 to-transparent" />
@@ -918,6 +920,8 @@ export default function HomePage({ onNavigateToAuth }) {
               <img
                 src="/nia-logo.png"
                 alt="NIA Group Seal"
+                loading="lazy"
+                decoding="async"
                 className="w-14 h-14 rounded-full border-2 border-[#D4AF37] bg-black shadow-lg"
               />
             </div>

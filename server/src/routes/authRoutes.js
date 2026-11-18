@@ -34,6 +34,33 @@ const BCRYPT_ROUNDS = 10;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
+// Short-lived cryptographic HMAC digest cache for verified credentials (prevents CPU event-loop
+// saturation from repeated pure-JS bcryptjs comparisons under high concurrent login bursts).
+// Never stores plaintext passwords; automatically invalidates if passwordHash changes.
+const verifiedPasswordDigests = new Map();
+const PASSWORD_DIGEST_TTL_MS = 5 * 60 * 1000;
+
+async function verifyPasswordFast(userId, password, passwordHash) {
+  if (!password || !passwordHash) return false;
+  const digestKey = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${String(userId)}:${passwordHash}:${password}`)
+    .digest('hex');
+  const cachedExpiry = verifiedPasswordDigests.get(digestKey);
+  if (cachedExpiry && cachedExpiry > Date.now()) {
+    return true;
+  }
+  const isValid = await bcrypt.compare(password, passwordHash);
+  if (isValid) {
+    if (verifiedPasswordDigests.size >= 1000) {
+      const oldestKey = verifiedPasswordDigests.keys().next().value;
+      if (oldestKey) verifiedPasswordDigests.delete(oldestKey);
+    }
+    verifiedPasswordDigests.set(digestKey, Date.now() + PASSWORD_DIGEST_TTL_MS);
+  }
+  return isValid;
+}
+
 // Layered login rate limiting: protects individual accounts while allowing 1,500-3,000 users behind shared corporate/AGM NATs
 const perAccountLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -187,12 +214,7 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
     const user = await User.findOne(
       cleanInput.includes('@')
         ? { email: cleanInput.toLowerCase() }
-        : {
-            $or: [
-              { email: cleanInput.toLowerCase() },
-              { shareholderId: cleanInput.toUpperCase() }
-            ]
-          }
+        : { shareholderId: cleanInput.toUpperCase() }
     );
     const cleanEmail = user ? user.email : cleanInput.toLowerCase();
     if (!user) {
@@ -235,7 +257,7 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
       });
     }
 
-    const validPassword = await bcrypt.compare(password, user.passwordHash || '');
+    const validPassword = await verifyPasswordFast(user._id, password, user.passwordHash || '');
     if (!validPassword) {
       const nextAttempts = (user.failedLoginAttempts || 0) + 1;
       user.failedLoginAttempts = nextAttempts;

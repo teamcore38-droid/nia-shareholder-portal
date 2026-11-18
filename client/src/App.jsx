@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HomePage from './pages/HomePage';
-import AuthPage from './pages/AuthPage';
 import Layout from './components/Layout';
 
+const loadAuthPage = () => import('./pages/AuthPage');
 const loadShareholderWorkspace = () => import('./pages/shareholder/ShareholderWorkspace');
 const loadAdminWorkspace = () => import('./pages/admin/AdminWorkspace');
 
+const AuthPage = lazy(loadAuthPage);
 const ShareholderWorkspace = lazy(loadShareholderWorkspace);
 const AdminWorkspace = lazy(loadAdminWorkspace);
 
@@ -27,8 +28,11 @@ function PortalRouter() {
   });
   const [authInitialMode, setAuthInitialMode] = useState('signin');
 
-  const [workspaceMode, setWorkspaceMode] = useState('shareholder');
+  const [workspaceMode, setWorkspaceMode] = useState(() =>
+    isStaff ? 'admin' : 'shareholder'
+  );
   const [activeTab, setActiveTab] = useState('overview');
+  const [lastUserId, setLastUserId] = useState(() => user?._id || null);
   const [badges, setBadges] = useState({
     unreadAnnouncements: 0,
     pendingApprovals: 0,
@@ -36,6 +40,24 @@ function PortalRouter() {
   });
   const [shareholdersList, setShareholdersList] = useState([]);
   const [previewShareholderId, setPreviewShareholderId] = useState('');
+
+  // Synchronously align workspaceMode & activeTab on login/logout before child workspaces mount.
+  // Prevents mounting ShareholderWorkspace (and firing /api/portal/workspace) for 1 frame on staff login.
+  if ((user?._id || null) !== lastUserId) {
+    setLastUserId(user?._id || null);
+    if (user) {
+      const staffRole = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
+      setWorkspaceMode(staffRole ? 'admin' : 'shareholder');
+      setActiveTab('overview');
+    } else {
+      setWorkspaceMode('shareholder');
+      setActiveTab('overview');
+      setBadges({ unreadAnnouncements: 0, pendingApprovals: 0, openSupport: 0 });
+      setShareholdersList([]);
+      setPreviewShareholderId('');
+      setAuthView('home');
+    }
+  }
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -49,26 +71,42 @@ function PortalRouter() {
   }, []);
 
   useEffect(() => {
-    // Preload workspace chunks in the background right after initial paint so entering or toggling is instant
-    const timer = setTimeout(() => {
+    // Preload AuthPage right after initial homepage paint so "Sign In to Portal" is 0ms instant,
+    // and preload workspace chunks when browser is idle or when user enters Auth view.
+    const authTimer = setTimeout(() => {
+      loadAuthPage();
+    }, 120);
+
+    const preloadChunks = () => {
       loadShareholderWorkspace();
       loadAdminWorkspace();
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
+    };
+    if (authView === 'auth') {
+      loadAuthPage();
+      preloadChunks();
+      return () => clearTimeout(authTimer);
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preloadChunks, { timeout: 2500 });
+      return () => {
+        clearTimeout(authTimer);
+        window.cancelIdleCallback(idleId);
+      };
+    }
+    const timer = setTimeout(preloadChunks, 1500);
+    return () => {
+      clearTimeout(authTimer);
+      clearTimeout(timer);
+    };
+  }, [authView]);
 
   useEffect(() => {
-    if (user) {
-      const staffRole = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
-      setWorkspaceMode(staffRole ? 'admin' : 'shareholder');
-      setActiveTab('overview');
-    } else {
-      // Clear cached workspace data and return to home upon logout
+    if (!user) {
+      // Clear cached workspace data asynchronously upon logout
       loadAdminWorkspace().then((m) => m.clearAdminWorkspaceCache && m.clearAdminWorkspaceCache());
       loadShareholderWorkspace().then(
         (m) => m.clearShareholderWorkspaceCache && m.clearShareholderWorkspaceCache()
       );
-      setAuthView('home');
     }
   }, [user]);
 
@@ -104,15 +142,17 @@ function PortalRouter() {
   if (!user) {
     if (authView === 'auth') {
       return (
-        <AuthPage
-          initialMode={authInitialMode}
-          onBackToHome={() => {
-            setAuthView('home');
-            if (typeof window !== 'undefined' && window.location.hash) {
-              window.history.replaceState(null, '', window.location.pathname);
-            }
-          }}
-        />
+        <Suspense fallback={<div className="min-h-screen bg-[#080C16]" />}>
+          <AuthPage
+            initialMode={authInitialMode}
+            onBackToHome={() => {
+              setAuthView('home');
+              if (typeof window !== 'undefined' && window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname);
+              }
+            }}
+          />
+        </Suspense>
       );
     }
     return (

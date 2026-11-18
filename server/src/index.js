@@ -84,7 +84,7 @@ app.use(
 
 app.use(compression());
 
-// Strict Cross-Origin Resource Sharing (CORS) Protection
+// Strict Cross-Origin Resource Sharing (CORS) Protection with 24h Preflight Cache
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -95,7 +95,8 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    maxAge: 86400
   })
 );
 
@@ -125,7 +126,15 @@ async function ensureInitialized() {
   return initPromise;
 }
 
+// Pre-warm DB connection & core system config at module load in production/serverless
+if (IS_PRODUCTION) {
+  ensureInitialized().catch(() => {});
+}
+
 app.use(async (req, res, next) => {
+  if (req.method === 'OPTIONS' || req.path === '/' || req.path === '/api/health') {
+    return next();
+  }
   try {
     await ensureInitialized();
     next();

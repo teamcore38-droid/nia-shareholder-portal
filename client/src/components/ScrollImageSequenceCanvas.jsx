@@ -13,15 +13,21 @@ import React, { useEffect, useRef } from 'react';
  * - Respects prefers-reduced-motion
  * - Zero layout shift, zero flicker, 60fps+ hardware-accelerated rendering
  */
+// Module-level persistent frame cache & default path helper:
+// 1. Prevents inline default function reference from re-triggering useEffect on parent re-renders
+// 2. Preserves decoded HTMLImageElement instances across Home <-> Auth <-> Workspace <-> Sign-Out transitions (0ms instant homepage restore)
+const DEFAULT_FRAME_PATH = (i) => `/frames/ezgif-frame-${String(i).padStart(3, '0')}.webp`;
+const GLOBAL_FRAME_CACHE = new Map();
+const IN_FLIGHT_FRAME_PROMISES = new Map();
+
 export default function ScrollImageSequenceCanvas({
   scrollProgress = 0, // 0.0 to 1.0 (fallback if progressRef not provided)
   progressRef = null, // Optional ref { current: 0..1 } for zero-re-render parent updates
   totalFrames = 70,
-  framePath = (i) => `/frames/ezgif-frame-${String(i).padStart(3, '0')}.webp`
+  framePath = DEFAULT_FRAME_PATH
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const imagesCache = useRef([]);
   const targetFrameRef = useRef(1);
   const currentFrameRef = useRef(1);
   const needsRedrawRef = useRef(true);
@@ -44,54 +50,86 @@ export default function ScrollImageSequenceCanvas({
     if (!ctx) return;
 
     let cancelled = false;
+    let fullPreloadStarted = false;
+    let idleHandle = null;
+    let deferTimer = null;
 
     // Check prefers-reduced-motion
     if (typeof window !== 'undefined' && window.matchMedia) {
       isReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
 
-    // 1. Progressive Batched Image Preloading (prevents network saturation & main-thread decode jank)
-    const loadFrame = (index, priority = 'auto') =>
-      new Promise((resolve) => {
-        if (cancelled || imagesCache.current[index]) {
-          resolve();
-          return;
-        }
+    const getCachedImage = (index) => {
+      const src = framePath(index);
+      return GLOBAL_FRAME_CACHE.get(src) || null;
+    };
+
+    // 1. Deduplicated Module-Cached Frame Loader
+    const loadFrame = (index, priority = 'auto') => {
+      const src = framePath(index);
+      const existing = GLOBAL_FRAME_CACHE.get(src);
+      if (existing && existing.complete && existing.naturalWidth > 0) {
+        return Promise.resolve(existing);
+      }
+      if (IN_FLIGHT_FRAME_PROMISES.has(src)) {
+        return IN_FLIGHT_FRAME_PROMISES.get(src).then((img) => {
+          if (!cancelled && img) {
+            const currentRounded = Math.round(currentFrameRef.current);
+            if (index === 1 || currentRounded === index || !getCachedImage(currentRounded)) {
+              needsRedrawRef.current = true;
+            }
+          }
+          return img;
+        });
+      }
+
+      const promise = new Promise((resolve) => {
         const img = new Image();
         img.decoding = 'async';
         if (priority === 'high') {
           img.fetchPriority = 'high';
         }
         img.onload = () => {
+          GLOBAL_FRAME_CACHE.set(src, img);
+          IN_FLIGHT_FRAME_PROMISES.delete(src);
           if (!cancelled) {
-            imagesCache.current[index] = img;
             const currentRounded = Math.round(currentFrameRef.current);
-            if (index === 1 || currentRounded === index || !imagesCache.current[currentRounded]) {
+            if (index === 1 || currentRounded === index || !getCachedImage(currentRounded)) {
               needsRedrawRef.current = true;
             }
           }
-          resolve();
+          resolve(img);
         };
-        img.onerror = () => resolve();
-        img.src = framePath(index);
+        img.onerror = () => {
+          IN_FLIGHT_FRAME_PROMISES.delete(src);
+          resolve(null);
+        };
+        img.src = src;
         if (img.complete && img.naturalWidth > 0) {
-          imagesCache.current[index] = img;
+          GLOBAL_FRAME_CACHE.set(src, img);
+          IN_FLIGHT_FRAME_PROMISES.delete(src);
           needsRedrawRef.current = true;
-          resolve();
+          resolve(img);
         }
       });
 
-    // Prioritize Frame 1 immediately, then stride keyframes (every 5th frame), then remaining frames in small batches
-    const preloadSequence = async () => {
-      await loadFrame(1, 'high');
-      if (cancelled) return;
+      IN_FLIGHT_FRAME_PROMISES.set(src, promise);
+      return promise;
+    };
+
+    // Stage B: Load remaining frames in controlled background batches only on scroll interaction or idle
+    const startRemainingFramesPreload = async () => {
+      if (cancelled || fullPreloadStarted || isReducedMotion.current) return;
+      fullPreloadStarted = true;
 
       const queue = [];
       const seen = new Set([1]);
+      // Coarse stride keyframes first (every 5th frame) so fast scroll scrubbing always has a nearby frame
       for (let i = 5; i <= totalFrames; i += 5) {
         queue.push(i);
         seen.add(i);
       }
+      // Intermediate frames next
       for (let i = 2; i <= totalFrames; i++) {
         if (!seen.has(i)) {
           queue.push(i);
@@ -99,18 +137,46 @@ export default function ScrollImageSequenceCanvas({
         }
       }
 
-      const CONCURRENCY = 5;
+      const CONCURRENCY = 3;
       let cursor = 0;
       const workers = Array.from({ length: CONCURRENCY }, async () => {
         while (!cancelled && cursor < queue.length) {
           const nextIdx = queue[cursor++];
-          await loadFrame(nextIdx);
+          await loadFrame(nextIdx, 'low');
         }
       });
       await Promise.all(workers);
     };
 
-    preloadSequence();
+    // Stage A: Render Frame 1 immediately (0ms if cached from earlier visit/session),
+    // then wait until initial page load settles before preloading sequence frames.
+    loadFrame(1, 'high').then(() => {
+      if (cancelled || isReducedMotion.current) return;
+
+      const scheduleBackgroundPreload = () => {
+        if (cancelled) return;
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          idleHandle = window.requestIdleCallback(() => startRemainingFramesPreload(), {
+            timeout: 1800
+          });
+        } else {
+          deferTimer = setTimeout(startRemainingFramesPreload, 600);
+        }
+      };
+
+      if (typeof document !== 'undefined' && document.readyState !== 'complete') {
+        window.addEventListener('load', scheduleBackgroundPreload, { once: true });
+      } else {
+        scheduleBackgroundPreload();
+      }
+    });
+
+    const triggerPreloadOnInteraction = () => {
+      startRemainingFramesPreload();
+    };
+    window.addEventListener('scroll', triggerPreloadOnInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', triggerPreloadOnInteraction, { passive: true, once: true });
+    window.addEventListener('touchmove', triggerPreloadOnInteraction, { passive: true, once: true });
 
     // 3. Responsive Canvas Sizing (uses container client dimensions)
     const resizeCanvas = () => {
@@ -141,20 +207,22 @@ export default function ScrollImageSequenceCanvas({
 
     // 4. Draw Helper (Implements "object-fit: cover" filling entire canvas)
     const renderFrameToCanvas = (frameIndex) => {
-      let img = imagesCache.current[frameIndex];
+      let img = getCachedImage(frameIndex);
       if (!img || !img.complete || img.naturalWidth === 0) {
         // Fallback backward to nearest loaded frame
         for (let back = frameIndex - 1; back >= 1; back--) {
-          if (imagesCache.current[back]?.complete && imagesCache.current[back]?.naturalWidth > 0) {
-            img = imagesCache.current[back];
+          const candidate = getCachedImage(back);
+          if (candidate?.complete && candidate?.naturalWidth > 0) {
+            img = candidate;
             break;
           }
         }
         // Fallback forward if no earlier frame is loaded
         if (!img) {
           for (let fwd = frameIndex + 1; fwd <= totalFrames; fwd++) {
-            if (imagesCache.current[fwd]?.complete && imagesCache.current[fwd]?.naturalWidth > 0) {
-              img = imagesCache.current[fwd];
+            const candidate = getCachedImage(fwd);
+            if (candidate?.complete && candidate?.naturalWidth > 0) {
+              img = candidate;
               break;
             }
           }
@@ -258,8 +326,15 @@ export default function ScrollImageSequenceCanvas({
     return () => {
       cancelled = true;
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (deferTimer) clearTimeout(deferTimer);
       if (observer) observer.disconnect();
       window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('scroll', triggerPreloadOnInteraction);
+      window.removeEventListener('wheel', triggerPreloadOnInteraction);
+      window.removeEventListener('touchmove', triggerPreloadOnInteraction);
     };
   }, [totalFrames, framePath, progressRef]);
 

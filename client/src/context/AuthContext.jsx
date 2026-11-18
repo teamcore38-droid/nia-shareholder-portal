@@ -44,10 +44,10 @@ export function AuthProvider({ children }) {
 
   const notify = useCallback((message, type = 'success') => {
     const id = `${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev.slice(-2), { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4500);
+    }, 3200);
   }, []);
 
   const removeToast = (id) => {
@@ -204,8 +204,8 @@ export function AuthProvider({ children }) {
     >
       {children}
 
-      {/* Floating Executive Toast Notifications */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-md w-full pointer-events-none px-4 sm:px-0">
+      {/* Floating Executive Toast Notifications (positioned above mobile bottom nav bar) */}
+      <div className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">
         {toasts.map((t) => (
           <div
             key={t.id}
