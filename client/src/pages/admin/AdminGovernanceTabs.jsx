@@ -25,7 +25,7 @@ import {
   Check,
   X
 } from 'lucide-react';
-import api, { getDownloadUrl } from '../../api/client';
+import api, { getDownloadUrl, resolveUploadUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import PasswordInput from '../../components/PasswordInput';
@@ -83,8 +83,19 @@ export default function AdminGovernanceTabs({
   shareholdersList = [],
   onRefresh
 }) {
-  const { user, company, setCompany, notify } = useAuth();
+  const { user, company, setCompany, notify, hasPermission, applySession } = useAuth();
   const isAdmin = user?.role === 'Administrator';
+  const canPublishDirectly = hasPermission('shareValues', 'approvePublish');
+
+  // Personal Staff Security State
+  const [staffPasswordForm, setStaffPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: ''
+  });
+  const [showStaffPasswordModal, setShowStaffPasswordModal] = useState(false);
+  const [showStaff2faModal, setShowStaff2faModal] = useState(false);
+  const [staffTwoFaPassword, setStaffTwoFaPassword] = useState('');
+  const [revealedStaff2faCodes, setRevealedStaff2faCodes] = useState(null);
 
   // Seed Data Governance State
   const [showClearSeedConfirm, setShowClearSeedConfirm] = useState(false);
@@ -148,6 +159,7 @@ export default function AdminGovernanceTabs({
   // ============================================================================
   // STATE FOR INTERFACE 18 (PUBLICATIONS)
   // ============================================================================
+  const [editingPub, setEditingPub] = useState(null);
   const [pubForm, setPubForm] = useState({
     contentType: 'Document', // 'Document' | 'Announcement'
     category: 'Holding confirmation',
@@ -264,13 +276,39 @@ export default function AdminGovernanceTabs({
   // ============================================================================
   // HANDLERS
   // ============================================================================
+  const openEditPublication = (p) => {
+    setEditingPub(p);
+    setPubForm({
+      contentType: p.contentType || 'Document',
+      category: p.category || 'Holding confirmation',
+      title: p.title || '',
+      summary: p.summary || '',
+      periodOrDate: p.periodOrDate || new Date().toISOString().slice(0, 10),
+      audienceType: p.audienceType || 'All shareholders',
+      targetShareholderId: p.targetShareholderId || '',
+      fileUrl: p.fileUrl || '',
+      fileName: p.fileName || '',
+      fileProvider: p.fileProvider || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSavePublication = async (actionType) => {
     try {
-      const res = await api.post('/admin/publications', {
-        ...pubForm,
-        actionType
-      });
-      notify(res.data.message);
+      if (editingPub) {
+        const res = await api.put(`/admin/publications/${editingPub._id}`, {
+          ...pubForm,
+          actionType
+        });
+        notify(res.data.message);
+      } else {
+        const res = await api.post('/admin/publications', {
+          ...pubForm,
+          actionType
+        });
+        notify(res.data.message);
+      }
+      setEditingPub(null);
       setPubForm({
         contentType: 'Document',
         category: 'Holding confirmation',
@@ -286,6 +324,78 @@ export default function AdminGovernanceTabs({
       onRefresh();
     } catch (err) {
       notify(err.response?.data?.message || 'Could not save publication.', 'error');
+    }
+  };
+
+  const handleDeletePublication = async (p) => {
+    if (!window.confirm(`Delete ${p.status.toLowerCase()} publication ${p.reference}?`)) return;
+    try {
+      const res = await api.delete(`/admin/publications/${p._id}`);
+      notify(res.data.message);
+      if (editingPub?._id === p._id) setEditingPub(null);
+      onRefresh();
+    } catch (err) {
+      notify(err.response?.data?.message || 'Could not delete publication.', 'error');
+    }
+  };
+
+  const handleStaffChangeOwnPassword = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/auth/change-password', staffPasswordForm);
+      applySession({ token: res.data.token });
+      notify(res.data.message);
+      setStaffPasswordForm({ currentPassword: '', newPassword: '' });
+      setShowStaffPasswordModal(false);
+    } catch (err) {
+      notify(err.response?.data?.message || 'Password change failed.', 'error');
+    }
+  };
+
+  const handleStaffToggleVerification = async () => {
+    try {
+      const res = await api.post('/auth/toggle-verification');
+      applySession({ user: { verificationEnabled: res.data.verificationEnabled } });
+      if (res.data.verificationCode) {
+        setRevealedStaff2faCodes({
+          verificationCode: res.data.verificationCode,
+          recoveryCode: res.data.recoveryCode
+        });
+      }
+      notify(res.data.message);
+    } catch (err) {
+      notify('Failed to update verification setting.', 'error');
+    }
+  };
+
+  const handleStaffManage2faCodes = async (rotate = false) => {
+    if (!staffTwoFaPassword) {
+      notify('Please enter your current password first.', 'error');
+      return;
+    }
+    try {
+      const res = await api.post('/auth/regenerate-2fa', {
+        currentPassword: staffTwoFaPassword,
+        rotate
+      });
+      setRevealedStaff2faCodes({
+        verificationCode: res.data.verificationCode,
+        recoveryCode: res.data.recoveryCode
+      });
+      applySession({ user: { verificationEnabled: res.data.verificationEnabled } });
+      notify(res.data.message);
+    } catch (err) {
+      notify(err.response?.data?.message || 'Could not retrieve 2FA codes.', 'error');
+    }
+  };
+
+  const handleStaffRevokeOtherSessions = async () => {
+    try {
+      const res = await api.post('/auth/revoke-other-sessions');
+      applySession({ token: res.data.token });
+      notify(res.data.message);
+    } catch (err) {
+      notify('Failed to revoke other sessions.', 'error');
     }
   };
 
@@ -524,27 +634,52 @@ export default function AdminGovernanceTabs({
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleSavePublication('publish')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
-            >
-              Publish immediately
-            </button>
+            {canPublishDirectly && (
+              <button
+                type="button"
+                onClick={() => handleSavePublication('publish')}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
+              >
+                {editingPub ? 'Update & publish immediately' : 'Publish immediately'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleSavePublication('submit')}
               className="px-5 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold cursor-pointer"
             >
-              Preview and submit for review
+              {editingPub ? 'Update & submit for review' : 'Preview and submit for review'}
             </button>
             <button
               type="button"
               onClick={() => handleSavePublication('draft')}
               className="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold cursor-pointer"
             >
-              Save draft
+              {editingPub ? 'Update draft' : 'Save draft'}
             </button>
+            {editingPub && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPub(null);
+                  setPubForm({
+                    contentType: 'Document',
+                    category: 'Holding confirmation',
+                    title: '',
+                    summary: '',
+                    periodOrDate: new Date().toISOString().slice(0, 10),
+                    audienceType: 'All shareholders',
+                    targetShareholderId: '',
+                    fileUrl: '',
+                    fileName: '',
+                    fileProvider: ''
+                  });
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                Cancel Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -567,6 +702,7 @@ export default function AdminGovernanceTabs({
                     <th className="py-3 px-6">Audience</th>
                     <th className="py-3 px-6">Date</th>
                     <th className="py-3 px-6">Status</th>
+                    <th className="py-3 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -600,6 +736,38 @@ export default function AdminGovernanceTabs({
                           {p.status}
                         </span>
                       </td>
+                      <td className="py-3.5 px-6 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          {p.fileUrl && (
+                            <a
+                              href={resolveUploadUrl(p.fileUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-bold text-slate-700"
+                            >
+                              Attachment
+                            </a>
+                          )}
+                          {['Draft', 'Returned', 'Rejected', 'Scheduled'].includes(p.status) && hasPermission('publications', 'createEdit') && (
+                            <button
+                              type="button"
+                              onClick={() => openEditPublication(p)}
+                              className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-900 cursor-pointer"
+                            >
+                              Edit / Submit
+                            </button>
+                          )}
+                          {(isAdmin || (['Draft', 'Returned', 'Rejected'].includes(p.status) && hasPermission('publications', 'createEdit'))) && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePublication(p)}
+                              className="px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-[11px] font-bold text-rose-700 cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -629,17 +797,23 @@ export default function AdminGovernanceTabs({
                 Manage staff invitations, account status, assigned roles and role permissions
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowInviteStaff(!showInviteStaff)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              Invite staff member
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setShowInviteStaff(!showInviteStaff)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                Invite staff member
+              </button>
+            ) : (
+              <span className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold">
+                Read-only view ({user?.role})
+              </span>
+            )}
           </div>
 
-          {showInviteStaff && (
+          {showInviteStaff && isAdmin && (
             <form
               onSubmit={handleInviteStaff}
               className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4 max-w-3xl"
@@ -756,7 +930,11 @@ export default function AdminGovernanceTabs({
                 </span>
               )}
             </h3>
-            {selectedStaff ? (
+            {!isAdmin ? (
+              <p className="text-xs text-amber-800 font-semibold">
+                Staff account role changes, session revocations, and account suspensions require <strong>Administrator</strong> privileges.
+              </p>
+            ) : selectedStaff ? (
               <div className="flex flex-wrap items-center gap-4 text-xs font-bold pt-1">
                 <div className="flex items-center gap-2">
                   <span className="text-slate-600">Change assigned role:</span>
@@ -892,13 +1070,19 @@ export default function AdminGovernanceTabs({
             Least access by default. Server checks apply to every action and record.
           </p>
 
-          <button
-            type="button"
-            onClick={handleSaveRoleMatrix}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
-          >
-            Save role permissions
-          </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={handleSaveRoleMatrix}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
+            >
+              Save role permissions
+            </button>
+          ) : (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-800 font-semibold">
+              Only an <strong>Administrator</strong> can modify role permission matrices.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1620,17 +1804,177 @@ export default function AdminGovernanceTabs({
           Changing financial structure (currency or share classes) after launch requires a separately reviewed migration rather than simply relabelling historical values.
         </p>
 
-        <button
-          type="submit"
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
-        >
-          Save permitted settings
-        </button>
+        {isAdmin ? (
+          <button
+            type="submit"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
+          >
+            Save permitted settings
+          </button>
+        ) : (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-xs text-amber-800 font-semibold">
+            Organization-wide registry and governance settings are read-only for the <strong>{user?.role}</strong> role. You can manage your personal account security below.
+          </div>
+        )}
       </form>
+
+      {/* Personal Staff Account Security Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900">Personal Account & Security Controls</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Manage your own password, two-step verification (2FA), recovery codes, and active browser sessions ({user?.email}).
+            </p>
+          </div>
+          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+            user?.verificationEnabled
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border border-amber-200'
+          }`}>
+            2FA {user?.verificationEnabled ? 'Active' : 'Disabled'}
+          </span>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setShowStaffPasswordModal(true)}
+            className="px-4 py-2 rounded-xl bg-[#080C16] hover:bg-slate-800 text-[#FDE047] border border-[#D4AF37]/40 text-xs font-bold cursor-pointer"
+          >
+            Change My Password
+          </button>
+          <button
+            type="button"
+            onClick={handleStaffToggleVerification}
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold cursor-pointer"
+          >
+            {user?.verificationEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setRevealedStaff2faCodes(null);
+              setStaffTwoFaPassword('');
+              setShowStaff2faModal(true);
+            }}
+            className="px-4 py-2 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-xs font-bold cursor-pointer"
+          >
+            View / Rotate 2FA Codes
+          </button>
+          <button
+            type="button"
+            onClick={handleStaffRevokeOtherSessions}
+            className="px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold cursor-pointer"
+          >
+            Sign Out Other Sessions
+          </button>
+        </div>
+
+        {showStaffPasswordModal && (
+          <form onSubmit={handleStaffChangeOwnPassword} className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1">Current Password</label>
+              <input
+                type="password"
+                required
+                value={staffPasswordForm.currentPassword}
+                onChange={(e) => setStaffPasswordForm({ ...staffPasswordForm, currentPassword: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1">New Password (min 8 chars)</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={staffPasswordForm.newPassword}
+                onChange={(e) => setStaffPasswordForm({ ...staffPasswordForm, newPassword: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+              >
+                Update Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStaffPasswordModal(false)}
+                className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {showStaff2faModal && (
+          <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[240px]">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">Confirm Current Password</label>
+                <input
+                  type="password"
+                  value={staffTwoFaPassword}
+                  onChange={(e) => setStaffTwoFaPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStaffManage2faCodes(false)}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+              >
+                Reveal Current Codes
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStaffManage2faCodes(true)}
+                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+              >
+                Generate New 2FA & Recovery Codes
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStaff2faModal(false);
+                  setRevealedStaff2faCodes(null);
+                  setStaffTwoFaPassword('');
+                }}
+                className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+            {revealedStaff2faCodes && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-wrap items-center gap-6 text-xs">
+                <div>
+                  <span className="text-slate-500 font-semibold">6-Digit 2FA Code: </span>
+                  <code className="font-mono font-extrabold text-emerald-900 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                    {revealedStaff2faCodes.verificationCode}
+                  </code>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-semibold">Emergency Recovery Code: </span>
+                  <code className="font-mono font-extrabold text-emerald-900 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                    {revealedStaff2faCodes.recoveryCode}
+                  </code>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* SEED DATA & REGISTRY SAFEGUARD GOVERNANCE SECTION */}
       {(() => {
         const seed = settingsData?.seedStatus || {};
+        const seedCounts = seed.counts || {};
         const isBlocked = seed.seedDataBlocked || seed.seedDataBlockedPermanently;
         const hasData = seed.hasSeedData;
         const total = seed.counts?.total || 0;
@@ -1678,7 +2022,7 @@ export default function AdminGovernanceTabs({
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
                   {hasData
-                    ? '7 Holders • 7 Movements • 5 Valuations • 5 Pubs • 3 Queries • 4 Users'
+                    ? `${seedCounts.shareholders ?? 0} Holders • ${seedCounts.movements ?? 0} Movements • ${seedCounts.valuations ?? 0} Valuations • ${seedCounts.publications ?? 0} Pubs • ${seedCounts.supportQueries ?? 0} Queries • ${seedCounts.users ?? 0} Users`
                     : 'Clean registry state — no dummy data'}
                 </div>
               </div>
@@ -1781,7 +2125,9 @@ export default function AdminGovernanceTabs({
       })()}
 
       {/* MODAL 1: Clear Seed Data Confirmation */}
-      {showClearSeedConfirm && (
+      {showClearSeedConfirm && (() => {
+        const seedCounts = settingsData?.seedStatus?.counts || {};
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-rose-300 animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center mb-4">
@@ -1791,15 +2137,15 @@ export default function AdminGovernanceTabs({
               Remove All Seed Data in 1 Click?
             </h3>
             <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-              This action will permanently purge all <strong>31 sample seed records</strong>:
+              This action will permanently purge all <strong>{(seedCounts.shareholders ?? 0) + (seedCounts.movements ?? 0) + (seedCounts.valuations ?? 0) + (seedCounts.publications ?? 0) + (seedCounts.supportQueries ?? 0) + (seedCounts.users ?? 0)} sample seed records</strong>:
             </p>
             <ul className="text-xs text-slate-600 mt-2 space-y-1 list-disc pl-5">
-              <li>7 Sample Shareholders (SH-001 through SH-007)</li>
-              <li>7 Published Share Movements (1,000,000 shares)</li>
-              <li>5 Historical Share Valuations</li>
-              <li>5 Publications & Announcements</li>
-              <li>3 Sample Support Queries</li>
-              <li>4 Demo Testing User Accounts</li>
+              <li>{seedCounts.shareholders ?? 0} Sample Shareholders</li>
+              <li>{seedCounts.movements ?? 0} Published Share Movements</li>
+              <li>{seedCounts.valuations ?? 0} Historical Share Valuations</li>
+              <li>{seedCounts.publications ?? 0} Publications & Announcements</li>
+              <li>{seedCounts.supportQueries ?? 0} Sample Support Queries</li>
+              <li>{seedCounts.users ?? 0} Demo Testing User Accounts</li>
             </ul>
             <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
               <strong>Safe Guarantee:</strong> Your Administrator account (<strong>{user?.email}</strong>) and company configuration will remain completely safe. The register issued shares will reset to 0.
@@ -1825,7 +2171,8 @@ export default function AdminGovernanceTabs({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL 2: Demo Testing Accounts */}
       {showDemoAccountsModal && (

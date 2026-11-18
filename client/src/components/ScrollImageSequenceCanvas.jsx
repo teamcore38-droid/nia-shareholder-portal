@@ -14,7 +14,8 @@ import React, { useEffect, useRef } from 'react';
  * - Zero layout shift, zero flicker, 60fps+ hardware-accelerated rendering
  */
 export default function ScrollImageSequenceCanvas({
-  scrollProgress = 0, // 0.0 to 1.0
+  scrollProgress = 0, // 0.0 to 1.0 (fallback if progressRef not provided)
+  progressRef = null, // Optional ref { current: 0..1 } for zero-re-render parent updates
   totalFrames = 70,
   framePath = (i) => `/frames/ezgif-frame-${String(i).padStart(3, '0')}.webp`
 }) {
@@ -25,53 +26,91 @@ export default function ScrollImageSequenceCanvas({
   const currentFrameRef = useRef(1);
   const needsRedrawRef = useRef(true);
   const isReducedMotion = useRef(false);
+  const isVisibleRef = useRef(true);
 
-  // Update target frame whenever scroll progress changes
+  // Update target frame whenever scrollProgress prop changes
   useEffect(() => {
+    if (progressRef) return;
     const clampedProgress = Math.max(0, Math.min(1, scrollProgress));
     const target = 1 + clampedProgress * (totalFrames - 1);
     targetFrameRef.current = target;
-  }, [scrollProgress, totalFrames]);
+  }, [scrollProgress, progressRef, totalFrames]);
 
-  // Main setup: preloading, animation loop, and resize management
+  // Main setup: progressive preloading, visibility-aware animation loop, and resize management
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
+    let cancelled = false;
+
     // Check prefers-reduced-motion
     if (typeof window !== 'undefined' && window.matchMedia) {
       isReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
 
-    // 1. Progressive Image Preloading: Frame 1 prioritized for instant display
-    const frame1 = new Image();
-    frame1.onload = () => {
-      imagesCache.current[1] = frame1;
-      needsRedrawRef.current = true;
-    };
-    frame1.src = framePath(1);
-    if (frame1.complete && frame1.naturalWidth > 0) {
-      imagesCache.current[1] = frame1;
-      needsRedrawRef.current = true;
-    }
-
-    // 2. Preload remaining frames in background batches so scrubbing is instant
-    for (let i = 2; i <= totalFrames; i++) {
-      const img = new Image();
-      img.onload = () => {
-        imagesCache.current[i] = img;
-        const currentRounded = Math.round(currentFrameRef.current);
-        if (currentRounded === i) {
-          needsRedrawRef.current = true;
+    // 1. Progressive Batched Image Preloading (prevents network saturation & main-thread decode jank)
+    const loadFrame = (index, priority = 'auto') =>
+      new Promise((resolve) => {
+        if (cancelled || imagesCache.current[index]) {
+          resolve();
+          return;
         }
-      };
-      img.src = framePath(i);
-      if (img.complete && img.naturalWidth > 0) {
-        imagesCache.current[i] = img;
+        const img = new Image();
+        img.decoding = 'async';
+        if (priority === 'high') {
+          img.fetchPriority = 'high';
+        }
+        img.onload = () => {
+          if (!cancelled) {
+            imagesCache.current[index] = img;
+            const currentRounded = Math.round(currentFrameRef.current);
+            if (index === 1 || currentRounded === index || !imagesCache.current[currentRounded]) {
+              needsRedrawRef.current = true;
+            }
+          }
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = framePath(index);
+        if (img.complete && img.naturalWidth > 0) {
+          imagesCache.current[index] = img;
+          needsRedrawRef.current = true;
+          resolve();
+        }
+      });
+
+    // Prioritize Frame 1 immediately, then stride keyframes (every 5th frame), then remaining frames in small batches
+    const preloadSequence = async () => {
+      await loadFrame(1, 'high');
+      if (cancelled) return;
+
+      const queue = [];
+      const seen = new Set([1]);
+      for (let i = 5; i <= totalFrames; i += 5) {
+        queue.push(i);
+        seen.add(i);
       }
-    }
+      for (let i = 2; i <= totalFrames; i++) {
+        if (!seen.has(i)) {
+          queue.push(i);
+          seen.add(i);
+        }
+      }
+
+      const CONCURRENCY = 5;
+      let cursor = 0;
+      const workers = Array.from({ length: CONCURRENCY }, async () => {
+        while (!cancelled && cursor < queue.length) {
+          const nextIdx = queue[cursor++];
+          await loadFrame(nextIdx);
+        }
+      });
+      await Promise.all(workers);
+    };
+
+    preloadSequence();
 
     // 3. Responsive Canvas Sizing (uses container client dimensions)
     const resizeCanvas = () => {
@@ -151,12 +190,21 @@ export default function ScrollImageSequenceCanvas({
       ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
     };
 
-    // 5. Persistent Animation Loop with Smooth Interpolation / Lerp
-    let animationFrameId;
+    // 5. Visibility-Aware Animation Loop with Smooth Interpolation / Lerp
+    let animationFrameId = null;
     let lastRenderedFrame = -1;
 
     const renderLoop = () => {
+      if (cancelled || !isVisibleRef.current) {
+        animationFrameId = null;
+        return;
+      }
       animationFrameId = requestAnimationFrame(renderLoop);
+
+      if (progressRef && typeof progressRef.current === 'number') {
+        const clamped = Math.max(0, Math.min(1, progressRef.current));
+        targetFrameRef.current = 1 + clamped * (totalFrames - 1);
+      }
 
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
@@ -164,12 +212,9 @@ export default function ScrollImageSequenceCanvas({
       const delta = target - current;
       const absDelta = Math.abs(delta);
 
-      // Adaptive lerp:
-      // When scrolling actively, track the scroll position faster (up to 0.42) to eliminate lag
-      // When nearing the target, ease gently into the final frame with 0.22 for silkiness
-      let lerpSpeed = 0.22;
+      let lerpSpeed = 0.28;
       if (absDelta > 1.5) {
-        lerpSpeed = Math.min(0.42, 0.22 + (absDelta - 1.5) * 0.04);
+        lerpSpeed = Math.min(0.48, 0.28 + (absDelta - 1.5) * 0.04);
       }
       if (isReducedMotion.current) {
         lerpSpeed = 1.0;
@@ -190,14 +235,33 @@ export default function ScrollImageSequenceCanvas({
       }
     };
 
+    // Pause RAF loop when hero canvas is scrolled completely offscreen (0% idle CPU/GPU)
+    let observer = null;
+    if (typeof IntersectionObserver !== 'undefined' && containerRef.current) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          isVisibleRef.current = Boolean(entry?.isIntersecting);
+          if (isVisibleRef.current && !animationFrameId) {
+            needsRedrawRef.current = true;
+            renderLoop();
+          }
+        },
+        { rootMargin: '200px 0px' }
+      );
+      observer.observe(containerRef.current);
+    }
+
     renderLoop();
 
     // 6. Cleanup
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      cancelled = true;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (observer) observer.disconnect();
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [totalFrames, framePath]);
+  }, [totalFrames, framePath, progressRef]);
 
   return (
     <div

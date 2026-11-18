@@ -33,7 +33,21 @@ function sanitizeRequestInputs(req, res, next) {
   if (req.query && typeof req.query === 'object') {
     stripUnsafeKeys(req.query);
   }
+  if (req.params && typeof req.params === 'object') {
+    stripUnsafeKeys(req.params);
+  }
   next();
+}
+
+/**
+ * Prevents CSV Formula Injection (CWE-1236) when exporting untrusted text to spreadsheet software.
+ */
+function escapeCsvCell(value) {
+  const str = String(value ?? '').replace(/"/g, '""');
+  if (/^[=+\-@\t\r]/.test(str) && !/^[+-]?\d+(\.\d+)?%?$/.test(str)) {
+    return `"'${str}"`;
+  }
+  return `"${str}"`;
 }
 
 function isPlainString(val, maxLen = 2000) {
@@ -109,6 +123,7 @@ function sendSafeError(res, err, fallbackMessage = 'Request could not be complet
 module.exports = {
   stripUnsafeKeys,
   sanitizeRequestInputs,
+  escapeCsvCell,
   isPlainString,
   validatePasswordPolicy,
   sanitizeSafeUrl,

@@ -613,6 +613,60 @@ router.post('/support', authenticate, async (req, res) => {
   }
 });
 
+// Shareholder Reply to Own Support Request
+router.post('/support/:id/reply', authenticate, async (req, res) => {
+  try {
+    const shareholderId = resolvePermittedShareholderId(req);
+    const { message } = req.body;
+    if (!isPlainString(message, 4000) || !message.trim()) {
+      return res.status(400).json({ message: 'Please enter a reply message.' });
+    }
+
+    const ticket = await SupportRequest.findById(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Support request not found.' });
+    }
+
+    const isStaff = ['Administrator', 'Data officer', 'Approver'].includes(req.user.role);
+    if (!isStaff && ticket.shareholderId !== shareholderId) {
+      return res.status(403).json({
+        message: 'Access denied: You can only reply to your own support requests.'
+      });
+    }
+
+    const replies = Array.isArray(ticket.replies) ? [...ticket.replies] : [];
+    replies.push({
+      id: `rep-${Date.now()}`,
+      senderName: req.user.fullName,
+      senderRole: req.user.role,
+      message: message.trim(),
+      createdAt: new Date().toISOString()
+    });
+    ticket.replies = replies;
+    if (ticket.status === 'Resolved') {
+      ticket.status = 'Open';
+    }
+    await ticket.save();
+
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: 'Added reply to support request',
+      reference: ticket.reference,
+      entityType: 'SupportRequest',
+      newValue: message.trim().slice(0, 80)
+    });
+
+    res.json({
+      message: `Reply posted to ${ticket.reference}.`,
+      supportRequest: ticket
+    });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to post support reply.');
+  }
+});
+
 // Desktop Interface 07: Profile & Security — Request Profile Update
 router.post('/profile-update-request', authenticate, async (req, res) => {
   try {

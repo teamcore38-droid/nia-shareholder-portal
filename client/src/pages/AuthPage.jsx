@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -28,6 +28,14 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
   const [mode, setMode] = useState(
     !bootstrapStatus.initialized ? 'setup-admin' : initialMode
   );
+
+  useEffect(() => {
+    if (!bootstrapStatus.initialized) {
+      setMode('setup-admin');
+    } else if (initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode, bootstrapStatus.initialized]);
 
   // Sign-In state
   const [email, setEmail] = useState('');
@@ -69,7 +77,7 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
         setPreAuthData(res.data);
         setVerificationCode('');
         setMode('verify-staff');
-        notify('Additional multi-factor verification required for staff sign-in.', 'info');
+        notify('Additional multi-factor verification required for sign-in.', 'info');
       } else {
         applySession(res.data);
         notify(`Welcome back, ${res.data.user.fullName}.`);
@@ -574,12 +582,12 @@ export default function AuthPage({ onBackToHome, initialMode = 'signin' }) {
             </div>
           )}
 
-          {/* CARD 3: Staff 2FA Verification (Interface M08) */}
+          {/* CARD 3: Multi-Factor 2FA Verification (Interface M08) */}
           {mode === 'verify-staff' && (
             <div className="bg-white text-slate-900 rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] p-7 sm:p-9 border-2 border-[#D4AF37]/60">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-[#D4AF37]/40 text-[#9A7B2C] text-xs font-bold mb-3">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Staff 2-Step Verification
+                {preAuthData?.role === 'Shareholder' ? 'Shareholder 2-Step Verification' : 'Staff 2-Step Verification'}
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900">Verify your sign in</h2>
               <p className="text-xs text-slate-500 mt-1">

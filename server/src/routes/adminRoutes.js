@@ -49,6 +49,7 @@ const {
   invalidateAuthUserCache
 } = require('../utils/cache');
 const {
+  escapeCsvCell,
   isPlainString,
   validatePasswordPolicy,
   sanitizeSafeUrl,
@@ -154,7 +155,7 @@ router.post('/upload', authenticate, requireStaff, uploadLimiter, (req, res, nex
       file: result
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -594,7 +595,7 @@ router.get('/overview', authenticate, requireStaff, async (req, res) => {
       seedStatus
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -696,7 +697,7 @@ router.get('/shareholders', authenticate, requireStaff, async (req, res) => {
       currency: registerState.settings.baseCurrency || 'LKR'
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -1016,7 +1017,7 @@ router.get('/movements', authenticate, requireStaff, async (req, res) => {
       difference: registerState.difference
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -1240,7 +1241,31 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
       });
     }
 
-    const { quantity, effectiveDate, reason, supportingDocumentUrl, supportingDocumentName, submitForApproval } = req.body;
+    const {
+      movementType,
+      fromShareholderId,
+      toShareholderId,
+      quantity,
+      effectiveDate,
+      reason,
+      linkedReference,
+      supportingDocumentUrl,
+      supportingDocumentName,
+      affectsIssuedTotal,
+      submitForApproval
+    } = req.body;
+
+    if (movementType && ['Opening', 'Allocation', 'Transfer', 'Correction', 'Cancellation'].includes(movementType)) {
+      mov.movementType = movementType;
+    }
+    if (fromShareholderId !== undefined) mov.fromShareholderId = fromShareholderId || null;
+    if (toShareholderId !== undefined) mov.toShareholderId = toShareholderId || null;
+    if (linkedReference !== undefined && isPlainString(linkedReference, 80)) {
+      mov.linkedReference = linkedReference.trim();
+    }
+    if (affectsIssuedTotal !== undefined) {
+      mov.affectsIssuedTotal = mov.movementType === 'Transfer' ? false : Boolean(affectsIssuedTotal);
+    }
     if (quantity !== undefined) {
       const numQty = Number(quantity);
       if (!numQty || numQty <= 0 || !Number.isInteger(numQty)) {
@@ -1249,7 +1274,7 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
       mov.quantity = numQty;
     }
     if (effectiveDate !== undefined) mov.effectiveDate = effectiveDate;
-    if (reason !== undefined && isPlainString(reason, 1000)) mov.reason = reason;
+    if (reason !== undefined && isPlainString(reason, 1000)) mov.reason = reason.trim();
     if (supportingDocumentUrl !== undefined) {
       const safeDocUrl = sanitizeSafeUrl(supportingDocumentUrl);
       if (safeDocUrl === null) {
@@ -1260,6 +1285,14 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
     if (supportingDocumentName !== undefined && isPlainString(supportingDocumentName, 255)) {
       mov.supportingDocumentName = supportingDocumentName;
     }
+
+    const [fromSh, toSh] = await Promise.all([
+      mov.fromShareholderId ? Shareholder.findOne({ shareholderId: mov.fromShareholderId }).select('fullName').lean() : Promise.resolve(null),
+      mov.toShareholderId ? Shareholder.findOne({ shareholderId: mov.toShareholderId }).select('fullName').lean() : Promise.resolve(null)
+    ]);
+    mov.fromShareholderName = fromSh ? fromSh.fullName : '';
+    mov.toShareholderName = toSh ? toSh.fullName : '';
+
     if (submitForApproval !== undefined) {
       if (submitForApproval && ['Transfer', 'Cancellation', 'Correction'].includes(mov.movementType) && mov.fromShareholderId) {
         const registerState = await calculateRegisterState();
@@ -1286,9 +1319,42 @@ router.put('/movements/:id', authenticate, requireStaff, async (req, res) => {
       newValue: `${mov.quantity} shares effective ${mov.effectiveDate}`
     });
 
-    res.json({ message: `Movement ${mov.reference} updated.`, movement: mov });
+    res.json({ message: `Movement ${mov.reference} updated (${mov.status}).`, movement: mov });
   } catch (err) {
     return sendSafeError(res, err, 'Failed to update share movement.');
+  }
+});
+
+// Delete Draft / Returned / Rejected Share Movement (Published records remain strictly immutable)
+router.delete('/movements/:id', authenticate, requireStaff, async (req, res) => {
+  try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareMovements', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to delete share movement drafts.`
+      });
+    }
+    const mov = await ShareMovement.findById(req.params.id);
+    if (!mov) return res.status(404).json({ message: 'Movement record not found.' });
+    if (mov.status === 'Published' || mov.status === 'Scheduled') {
+      return res.status(400).json({
+        message: 'Published or scheduled share movements cannot be deleted. Use a linked Correction entry instead.'
+      });
+    }
+    await ShareMovement.findByIdAndDelete(mov._id);
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: `Deleted ${mov.status.toLowerCase()} share movement`,
+      reference: mov.reference,
+      entityType: 'ShareMovement',
+      previousValue: `${mov.movementType} ${mov.quantity} shares (${mov.status})`,
+      newValue: 'Deleted'
+    });
+    res.json({ message: `Draft movement ${mov.reference} deleted.` });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to delete share movement.');
   }
 });
 
@@ -1320,7 +1386,7 @@ router.get('/valuations', authenticate, requireStaff, async (req, res) => {
       shareClass: valuationState.shareClass
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -1432,6 +1498,105 @@ router.post('/valuations', authenticate, requireStaff, async (req, res) => {
   }
 });
 
+// Update Draft / Returned Share Valuation
+router.put('/valuations/:id', authenticate, requireStaff, async (req, res) => {
+  try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareValues', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to modify share valuations.`
+      });
+    }
+
+    const val = await ShareValuation.findById(req.params.id);
+    if (!val) return res.status(404).json({ message: 'Valuation record not found.' });
+    if (val.status === 'Published') {
+      return res.status(400).json({ message: 'Published share valuations are immutable.' });
+    }
+
+    if (req.body.version && Number(req.body.version) !== Number(val.version)) {
+      return res.status(409).json({
+        message: 'Stale edit detected: This valuation was modified by another user. Please reload first.'
+      });
+    }
+
+    const { valuePerShare, effectiveDate, basis, supportingDocumentUrl, supportingDocumentName, submitForApproval } = req.body;
+    if (valuePerShare !== undefined) {
+      const numVal = Number(valuePerShare);
+      if (isNaN(numVal) || numVal <= 0) {
+        return res.status(400).json({ message: 'Value per share must be a positive number.' });
+      }
+      val.valuePerShare = numVal;
+      if (val.previousValuePerShare !== null && val.previousValuePerShare > 0) {
+        val.changePercent = Number((((numVal - val.previousValuePerShare) / val.previousValuePerShare) * 100).toFixed(2));
+      }
+    }
+    if (effectiveDate !== undefined) val.effectiveDate = effectiveDate;
+    if (basis !== undefined && isPlainString(basis, 2000) && basis.trim()) val.basis = basis.trim();
+    if (supportingDocumentUrl !== undefined) {
+      const safeDocUrl = sanitizeSafeUrl(supportingDocumentUrl);
+      if (safeDocUrl === null) {
+        return res.status(400).json({ message: 'Invalid supporting document URL format.' });
+      }
+      val.supportingDocumentUrl = safeDocUrl;
+    }
+    if (supportingDocumentName !== undefined && isPlainString(supportingDocumentName, 255)) {
+      val.supportingDocumentName = supportingDocumentName;
+    }
+    if (submitForApproval !== undefined) {
+      val.status = submitForApproval ? 'Submitted' : 'Draft';
+      if (submitForApproval) val.submittedAt = new Date().toISOString();
+    }
+
+    await val.save();
+
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: `Updated share valuation (${val.status})`,
+      reference: val.reference,
+      entityType: 'ShareValuation',
+      newValue: `${val.currency} ${Number(val.valuePerShare).toFixed(2)} (Effective: ${val.effectiveDate})`
+    });
+
+    res.json({ message: `Valuation ${val.reference} updated (${val.status}).`, valuation: val });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to update share valuation.');
+  }
+});
+
+// Delete Draft / Returned / Rejected Share Valuation
+router.delete('/valuations/:id', authenticate, requireStaff, async (req, res) => {
+  try {
+    const canEdit = await checkRolePermission(req.user.role, 'shareValues', 'createEditDraft');
+    if (!canEdit) {
+      return res.status(403).json({
+        message: `Access control: Role "${req.user.role}" is not permitted to delete valuation drafts.`
+      });
+    }
+    const val = await ShareValuation.findById(req.params.id);
+    if (!val) return res.status(404).json({ message: 'Valuation record not found.' });
+    if (val.status === 'Published' || val.status === 'Scheduled') {
+      return res.status(400).json({ message: 'Published or scheduled valuations cannot be deleted.' });
+    }
+    await ShareValuation.findByIdAndDelete(val._id);
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: `Deleted ${val.status.toLowerCase()} share valuation`,
+      reference: val.reference,
+      entityType: 'ShareValuation',
+      previousValue: `${val.currency} ${Number(val.valuePerShare).toFixed(2)} (${val.status})`,
+      newValue: 'Deleted'
+    });
+    res.json({ message: `Draft valuation ${val.reference} deleted.` });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to delete share valuation.');
+  }
+});
+
 // Desktop Interface 14 & Mobile M07: Approvals Center
 router.get('/approvals', authenticate, requireStaff, async (req, res) => {
   try {
@@ -1504,7 +1669,7 @@ router.get('/approvals', authenticate, requireStaff, async (req, res) => {
       shareholders
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -1793,6 +1958,29 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
       const pub = await Publication.findById(itemId);
       if (!pub) return res.status(404).json({ message: 'Publication not found.' });
 
+      const isSelfApproval =
+        pub.enteredByEmail &&
+        pub.enteredByEmail.toLowerCase() === req.user.email.toLowerCase();
+
+      if (decision === 'approve' && isSelfApproval) {
+        if (settings.financialApprovalPolicy !== 'Single-operator exception logged') {
+          return res.status(403).json({
+            message:
+              'Separation of duties policy: Submitter cannot approve their own publication submission. An independent Approver must review this entry.'
+          });
+        } else {
+          await logAuditEvent({
+            actor: req.user.fullName,
+            actorEmail: req.user.email,
+            actorRole: req.user.role,
+            action: 'Single-operator exception invoked for publication approval',
+            reference: pub.reference,
+            entityType: 'PolicyException',
+            reason: reviewerComment || 'Single-operator policy exception'
+          });
+        }
+      }
+
       pub.status = decision === 'approve' ? 'Published' : decision === 'return' ? 'Returned' : 'Rejected';
       pub.reviewedBy = req.user.fullName;
       pub.reviewerComment = (reviewerComment || '').trim();
@@ -1817,10 +2005,49 @@ router.post('/approvals/action', authenticate, requireStaff, async (req, res) =>
       const sh = await Shareholder.findById(itemId);
       if (!sh) return res.status(404).json({ message: 'Shareholder not found.' });
 
+      const isSelfApproval =
+        sh.enteredByEmail &&
+        sh.enteredByEmail.toLowerCase() === req.user.email.toLowerCase();
+
+      if (decision === 'approve' && isSelfApproval) {
+        if (settings.financialApprovalPolicy !== 'Single-operator exception logged') {
+          return res.status(403).json({
+            message:
+              'Separation of duties policy: Submitter cannot approve their own shareholder profile submission. An independent Approver must review this entry.'
+          });
+        }
+      }
+
       sh.accountStatus = decision === 'approve' ? 'Active' : decision === 'return' ? 'Returned' : 'Rejected';
       sh.reviewedBy = req.user.fullName;
       sh.reviewerComment = (reviewerComment || '').trim();
       await sh.save();
+
+      if (decision === 'approve') {
+        const existingUser = await User.findOne({
+          $or: [{ shareholderId: sh.shareholderId }, { email: sh.email.toLowerCase() }]
+        });
+        if (!existingUser) {
+          const inviteToken = `INV-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+          await User.create({
+            email: sh.email.toLowerCase(),
+            fullName: sh.fullName,
+            role: 'Shareholder',
+            status: 'Invited',
+            shareholderId: sh.shareholderId,
+            passwordHash: '',
+            inviteToken,
+            inviteExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            verificationEnabled: false
+          });
+          del(CACHE_KEYS.BOOTSTRAP_USER_COUNT);
+        } else if (existingUser.status === 'Suspended' || existingUser.status === 'Inactive') {
+          existingUser.status = 'Active';
+          await existingUser.save();
+          invalidateAuthUserCache(existingUser._id);
+        }
+      }
+
       invalidateLedgerCaches();
 
       await logAuditEvent({
@@ -2190,9 +2417,9 @@ router.get('/reports/export', authenticate, requireStaff, adminExportLimiter, as
     });
 
     if (String(format).toLowerCase() === 'csv') {
-      const headerLine = columns.map((c) => `"${c.header}"`).join(',');
+      const headerLine = columns.map((c) => escapeCsvCell(c.header)).join(',');
       const dataLines = rows.map((r) =>
-        columns.map((c) => `"${String(r[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+        columns.map((c) => escapeCsvCell(r[c.key] ?? '')).join(',')
       );
       const csvContent = [headerLine, ...dataLines].join('\n');
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -2210,7 +2437,7 @@ router.get('/reports/export', authenticate, requireStaff, adminExportLimiter, as
       summaryNote
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -2365,6 +2592,115 @@ router.post('/publications', authenticate, requireStaff, async (req, res) => {
   }
 });
 
+// Update Draft / Returned Publication
+router.put('/publications/:id', authenticate, requireStaff, async (req, res) => {
+  try {
+    const pub = await Publication.findById(req.params.id);
+    if (!pub) return res.status(404).json({ message: 'Publication not found.' });
+
+    const {
+      contentType,
+      category,
+      title,
+      summary,
+      periodOrDate,
+      audienceType,
+      targetShareholderId,
+      fileUrl,
+      fileName,
+      fileProvider,
+      actionType
+    } = req.body;
+
+    if (actionType === 'publish') {
+      const canPublish = await checkRolePermission(req.user.role, 'shareValues', 'approvePublish');
+      if (!canPublish) {
+        return res.status(403).json({
+          message: `Access control: Role "${req.user.role}" cannot publish directly. Please submit for review.`
+        });
+      }
+    }
+
+    if (contentType && ['Document', 'Announcement'].includes(contentType)) pub.contentType = contentType;
+    if (category) pub.category = category;
+    if (isPlainString(title, 200) && title.trim()) pub.title = title.trim();
+    if (summary !== undefined && isPlainString(summary, 2000)) pub.summary = summary.trim();
+    if (periodOrDate !== undefined && isPlainString(periodOrDate, 80)) pub.periodOrDate = periodOrDate;
+    if (audienceType && ['All shareholders', 'Specific shareholder'].includes(audienceType)) {
+      pub.audienceType = audienceType;
+      pub.targetShareholderId = audienceType === 'Specific shareholder' ? targetShareholderId || null : null;
+    }
+    if (fileUrl !== undefined) {
+      const safeFileUrl = sanitizeSafeUrl(fileUrl);
+      if (safeFileUrl === null) {
+        return res.status(400).json({ message: 'Invalid publication file URL format.' });
+      }
+      pub.fileUrl = safeFileUrl;
+    }
+    if (fileName !== undefined && isPlainString(fileName, 255)) pub.fileName = fileName;
+    if (fileProvider !== undefined && isPlainString(fileProvider, 60)) pub.fileProvider = fileProvider;
+
+    if (actionType) {
+      pub.status =
+        actionType === 'publish'
+          ? 'Published'
+          : actionType === 'submit'
+          ? 'Submitted'
+          : 'Draft';
+      if (pub.status === 'Published') {
+        pub.publishedDate = getTodayDateString();
+      }
+    }
+
+    await pub.save();
+    invalidatePublicationCaches();
+
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: `Updated publication (${pub.status})`,
+      reference: pub.reference,
+      entityType: 'Publication',
+      newValue: `${pub.title} (${pub.status})`
+    });
+
+    res.json({ message: `Publication ${pub.reference} updated (${pub.status}).`, publication: pub });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to update publication.');
+  }
+});
+
+// Delete Draft / Returned / Rejected Publication
+router.delete('/publications/:id', authenticate, requireStaff, async (req, res) => {
+  try {
+    const pub = await Publication.findById(req.params.id);
+    if (!pub) return res.status(404).json({ message: 'Publication not found.' });
+    if (pub.status === 'Published' && req.user.role !== 'Administrator') {
+      return res.status(403).json({
+        message: 'Only an Administrator can remove a published document or announcement.'
+      });
+    }
+    await Publication.findByIdAndDelete(pub._id);
+    invalidatePublicationCaches();
+
+    await logAuditEvent({
+      actor: req.user.fullName,
+      actorEmail: req.user.email,
+      actorRole: req.user.role,
+      action: `Deleted publication (${pub.status})`,
+      reference: pub.reference,
+      entityType: 'Publication',
+      previousValue: `${pub.title} (${pub.status})`,
+      newValue: 'Deleted'
+    });
+
+    res.json({ message: `Publication ${pub.reference} deleted.` });
+  } catch (err) {
+    return sendSafeError(res, err, 'Failed to delete publication.');
+  }
+});
+
 // Desktop Interface 20: Support Requests
 router.get('/support-requests', authenticate, requireStaff, async (req, res) => {
   try {
@@ -2461,7 +2797,7 @@ router.put('/support-requests/:id', authenticate, requireStaff, async (req, res)
       supportRequest: ticket
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -2479,7 +2815,7 @@ router.get('/settings', authenticate, requireStaff, async (req, res) => {
       seedStatus
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -2585,7 +2921,7 @@ router.put('/settings', authenticate, requireRoles('Administrator'), async (req,
       cloudflareStatus: getCloudflareStatus()
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 
@@ -2598,7 +2934,7 @@ router.get('/seed-data/status', authenticate, requireStaff, async (req, res) => 
     const status = await getSeedStatus();
     res.json(status);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return sendSafeError(res, err);
   }
 });
 

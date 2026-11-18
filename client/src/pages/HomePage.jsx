@@ -70,6 +70,16 @@ const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
   };
 };
 
+// Helper to apply smooth opacity and subtle translate transitions directly to stage DOM nodes (0 React re-renders on scroll)
+const applyStageStyleToElement = (el, progress, enterStart, enterEnd, exitStart, exitEnd) => {
+  if (!el) return;
+  const style = getStageStyle(progress, enterStart, enterEnd, exitStart, exitEnd);
+  el.style.opacity = String(style.opacity);
+  el.style.transform = style.transform;
+  el.style.pointerEvents = style.pointerEvents;
+  el.style.visibility = style.visibility;
+};
+
 export default function HomePage({ onNavigateToAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -79,128 +89,52 @@ export default function HomePage({ onNavigateToAuth }) {
   // FAQ open item
   const [openFaq, setOpenFaq] = useState(0);
 
-  // Scroll-linked hero image sequence
+  // Scroll-linked hero image sequence (zero-re-render ref-driven architecture)
   const heroTrackRef = useRef(null);
-  const [heroScrollProgress, setHeroScrollProgress] = useState(0);
+  const heroProgressRef = useRef(0);
+  const chapter1Ref = useRef(null);
+  const chapter2Ref = useRef(null);
+  const chapter3Ref = useRef(null);
 
-  // Programmatic scroll flag to prevent snap fighting during link navigation
-  const isProgrammaticScrollRef = useRef(false);
-
-  // Distinct stage plateaus with dedicated clean 3D motion showcase zones:
-  // - Stage 1 (Details): 0.00 to 0.16 (exits by 0.23)
-  // - Clean 3D Motion Only: 0.23 to 0.40 (all cards hidden, snap at 0.31)
-  // - Stage 2 (Details): 0.46 to 0.58 (enters 0.40, exits 0.64, snap at 0.52)
-  // - Clean 3D Motion Only: 0.64 to 0.77 (all cards hidden, snap at 0.70)
-  // - Stage 3 (Details): 0.83 to 0.92 (enters 0.77, exits 0.98, snap at 0.87)
-  const chapter1Style = getStageStyle(heroScrollProgress, -0.1, 0.0, 0.16, 0.23);
-  const chapter2Style = getStageStyle(heroScrollProgress, 0.40, 0.46, 0.58, 0.64);
-  const chapter3Style = getStageStyle(heroScrollProgress, 0.77, 0.83, 0.92, 0.98);
+  const chapter1InitialStyle = getStageStyle(0, -0.1, 0.0, 0.16, 0.23);
+  const chapter2InitialStyle = getStageStyle(0, 0.40, 0.46, 0.58, 0.64);
+  const chapter3InitialStyle = getStageStyle(0, 0.77, 0.83, 0.92, 0.98);
 
   useEffect(() => {
     let ticking = false;
-    let snapTimeout = null;
-    let isTouchActive = false;
 
-    // Defined clean resting targets within the hero track:
-    // 0.00: Stage 1 (Full Details: Title, CTA Buttons, Digital Network card)
-    // 0.31: Clean 3D Motion Only (Pure visual, all cards hidden)
-    // 0.52: Stage 2 (Full Details: Nationwide Digital Network & 3 frosted cards)
-    // 0.70: Clean 3D Motion Only (Pure visual, all cards hidden)
-    // 0.87: Stage 3 (Full Details: 6 Diversified Sectors & Action CTAs)
-    // 1.00: Exit Hero (Transition smoothly into Metrics Strip & rest of page)
-    const SNAP_TARGETS = [0.00, 0.31, 0.52, 0.70, 0.87, 1.00];
-
-    const evaluateSnap = () => {
-      if (isTouchActive || isProgrammaticScrollRef.current) return;
-
+    const updateScrollStages = () => {
       const el = heroTrackRef.current;
-      if (!el) return;
-
-      const rect = el.getBoundingClientRect();
-      const totalScrollable = el.offsetHeight - window.innerHeight;
-      if (totalScrollable <= 0) return;
-
-      const scrolled = -rect.top;
-      const progress = scrolled / totalScrollable;
-
-      // Only snap if the user has stopped inside the active hero track
-      // If user has scrolled into the rest of the website (progress >= 0.985), do not interfere
-      if (progress < 0.015 || progress > 0.985) return;
-
-      // Find the closest clean resting state (either full cards or clean motion)
-      let closest = SNAP_TARGETS[0];
-      let minDiff = 999;
-      for (const target of SNAP_TARGETS) {
-        const diff = Math.abs(target - progress);
-        if (diff < minDiff) {
-          minDiff = diff;
-          closest = target;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const totalScrollable = el.offsetHeight - window.innerHeight;
+        if (totalScrollable > 0) {
+          const scrolled = -rect.top;
+          const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
+          heroProgressRef.current = progress;
+          applyStageStyleToElement(chapter1Ref.current, progress, -0.1, 0.0, 0.16, 0.23);
+          applyStageStyleToElement(chapter2Ref.current, progress, 0.40, 0.46, 0.58, 0.64);
+          applyStageStyleToElement(chapter3Ref.current, progress, 0.77, 0.83, 0.92, 0.98);
         }
       }
-
-      // If user landed in an awkward in-between transition zone, smoothly glide to the clean target
-      if (minDiff > 0.018) {
-        const targetScrolled = totalScrollable * closest;
-        const deltaY = targetScrolled - scrolled;
-
-        window.scrollBy({
-          top: deltaY,
-          behavior: 'smooth'
-        });
-      }
-    };
-
-    const scheduleSnap = () => {
-      clearTimeout(snapTimeout);
-      snapTimeout = setTimeout(evaluateSnap, 140);
+      ticking = false;
     };
 
     const handleScroll = () => {
       if (!ticking) {
         ticking = true;
-        requestAnimationFrame(() => {
-          const el = heroTrackRef.current;
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            const totalScrollable = el.offsetHeight - window.innerHeight;
-            if (totalScrollable > 0) {
-              const scrolled = -rect.top;
-              const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
-              setHeroScrollProgress(progress);
-            }
-          }
-          ticking = false;
-        });
+        requestAnimationFrame(updateScrollStages);
       }
-
-      scheduleSnap();
-    };
-
-    const onTouchStart = () => {
-      isTouchActive = true;
-      clearTimeout(snapTimeout);
-    };
-
-    const onTouchEnd = () => {
-      isTouchActive = false;
-      scheduleSnap();
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
-    handleScroll();
+    updateScrollStages();
 
     return () => {
-      clearTimeout(snapTimeout);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchEnd);
     };
   }, []);
 
@@ -269,14 +203,10 @@ export default function HomePage({ onNavigateToAuth }) {
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
-    isProgrammaticScrollRef.current = true;
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
-    setTimeout(() => {
-      isProgrammaticScrollRef.current = false;
-    }, 1000);
   };
 
   return (
@@ -298,11 +228,7 @@ export default function HomePage({ onNavigateToAuth }) {
             {/* Active Link: Home with Gold Underline */}
             <button
               onClick={() => {
-                isProgrammaticScrollRef.current = true;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                setTimeout(() => {
-                  isProgrammaticScrollRef.current = false;
-                }, 1000);
               }}
               className="text-[#FDE047] font-bold cursor-pointer relative pb-1 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FDE047] transition-all"
             >
@@ -425,7 +351,7 @@ export default function HomePage({ onNavigateToAuth }) {
         <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-center">
           {/* Scroll-Linked Image Sequence Canvas (Behind the UI) */}
           <ScrollImageSequenceCanvas
-            scrollProgress={heroScrollProgress}
+            progressRef={heroProgressRef}
             totalFrames={70}
           />
 
@@ -439,8 +365,9 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* STAGE 1: EXACT SCREENSHOT DESIGN (HERO & DIGITAL NETWORK) */}
           {/* ========================================================= */}
           <div
+            ref={chapter1Ref}
             className="absolute inset-0 flex flex-col justify-center"
-            style={chapter1Style}
+            style={chapter1InitialStyle}
           >
             <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
               <section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -615,8 +542,9 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* STAGE 2: NATIONWIDE DIGITAL NETWORK & GOVERNANCE PILLARS  */}
           {/* ========================================================= */}
           <div
+            ref={chapter2Ref}
             className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
-            style={chapter2Style}
+            style={chapter2InitialStyle}
           >
             <div className="relative z-10 w-full max-w-6xl mx-auto text-center pt-16 lg:pt-20 my-auto">
               {/* Badge */}
@@ -682,8 +610,9 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* STAGE 3: 6 DIVERSIFIED SECTORS & GATEWAY ACCESS           */}
           {/* ========================================================= */}
           <div
+            ref={chapter3Ref}
             className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
-            style={chapter3Style}
+            style={chapter3InitialStyle}
           >
             <div className="relative z-10 w-full max-w-5xl mx-auto text-center pt-16 lg:pt-20 my-auto">
               {/* Badge */}
@@ -1499,7 +1428,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigateToAuth('signin')}
+                  onClick={() => onNavigateToAuth('activate')}
                   className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-black/50 hover:bg-black/70 border border-[#D4AF37]/40 text-[#F3E5AB] font-bold text-sm cursor-pointer"
                 >
                   Activate Account Invite

@@ -259,10 +259,8 @@ router.post('/login', strictLoginLimiter, async (req, res) => {
       return res.status(401).json({ message: 'Invalid Shareholder ID / email address or password.' });
     }
 
-    const isStaff = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
-
-    // Staff verification flow (Interface M08 & D01: "Additional verification required for staff")
-    if (isStaff && user.verificationEnabled) {
+    // Multi-factor verification flow (enforced for staff by default, and for any shareholder who enables 2FA)
+    if (user.verificationEnabled) {
       if (user.failedLoginAttempts || user.lockUntil) {
         user.failedLoginAttempts = 0;
         user.lockUntil = null;
@@ -765,6 +763,14 @@ router.post('/toggle-verification', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     user.verificationEnabled = !user.verificationEnabled;
+    if (user.verificationEnabled) {
+      if (!user.verificationCode) {
+        user.verificationCode = String(crypto.randomInt(100000, 999999));
+      }
+      if (!user.recoveryCode) {
+        user.recoveryCode = `NIA-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      }
+    }
     await user.save();
     invalidateAuthUserCache(user._id);
 
@@ -780,10 +786,58 @@ router.post('/toggle-verification', authenticate, async (req, res) => {
 
     res.json({
       message: `Multi-factor verification ${user.verificationEnabled ? 'enabled' : 'disabled'}.`,
-      verificationEnabled: user.verificationEnabled
+      verificationEnabled: user.verificationEnabled,
+      ...(user.verificationEnabled
+        ? {
+            verificationCode: user.verificationCode,
+            recoveryCode: user.recoveryCode
+          }
+        : {})
     });
   } catch (err) {
     return sendSafeError(res, err, 'Unable to update verification setting.');
+  }
+});
+
+// Rotate 2FA Verification & Recovery Codes (Interface 07)
+router.post('/regenerate-2fa', authenticate, async (req, res) => {
+  try {
+    const { currentPassword } = req.body;
+    if (!isPlainString(currentPassword, 128) || !currentPassword) {
+      return res.status(400).json({ message: 'Please enter your current password to view or rotate 2FA codes.' });
+    }
+    const user = await User.findById(req.user._id);
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash || '');
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
+    }
+
+    const rotate = Boolean(req.body.rotate);
+    if (rotate || !user.verificationCode || !user.recoveryCode) {
+      user.verificationCode = String(crypto.randomInt(100000, 999999));
+      user.recoveryCode = `NIA-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      user.verificationEnabled = true;
+      await user.save();
+      invalidateAuthUserCache(user._id);
+
+      await logAuditEvent({
+        actor: user.fullName,
+        actorEmail: user.email,
+        actorRole: user.role,
+        action: 'Rotated multi-factor verification and recovery codes',
+        reference: user.shareholderId || 'SECURITY',
+        entityType: 'User'
+      });
+    }
+
+    res.json({
+      message: rotate ? 'New 6-digit verification and recovery codes generated.' : 'Verification codes retrieved.',
+      verificationEnabled: user.verificationEnabled,
+      verificationCode: user.verificationCode,
+      recoveryCode: user.recoveryCode
+    });
+  } catch (err) {
+    return sendSafeError(res, err, 'Unable to manage 2FA verification codes.');
   }
 });
 

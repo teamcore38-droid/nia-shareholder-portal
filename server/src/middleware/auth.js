@@ -93,10 +93,9 @@ async function authenticate(req, res, next) {
       });
     }
 
-    const isStaff = ['Administrator', 'Data officer', 'Approver'].includes(user.role);
-    if (isStaff && user.verificationEnabled && decoded.staffVerified !== true) {
+    if (user.verificationEnabled && decoded.staffVerified !== true) {
       return res.status(403).json({
-        message: 'Staff multi-factor verification required.'
+        message: 'Multi-factor verification required.'
       });
     }
 

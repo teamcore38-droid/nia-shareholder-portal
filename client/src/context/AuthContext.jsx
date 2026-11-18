@@ -112,33 +112,67 @@ export function AuthProvider({ children }) {
     fetchBootstrapAndSession();
   }, [fetchBootstrapAndSession]);
 
-  const applySession = (data) => {
+  const applySession = useCallback((data) => {
     if (data.token) {
       localStorage.setItem('apex_portal_token', data.token);
     }
-    if (data.user) setUser(data.user);
+    setUser((prevUser) => {
+      const nextUser = data.user ? { ...(prevUser || {}), ...data.user } : prevUser;
+      const nextPerms = data.permissions || permissions || null;
+      const nextProfile = data.shareholderProfile || shareholderProfile || null;
+      const nextCompany = data.company || company || null;
+      if (nextUser) {
+        try {
+          localStorage.setItem(
+            SESSION_CACHE_KEY,
+            JSON.stringify({
+              user: nextUser,
+              permissions: nextPerms,
+              shareholderProfile: nextProfile,
+              company: nextCompany
+            })
+          );
+        } catch {}
+      }
+      return nextUser;
+    });
     if (data.permissions) setPermissions(data.permissions);
+    if (data.shareholderProfile !== undefined) setShareholderProfile(data.shareholderProfile);
     if (data.company) {
       setCompany(data.company);
       try {
         localStorage.setItem(COMPANY_CACHE_KEY, JSON.stringify(data.company));
       } catch {}
     }
-    if (data.user) {
-      try {
-        localStorage.setItem(
-          SESSION_CACHE_KEY,
-          JSON.stringify({
-            user: data.user,
-            permissions: data.permissions || permissions || null,
-            shareholderProfile: data.shareholderProfile || shareholderProfile || null,
-            company: data.company || company || null
-          })
-        );
-      } catch {}
-    }
     setBootstrapStatus((prev) => ({ ...prev, initialized: true }));
-  };
+  }, [permissions, shareholderProfile, company]);
+
+  const hasPermission = useCallback(
+    (resourceKey, actionKey) => {
+      if (!user) return false;
+      if (permissions && permissions[resourceKey] && permissions[resourceKey][actionKey] !== undefined) {
+        const val = permissions[resourceKey][actionKey];
+        return val === 'Yes' || val === 'Assigned' || val === 'If assigned' || val === 'Review if assigned';
+      }
+      if (user.role === 'Administrator') return true;
+      if (user.role === 'Data officer') {
+        if (actionKey === 'view') return resourceKey !== 'staffAndRoles';
+        if (actionKey === 'createEditDraft') {
+          return ['shareholderProfiles', 'shareMovements', 'shareValues'].includes(resourceKey);
+        }
+        return false;
+      }
+      if (user.role === 'Approver') {
+        if (actionKey === 'view') return resourceKey !== 'staffAndRoles';
+        if (actionKey === 'createEditDraft' || actionKey === 'approvePublish') {
+          return ['shareholderProfiles', 'shareMovements', 'shareValues'].includes(resourceKey);
+        }
+        return false;
+      }
+      return false;
+    },
+    [user, permissions]
+  );
 
   const logout = () => {
     api.post('/auth/logout').catch(() => {});
@@ -158,6 +192,7 @@ export function AuthProvider({ children }) {
         company,
         setCompany,
         permissions,
+        hasPermission,
         shareholderProfile,
         bootstrapStatus,
         loading,

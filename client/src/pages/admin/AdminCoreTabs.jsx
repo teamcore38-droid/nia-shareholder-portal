@@ -25,7 +25,7 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import api from '../../api/client';
+import api, { resolveUploadUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import FileUploader from '../../components/FileUploader';
 import SteppedValuationChart from '../../components/SteppedValuationChart';
@@ -85,9 +85,12 @@ export default function AdminCoreTabs({
   onRefresh,
   onInspectShareholderPortal
 }) {
-  const { user, company, notify } = useAuth();
+  const { user, company, notify, hasPermission } = useAuth();
   const currency = company?.baseCurrency || 'LKR';
   const isAdmin = user?.role === 'Administrator';
+  const canEditShareholders = hasPermission('shareholderProfiles', 'createEditDraft');
+  const canEditMovements = hasPermission('shareMovements', 'createEditDraft');
+  const canEditValues = hasPermission('shareValues', 'createEditDraft');
 
   // Seed Data Governance & Testing State
   const [showClearSeedConfirm, setShowClearSeedConfirm] = useState(false);
@@ -125,6 +128,7 @@ export default function AdminCoreTabs({
   const [movTypeFilter, setMovTypeFilter] = useState('All');
   const [movPage, setMovPage] = useState(1);
   const [showMovForm, setShowMovForm] = useState(false);
+  const [editingMov, setEditingMov] = useState(null);
   const [movForm, setMovForm] = useState({
     reference: '',
     movementType: 'Transfer',
@@ -144,6 +148,7 @@ export default function AdminCoreTabs({
   // STATE FOR VALUATION UPDATE WIZARD (INTERFACE 13 — MATCHES BOTTOM-RIGHT MOCKUP)
   // ============================================================================
   const [valStep, setValStep] = useState(1); // 1: Enter Details, 2: Add Evidence, 3: Review & Submit
+  const [editingVal, setEditingVal] = useState(null);
   const [valForm, setValForm] = useState({
     reference: '',
     shareClass: 'Ordinary',
@@ -267,15 +272,45 @@ export default function AdminCoreTabs({
     }
   };
 
+  const openEditMovement = (m) => {
+    setEditingMov(m);
+    setMovForm({
+      reference: m.reference || '',
+      movementType: m.movementType || 'Transfer',
+      shareClass: m.shareClass || 'Ordinary',
+      fromShareholderId: m.fromShareholderId || '',
+      toShareholderId: m.toShareholderId || '',
+      quantity: String(m.quantity || ''),
+      effectiveDate: m.effectiveDate || new Date().toISOString().slice(0, 10),
+      reason: m.reason || '',
+      linkedReference: m.linkedReference || '',
+      supportingDocumentUrl: m.supportingDocumentUrl || '',
+      supportingDocumentName: m.supportingDocumentName || '',
+      affectsIssuedTotal: Boolean(m.affectsIssuedTotal)
+    });
+    setShowMovForm(true);
+  };
+
   const handleSaveMovement = async (submitForApproval) => {
     try {
-      const res = await api.post('/admin/movements', {
-        ...movForm,
-        quantity: Number(movForm.quantity),
-        submitForApproval
-      });
-      notify(res.data.message);
+      if (editingMov) {
+        const res = await api.put(`/admin/movements/${editingMov._id}`, {
+          ...movForm,
+          quantity: Number(movForm.quantity),
+          submitForApproval,
+          version: editingMov.version
+        });
+        notify(res.data.message);
+      } else {
+        const res = await api.post('/admin/movements', {
+          ...movForm,
+          quantity: Number(movForm.quantity),
+          submitForApproval
+        });
+        notify(res.data.message);
+      }
       setShowMovForm(false);
+      setEditingMov(null);
       setMovForm({
         reference: '',
         movementType: 'Transfer',
@@ -296,20 +331,58 @@ export default function AdminCoreTabs({
     }
   };
 
+  const handleDeleteMovement = async (m) => {
+    if (!window.confirm(`Delete ${m.status.toLowerCase()} movement ${m.reference}?`)) return;
+    try {
+      const res = await api.delete(`/admin/movements/${m._id}`);
+      notify(res.data.message);
+      onRefresh();
+    } catch (err) {
+      notify(err.response?.data?.message || 'Could not delete movement.', 'error');
+    }
+  };
+
+  const openEditValuation = (v) => {
+    setEditingVal(v);
+    setValForm({
+      reference: v.reference || '',
+      shareClass: v.shareClass || 'Ordinary',
+      valuePerShare: String(v.valuePerShare || ''),
+      effectiveDate: v.effectiveDate || new Date().toISOString().slice(0, 10),
+      basis: v.basis || '',
+      supportingDocumentUrl: v.supportingDocumentUrl || '',
+      supportingDocumentName: v.supportingDocumentName || ''
+    });
+    setValStep(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSaveValuation = async (submitForApproval) => {
     if (!valForm.valuePerShare || Number(valForm.valuePerShare) <= 0) {
       notify('Please enter a valid positive value per share.', 'error');
       return;
     }
     try {
-      const res = await api.post('/admin/valuations', {
-        ...valForm,
-        reference: valForm.reference || valuationsData?.nextReference || '',
-        basis: valForm.basis || 'Updated based on the latest board-approved valuation.',
-        valuePerShare: Number(valForm.valuePerShare),
-        submitForApproval
-      });
-      notify(res.data.message);
+      if (editingVal) {
+        const res = await api.put(`/admin/valuations/${editingVal._id}`, {
+          ...valForm,
+          basis: valForm.basis || 'Updated based on the latest board-approved valuation.',
+          valuePerShare: Number(valForm.valuePerShare),
+          submitForApproval,
+          version: editingVal.version
+        });
+        notify(res.data.message);
+      } else {
+        const res = await api.post('/admin/valuations', {
+          ...valForm,
+          reference: valForm.reference || valuationsData?.nextReference || '',
+          basis: valForm.basis || 'Updated based on the latest board-approved valuation.',
+          valuePerShare: Number(valForm.valuePerShare),
+          submitForApproval
+        });
+        notify(res.data.message);
+      }
+      setEditingVal(null);
       setValForm({
         reference: '',
         shareClass: 'Ordinary',
@@ -323,6 +396,18 @@ export default function AdminCoreTabs({
       onRefresh();
     } catch (err) {
       notify(err.response?.data?.message || 'Failed to save valuation.', 'error');
+    }
+  };
+
+  const handleDeleteValuation = async (v) => {
+    if (!window.confirm(`Delete ${v.status.toLowerCase()} valuation ${v.reference}?`)) return;
+    try {
+      const res = await api.delete(`/admin/valuations/${v._id}`);
+      notify(res.data.message);
+      if (editingVal?._id === v._id) setEditingVal(null);
+      onRefresh();
+    } catch (err) {
+      notify(err.response?.data?.message || 'Could not delete valuation.', 'error');
     }
   };
 
@@ -396,6 +481,195 @@ export default function AdminCoreTabs({
     setTimeout(() => setCopiedAccountEmail(''), 2500);
     notify('Copied demo credentials to clipboard.');
   };
+
+  const seedCounts = overviewData?.seedStatus?.counts || {};
+
+  const renderSeedModals = () => (
+    <>
+      {/* 1. MODAL: Clear Seed Data Confirmation */}
+      {showClearSeedConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-rose-300 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">
+              Remove All Seed Data in 1 Click?
+            </h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              This action will permanently purge all{' '}
+              <strong>{seedCounts.total || 0} sample seed records</strong>:
+            </p>
+            <ul className="text-xs text-slate-600 mt-2 space-y-1 list-disc pl-5">
+              <li>{seedCounts.shareholders || 0} Sample Shareholders</li>
+              <li>{seedCounts.movements || 0} Published Share Movements</li>
+              <li>{seedCounts.valuations || 0} Historical Share Valuations</li>
+              <li>{seedCounts.publications || 0} Publications &amp; Announcements</li>
+              <li>{seedCounts.supportRequests || 0} Sample Support Queries</li>
+              <li>{seedCounts.users || 0} Demo Testing User Accounts</li>
+            </ul>
+            <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+              <strong>Safe Guarantee:</strong> Your Administrator account (<strong>{user?.email}</strong>) and company configuration will remain completely safe.
+            </div>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowClearSeedConfirm(false)}
+                disabled={seedActionLoading}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSeedData}
+                disabled={seedActionLoading}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md shadow-rose-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{seedActionLoading ? 'Removing...' : 'Yes, Purge Seed Data (1-Click)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. MODAL: Demo Testing Accounts */}
+      {showDemoAccountsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 border-2 border-[#D4AF37]/50 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Predefined Demo Testing Credentials
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Use these accounts to test dual-control Maker-Checker approvals and shareholder portal access.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDemoAccountsModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <div
+                  key={acc.email}
+                  className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-amber-50/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-sm">{acc.fullName}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          acc.role === 'Administrator'
+                            ? 'bg-purple-100 text-purple-800'
+                            : acc.role === 'Approver'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : acc.role === 'Data officer'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {acc.role}
+                      </span>
+                    </div>
+                    <div className="text-slate-500 font-mono-num">{acc.email}</div>
+                    <div className="text-[11px] text-slate-400">{acc.description}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-mono-num font-bold text-slate-800 text-[11px]">
+                      {acc.password}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCredentials(`${acc.email} | ${acc.password}`, acc.email)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#FDE047] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedAccountEmail === acc.email ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span>
+                Staff 2FA code: <strong className="font-mono-num text-slate-800">246810</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDemoAccountsModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. MODAL: Admin Override Insertion when Blocked */}
+      {showOverrideConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-[#D4AF37]/60 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-[#B8860B] flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">
+              Seed Data is Permanently Blocked
+            </h3>
+            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Permanent administrator policy is currently active to safeguard the production share register from accidental demo seeding.
+            </p>
+            <p className="text-xs text-slate-600 mt-2">
+              As an authenticated <strong>Administrator</strong>, would you like to execute an <strong>Administrator Override</strong> to insert the comprehensive seed data anyway?
+            </p>
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowOverrideConfirm(false)}
+                disabled={seedActionLoading}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsertSeedData(true)}
+                disabled={seedActionLoading}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{seedActionLoading ? 'Populating...' : 'Confirm Admin Override & Insert'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   // ============================================================================
   // TAB 1: DASHBOARD / COMPANY OVERVIEW (Interface 08 & Mobile M05)
@@ -478,7 +752,11 @@ export default function AdminCoreTabs({
                       )}
                     </div>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Current ledger holding: <strong>7 Shareholders</strong> • <strong>1,000,000 Ordinary Shares</strong> • <strong>5 Valuations (225.00 LKR)</strong> • 5 Publications • 3 Support Queries • 4 Demo Accounts.
+                      Current seed dataset: <strong>{seed.counts?.shareholders || 0} Shareholders</strong> •{' '}
+                      <strong>{seed.counts?.movements || 0} Movements ({Number(sum.issuedShares || 0).toLocaleString()} {company?.shareClass || 'Ordinary'} Shares)</strong> •{' '}
+                      <strong>{seed.counts?.valuations || 0} Valuations{pubVal ? ` (${Number(pubVal.valuePerShare).toFixed(2)} ${currency})` : ''}</strong> •{' '}
+                      {seed.counts?.publications || 0} Publications • {seed.counts?.supportRequests || 0} Support Queries •{' '}
+                      {seed.counts?.users || 0} Demo Accounts.
                     </p>
                   </div>
                 </div>
@@ -797,6 +1075,8 @@ export default function AdminCoreTabs({
             Run Reconciliation Report
           </button>
         </div>
+
+        {renderSeedModals()}
       </div>
     );
   }
@@ -1154,27 +1434,31 @@ export default function AdminCoreTabs({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleShareholderAccountAction(selectedShForActions, 'reset-invite')
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-[#D4AF37]/15 text-[#9A7B2C] hover:bg-[#D4AF37]/25 cursor-pointer"
-                  >
-                    Reset Invitation
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleShareholderAccountAction(selectedShForActions, 'suspend')
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 cursor-pointer"
-                  >
-                    {selectedShForActions.accountStatus === 'Suspended'
-                      ? 'Restore Access'
-                      : 'Suspend Access'}
-                  </button>
-                  {!selectedShForActions.hasLinkedHistory && (
+                  {canEditShareholders && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleShareholderAccountAction(selectedShForActions, 'reset-invite')
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-[#D4AF37]/15 text-[#9A7B2C] hover:bg-[#D4AF37]/25 cursor-pointer"
+                      >
+                        Reset Invitation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleShareholderAccountAction(selectedShForActions, 'suspend')
+                        }
+                        className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 cursor-pointer"
+                      >
+                        {selectedShForActions.accountStatus === 'Suspended'
+                          ? 'Restore Access'
+                          : 'Suspend Access'}
+                      </button>
+                    </>
+                  )}
+                  {isAdmin && !selectedShForActions.hasLinkedHistory && (
                     <button
                       type="button"
                       onClick={() =>
@@ -1507,6 +1791,7 @@ export default function AdminCoreTabs({
                     <option value="Allocation">Allocation</option>
                     <option value="Transfer">Transfer</option>
                     <option value="Correction">Correction</option>
+                    <option value="Cancellation">Cancellation</option>
                   </select>
                 </div>
               </div>
@@ -1534,6 +1819,7 @@ export default function AdminCoreTabs({
                         <th className="py-3 px-6">Quantity</th>
                         <th className="py-3 px-6">Effective Date</th>
                         <th className="py-3 px-6">Status</th>
+                        <th className="py-3 px-6 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
@@ -1547,6 +1833,11 @@ export default function AdminCoreTabs({
                             </div>
                             {m.reason && (
                               <div className="text-[11px] text-slate-500 mt-0.5">{m.reason}</div>
+                            )}
+                            {m.reviewerComment && ['Returned', 'Rejected'].includes(m.status) && (
+                              <div className="text-[11px] text-rose-600 font-semibold mt-0.5">
+                                Reviewer note: {m.reviewerComment}
+                              </div>
                             )}
                           </td>
                           <td className="py-3.5 px-6 font-mono-num font-semibold text-slate-800">
@@ -1569,11 +1860,44 @@ export default function AdminCoreTabs({
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : m.status === 'Submitted'
                                   ? 'bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30'
+                                  : m.status === 'Rejected'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                   : 'bg-amber-50 text-amber-800 border border-amber-200'
                               }`}
                             >
                               {m.status}
                             </span>
+                          </td>
+                          <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
+                            {m.supportingDocumentUrl && (
+                              <a
+                                href={resolveUploadUrl(m.supportingDocumentUrl)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Evidence</span>
+                              </a>
+                            )}
+                            {canEditMovements && ['Draft', 'Returned'].includes(m.status) && (
+                              <button
+                                type="button"
+                                onClick={() => openEditMovement(m)}
+                                className="px-2.5 py-1 rounded-lg border border-[#D4AF37] text-[#9A7B2C] hover:bg-[#080C16] hover:text-[#FDE047] font-bold cursor-pointer"
+                              >
+                                Edit / Submit
+                              </button>
+                            )}
+                            {canEditMovements && ['Draft', 'Returned', 'Rejected'].includes(m.status) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMovement(m)}
+                                className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1789,19 +2113,41 @@ export default function AdminCoreTabs({
 
               {/* Action Buttons Row */}
               <div className="flex flex-wrap items-center justify-end gap-3">
+                {editingVal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingVal(null);
+                      setValForm({
+                        reference: '',
+                        shareClass: 'Ordinary',
+                        valuePerShare: '',
+                        effectiveDate: new Date().toISOString().slice(0, 10),
+                        basis: '',
+                        supportingDocumentUrl: '',
+                        supportingDocumentName: ''
+                      });
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                  >
+                    Cancel Edit ({editingVal.reference})
+                  </button>
+                )}
                 <button
                   type="button"
+                  disabled={!canEditValues}
                   onClick={() => handleSaveValuation(false)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Save Draft
+                  {editingVal ? 'Update Draft' : 'Save Draft'}
                 </button>
                 <button
                   type="button"
+                  disabled={!canEditValues}
                   onClick={() => handleSaveValuation(true)}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  <span>Continue & Submit</span>
+                  <span>{editingVal ? `Update & Submit (${editingVal.reference})` : 'Continue & Submit'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -1837,6 +2183,7 @@ export default function AdminCoreTabs({
                     <th className="py-3 px-6">Basis</th>
                     <th className="py-3 px-6">Requested By</th>
                     <th className="py-3 px-6">Status</th>
+                    <th className="py-3 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -1851,7 +2198,14 @@ export default function AdminCoreTabs({
                       <td className="py-3.5 px-6 font-mono-num text-slate-600">
                         {v.effectiveDate}
                       </td>
-                      <td className="py-3.5 px-6 text-slate-700">{v.basis}</td>
+                      <td className="py-3.5 px-6 text-slate-700">
+                        <div>{v.basis}</div>
+                        {v.reviewerComment && ['Returned', 'Rejected'].includes(v.status) && (
+                          <div className="text-[11px] text-rose-600 font-semibold mt-0.5">
+                            Reviewer note: {v.reviewerComment}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3.5 px-6 text-slate-600">
                         {v.enteredByRole || v.enteredBy}
                       </td>
@@ -1862,11 +2216,44 @@ export default function AdminCoreTabs({
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : v.status === 'Submitted'
                               ? 'bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30'
+                              : v.status === 'Rejected'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : 'bg-amber-50 text-amber-800 border border-amber-200'
                           }`}
                         >
                           {v.status}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
+                        {v.supportingDocumentUrl && (
+                          <a
+                            href={resolveUploadUrl(v.supportingDocumentUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Evidence</span>
+                          </a>
+                        )}
+                        {canEditValues && ['Draft', 'Returned'].includes(v.status) && (
+                          <button
+                            type="button"
+                            onClick={() => openEditValuation(v)}
+                            className="px-2.5 py-1 rounded-lg border border-[#D4AF37] text-[#9A7B2C] hover:bg-[#080C16] hover:text-[#FDE047] font-bold cursor-pointer"
+                          >
+                            Edit / Submit
+                          </button>
+                        )}
+                        {canEditValues && ['Draft', 'Returned', 'Rejected'].includes(v.status) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteValuation(v)}
+                            className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1945,7 +2332,7 @@ export default function AdminCoreTabs({
     }))
   ];
 
-  // Historical / Approved / Rejected rows from movements & valuations
+  // Historical / Approved / Rejected rows across Movements, Valuations, and Shareholders
   const approvedHistoryRows = [
     ...(movementsData?.movements || [])
       .filter((m) => m.status === 'Published' || m.status === 'Scheduled')
@@ -1980,7 +2367,7 @@ export default function AdminCoreTabs({
         id: m._id,
         reference: m.reference,
         requestLabel: `Share ${m.movementType}`,
-        details: `${Number(m.quantity).toLocaleString()} shares`,
+        details: `${Number(m.quantity).toLocaleString()} shares${m.reviewerComment ? ` • ${m.reviewerComment}` : ''}`,
         requestedBy: m.enteredByRole || m.enteredBy || 'Staff',
         date: m.effectiveDate,
         status: m.status
@@ -1991,12 +2378,27 @@ export default function AdminCoreTabs({
         id: v._id,
         reference: v.reference,
         requestLabel: 'Value Update',
-        details: `${v.currency} ${Number(v.valuePerShare).toFixed(2)} per share`,
+        details: `${v.currency} ${Number(v.valuePerShare).toFixed(2)} per share${v.reviewerComment ? ` • ${v.reviewerComment}` : ''}`,
         requestedBy: v.enteredByRole || v.enteredBy || 'Staff',
         date: v.effectiveDate,
         status: v.status
+      })),
+    ...shareholders
+      .filter((s) => s.accountStatus === 'Rejected' || s.accountStatus === 'Returned')
+      .map((s) => ({
+        id: s._id,
+        reference: s.shareholderId,
+        requestLabel: 'Profile Verification',
+        details: `${s.fullName} (${s.email})`,
+        requestedBy: s.enteredBy || 'Staff',
+        date: new Date(s.updatedAt || Date.now()).toISOString().slice(0, 10),
+        status: s.accountStatus
       }))
   ];
+
+  const allHistoryRows = [...approvedHistoryRows, ...rejectedHistoryRows].sort((a, b) =>
+    String(b.date || '').localeCompare(String(a.date || ''))
+  );
 
   const activeReviewRow =
     selectedApprovalItem &&
@@ -2017,9 +2419,9 @@ export default function AdminCoreTabs({
         <div className="px-6 pt-4 border-b border-slate-200/80 flex items-center gap-6 overflow-x-auto">
           {[
             { id: 'Pending', label: `Pending (${unifiedPendingRows.length})` },
-            { id: 'Approved', label: 'Approved' },
-            { id: 'Rejected', label: 'Rejected' },
-            { id: 'History', label: 'History' }
+            { id: 'Approved', label: `Approved (${approvedHistoryRows.length})` },
+            { id: 'Rejected', label: `Rejected / Returned (${rejectedHistoryRows.length})` },
+            { id: 'History', label: `History (${allHistoryRows.length})` }
           ].map((tab) => {
             const active = approvalSubTab === tab.id;
             return (
@@ -2058,14 +2460,7 @@ export default function AdminCoreTabs({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    <th className="py-3.5 pl-6 pr-2 w-10">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all"
-                        className="w-4 h-4 rounded border-slate-300 text-[#B8860B]"
-                      />
-                    </th>
-                    <th className="py-3.5 px-4">Reference</th>
+                    <th className="py-3.5 pl-6 pr-4">Reference</th>
                     <th className="py-3.5 px-4">Request</th>
                     <th className="py-3.5 px-4">Details</th>
                     <th className="py-3.5 px-4">Requested By</th>
@@ -2079,21 +2474,12 @@ export default function AdminCoreTabs({
                     return (
                       <tr
                         key={row.id}
-                        className={`hover:bg-amber-50/30 transition-colors ${
+                        onClick={() => setSelectedApprovalItem(isSelected ? null : row)}
+                        className={`hover:bg-amber-50/30 transition-colors cursor-pointer ${
                           isSelected ? 'bg-amber-50/60' : ''
                         }`}
                       >
-                        <td className="py-4 pl-6 pr-2">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(isSelected)}
-                            onChange={() =>
-                              setSelectedApprovalItem(isSelected ? null : row)
-                            }
-                            className="w-4 h-4 rounded border-slate-300 text-[#B8860B]"
-                          />
-                        </td>
-                        <td className="py-4 px-4 font-mono-num font-extrabold text-slate-900">
+                        <td className="py-4 pl-6 pr-4 font-mono-num font-extrabold text-slate-900">
                           {row.reference}
                         </td>
                         <td className="py-4 px-4 font-semibold text-slate-800">
@@ -2107,9 +2493,10 @@ export default function AdminCoreTabs({
                         <td className="py-4 px-6 text-right">
                           <button
                             type="button"
-                            onClick={() =>
-                              setSelectedApprovalItem(isSelected ? null : row)
-                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedApprovalItem(isSelected ? null : row);
+                            }}
                             className={`px-4 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-[#080C16] border-[#D4AF37] text-[#FDE047] shadow-sm'
@@ -2143,6 +2530,8 @@ export default function AdminCoreTabs({
               <tbody className="divide-y divide-slate-100 text-xs">
                 {(approvalSubTab === 'Rejected'
                   ? rejectedHistoryRows
+                  : approvalSubTab === 'History'
+                  ? allHistoryRows
                   : approvedHistoryRows
                 ).map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50">
@@ -2158,7 +2547,7 @@ export default function AdminCoreTabs({
                     <td className="py-3.5 px-6 text-right">
                       <span
                         className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          row.status === 'Published'
+                          row.status === 'Published' || row.status === 'Scheduled'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
@@ -2179,13 +2568,24 @@ export default function AdminCoreTabs({
         const target = activeReviewRow || unifiedPendingRows[0];
         const raw = target.raw;
         const cmp = raw.liveComparison || {};
+        const resourceMap = {
+          movement: 'shareMovements',
+          valuation: 'shareValues',
+          shareholder: 'shareholderProfiles',
+          publication: 'shareValues'
+        };
+        const canApproveTarget = hasPermission(resourceMap[target.itemType] || 'shareMovements', 'approvePublish');
+        const evidenceUrl = raw.supportingDocumentUrl || raw.fileUrl || raw.kycDocumentUrl || '';
+        const evidenceName = raw.supportingDocumentName || raw.fileName || raw.kycDocumentName || 'Attached Evidence';
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const isFutureDate = Boolean(target.date && /^\d{4}-\d{2}-\d{2}$/.test(target.date) && target.date > todayStr);
 
         return (
           <div className="bg-white rounded-2xl border-2 border-[#D4AF37]/50 p-6 sm:p-7 shadow-lg space-y-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#9A7B2C] border border-[#D4AF37]/30 text-[11px] font-bold mb-1.5">
-                  Before & After Approval Inspection
+                  Before &amp; After Approval Inspection
                 </div>
                 <h3 className="text-lg font-extrabold text-slate-900">
                   Review {target.requestLabel}: {target.reference}
@@ -2195,15 +2595,28 @@ export default function AdminCoreTabs({
                   <strong className="font-mono-num">{target.date}</strong>
                 </p>
               </div>
-              {selectedApprovalItem && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedApprovalItem(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {evidenceUrl && (
+                  <a
+                    href={resolveUploadUrl(evidenceUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-[#D4AF37]/40 text-xs font-bold text-[#9A7B2C]"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Inspect Evidence ({evidenceName})</span>
+                  </a>
+                )}
+                {selectedApprovalItem && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApprovalItem(null)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Before-and-After Impact Table for Share Movements */}
@@ -2286,229 +2699,131 @@ export default function AdminCoreTabs({
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Reviewer Comment / Audit Note
-              </label>
-              <input
-                type="text"
-                placeholder="Confirm authorisation and supporting evidence..."
-                value={reviewerComments[target.id] || ''}
-                onChange={(e) =>
-                  setReviewerComments({ ...reviewerComments, [target.id]: e.target.value })
-                }
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-              />
-            </div>
+            {/* Publication Review Summary */}
+            {target.itemType === 'publication' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FBF9F2] border border-[#D4AF37]/40 text-xs">
+                <div>
+                  <span className="text-slate-500">Content &amp; Category:</span>
+                  <div className="font-bold text-slate-900 mt-0.5">
+                    {raw.contentType} • {raw.category}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Target Audience:</span>
+                  <div className="font-bold text-[#9A7B2C] mt-0.5">
+                    {raw.audienceType === 'Specific shareholder'
+                      ? `Private (${raw.targetShareholderId})`
+                      : 'All Shareholders'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Summary:</span>
+                  <div className="font-medium text-slate-800 mt-0.5">{raw.summary || raw.title}</div>
+                </div>
+              </div>
+            )}
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => handleApprovalDecision(target.itemType, target.id, 'approve', true)}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
-              >
-                Approve & Publish
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApprovalDecision(target.itemType, target.id, 'return')}
-                className="px-4 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
-              >
-                Return for Correction
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApprovalDecision(target.itemType, target.id, 'reject')}
-                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
-              >
-                Reject
-              </button>
-            </div>
+            {/* Shareholder Profile Verification Summary */}
+            {target.itemType === 'shareholder' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FBF9F2] border border-[#D4AF37]/40 text-xs">
+                <div>
+                  <span className="text-slate-500">Shareholder Identity:</span>
+                  <div className="font-bold text-slate-900 mt-0.5">
+                    {raw.shareholderId} — {raw.fullName}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Contact &amp; Type:</span>
+                  <div className="font-medium text-slate-800 mt-0.5">
+                    {raw.email} • {raw.shareholderType}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Current Status:</span>
+                  <div className="font-bold text-[#9A7B2C] mt-0.5">{raw.accountStatus}</div>
+                </div>
+              </div>
+            )}
+
+            {canApproveTarget ? (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Reviewer Comment / Audit Note
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Confirm authorisation and supporting evidence (mandatory for Return/Reject)..."
+                    value={reviewerComments[target.id] || ''}
+                    onChange={(e) =>
+                      setReviewerComments({ ...reviewerComments, [target.id]: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  {isFutureDate && ['movement', 'valuation'].includes(target.itemType) && (
+                    <button
+                      type="button"
+                      onClick={() => handleApprovalDecision(target.itemType, target.id, 'approve', false)}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm cursor-pointer"
+                    >
+                      Approve &amp; Schedule ({target.date})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleApprovalDecision(target.itemType, target.id, 'approve', true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:brightness-105 text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/20 cursor-pointer"
+                  >
+                    Approve &amp; Publish Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApprovalDecision(target.itemType, target.id, 'return')}
+                    className="px-4 py-2.5 rounded-xl bg-[#080C16] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Return for Correction
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApprovalDecision(target.itemType, target.id, 'reject')}
+                    className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900">
+                <div>
+                  <strong>Maker-Checker Governance:</strong> Role <strong>{user?.role}</strong> can prepare and submit records, while formal approval and publication require an independent <strong>Approver</strong> or <strong>Administrator</strong>.
+                </div>
+                {['movement', 'valuation'].includes(target.itemType) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (target.itemType === 'movement') {
+                        setActiveTab('register');
+                        openEditMovement(raw);
+                      } else if (target.itemType === 'valuation') {
+                        setActiveTab('values');
+                        openEditValuation(raw);
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-[#080C16] text-[#FDE047] font-bold cursor-pointer shrink-0"
+                  >
+                    Edit Draft / Submission
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
       })()}
 
-      {/* 1. MODAL: Clear Seed Data Confirmation */}
-      {showClearSeedConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-rose-300 animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center mb-4">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900">
-              Remove All Seed Data in 1 Click?
-            </h3>
-            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-              This action will permanently purge all <strong>31 sample seed records</strong>:
-            </p>
-            <ul className="text-xs text-slate-600 mt-2 space-y-1 list-disc pl-5">
-              <li>7 Sample Shareholders (SH-001 through SH-007)</li>
-              <li>7 Published Share Movements (1,000,000 shares)</li>
-              <li>5 Historical Share Valuations</li>
-              <li>5 Publications & Announcements</li>
-              <li>3 Sample Support Queries</li>
-              <li>4 Demo Testing User Accounts</li>
-            </ul>
-            <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
-              <strong>Safe Guarantee:</strong> Your Administrator account (<strong>{user?.email}</strong>) and company configuration will remain completely safe. The register issued shares will reset to 0.
-            </div>
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setShowClearSeedConfirm(false)}
-                disabled={seedActionLoading}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleClearSeedData}
-                disabled={seedActionLoading}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md shadow-rose-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>{seedActionLoading ? 'Removing...' : 'Yes, Purge Seed Data (1-Click)'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. MODAL: Demo Testing Accounts */}
-      {showDemoAccountsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 border-2 border-[#D4AF37]/50 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#0B101E] border border-[#D4AF37] text-[#FDE047] flex items-center justify-center">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">
-                    Predefined Demo Testing Credentials
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Use these accounts to test dual-control Maker-Checker approvals and shareholder portal access.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDemoAccountsModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <div
-                  key={acc.email}
-                  className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-amber-50/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-slate-900 text-sm">{acc.fullName}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                          acc.role === 'Administrator'
-                            ? 'bg-purple-100 text-purple-800'
-                            : acc.role === 'Approver'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : acc.role === 'Data officer'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {acc.role}
-                      </span>
-                    </div>
-                    <div className="text-slate-500 font-mono-num">{acc.email}</div>
-                    <div className="text-[11px] text-slate-400">{acc.description}</div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 font-mono-num font-bold text-slate-800 text-[11px]">
-                      {acc.password}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCredentials(`${acc.email} | ${acc.password}`, acc.email)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[#FDE047] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      {copiedAccountEmail === acc.email ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>
-                Staff 2FA code: <strong className="font-mono-num text-slate-800">246810</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowDemoAccountsModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. MODAL: Admin Override Insertion when Blocked */}
-      {showOverrideConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-2 border-[#D4AF37]/60 animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-[#B8860B] flex items-center justify-center mb-4">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900">
-              Seed Data is Permanently Blocked
-            </h3>
-            <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-              Permanent administrator policy is currently active to safeguard the production share register from accidental demo seeding.
-            </p>
-            <p className="text-xs text-slate-600 mt-2">
-              As an authenticated <strong>Administrator</strong>, would you like to execute an <strong>Administrator Override</strong> to insert the comprehensive seed data anyway?
-            </p>
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setShowOverrideConfirm(false)}
-                disabled={seedActionLoading}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInsertSeedData(true)}
-                disabled={seedActionLoading}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold shadow-md shadow-[#D4AF37]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{seedActionLoading ? 'Populating...' : 'Confirm Admin Override & Insert'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderSeedModals()}
     </div>
   );
 }
