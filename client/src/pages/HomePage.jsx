@@ -533,10 +533,10 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* ========================================================= */}
           <div
             ref={chapter1Ref}
-            className="absolute inset-0 flex flex-col justify-center z-10"
+            className="absolute inset-0 flex flex-col justify-start lg:justify-center z-10"
             style={chapter1InitialStyle}
           >
-            <div className="relative z-10 w-full pt-20 pb-3 sm:pt-22 sm:pb-4 lg:pt-20 lg:pb-8 my-auto">
+            <div className="relative z-10 w-full pt-24 pb-4 sm:pt-24 sm:pb-6 lg:pt-20 lg:pb-8 lg:my-auto">
               <section className="relative z-10 py-1 sm:py-3 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 lg:gap-14">
                   {/* Left Column: Crisp Typography, CTAs & Trust Badges */}
