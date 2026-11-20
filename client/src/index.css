@@ -54,3 +54,13 @@
 .animate-pulse-subtle {
   animation: pulseSubtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes scrollHairline {
+  0% { transform: translateY(-100%); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+.animate-scroll-hairline {
+  animation: scrollHairline 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ScrollImageSequenceCanvas from '../components/ScrollImageSequenceCanvas';
+import KineticObsidian3DCanvas from '../components/KineticObsidian3DCanvas';
 import {
   ShieldCheck,
   Lock,
@@ -12,11 +12,9 @@ import {
   CheckCircle2,
   ChevronDown,
   Building2,
-  PieChart,
   HelpCircle,
   Sparkles,
   Download,
-  KeyRound,
   FileCheck2,
   Menu,
   X,
@@ -25,9 +23,6 @@ import {
   Globe,
   Settings,
   MapPin,
-  Mail,
-  Phone,
-  ExternalLink,
   Layers,
   Monitor,
   Zap,
@@ -35,42 +30,66 @@ import {
 } from 'lucide-react';
 import { ApexBrandLogo } from '../components/ApexBrandLogo';
 
-// Helper to compute smooth opacity and subtle translate transitions across scroll stages
+// Hero scroll timeline chapters (wide clean plateaus + unobstructed 3D motion interludes)
+const HERO_CHAPTERS = [
+  { id: 'overview', label: 'Overview', targetProgress: 0.0 },
+  { id: 'aperture', label: '3D Kinetic', targetProgress: 0.29 },
+  { id: 'network', label: 'Network', targetProgress: 0.50 },
+  { id: 'helix', label: '3D Motion', targetProgress: 0.67 },
+  { id: 'sectors', label: 'Sectors', targetProgress: 0.84 }
+];
+
+// Narrow half-faded transition windows: settle gently only if scroll stops inside one of these
+const TRANSITION_ZONES = [
+  { start: 0.16, end: 0.21, snapLow: 0.0, snapHigh: 0.29 },
+  { start: 0.39, end: 0.44, snapLow: 0.29, snapHigh: 0.50 },
+  { start: 0.56, end: 0.61, snapLow: 0.50, snapHigh: 0.67 },
+  { start: 0.73, end: 0.78, snapLow: 0.67, snapHigh: 0.84 },
+  { start: 0.90, end: 0.96, snapLow: 0.84, snapHigh: 1.0 }
+];
+
+// Computes crisp Hermite opacity and subtle vertical glide across scroll stages
 const getStageStyle = (progress, enterStart, enterEnd, exitStart, exitEnd) => {
   let opacity = 0;
-  let translateY = 18;
+  let translateY = 20;
+  let scale = 0.985;
 
   if (progress <= enterStart) {
     opacity = 0;
-    translateY = 18;
+    translateY = 20;
+    scale = 0.985;
   } else if (progress < enterEnd) {
     const t = (progress - enterStart) / (enterEnd - enterStart);
     const ease = t * t * (3 - 2 * t);
     opacity = ease;
-    translateY = (1 - ease) * 18;
+    translateY = (1 - ease) * 20;
+    scale = 0.985 + ease * 0.015;
   } else if (progress <= exitStart) {
     opacity = 1;
     translateY = 0;
+    scale = 1;
   } else if (progress < exitEnd) {
     const t = (progress - exitStart) / (exitEnd - exitStart);
     const ease = t * t * (3 - 2 * t);
     opacity = 1 - ease;
     translateY = -ease * 18;
+    scale = 1 - ease * 0.012;
   } else {
     opacity = 0;
     translateY = -18;
+    scale = 0.988;
   }
 
   return {
     opacity: Number(opacity.toFixed(3)),
-    transform: `translate3d(0, ${translateY.toFixed(1)}px, 0)`,
-    pointerEvents: opacity > 0.35 ? 'auto' : 'none',
+    transform: `translate3d(0, ${translateY.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`,
+    pointerEvents: opacity > 0.4 ? 'auto' : 'none',
     visibility: opacity > 0.01 ? 'visible' : 'hidden',
     willChange: 'transform, opacity'
   };
 };
 
-// Helper to apply smooth opacity and subtle translate transitions directly to stage DOM nodes (0 React re-renders on scroll)
+// Direct DOM style writer (0 React re-renders during scroll)
 const applyStageStyleToElement = (el, progress, enterStart, enterEnd, exitStart, exitEnd) => {
   if (!el) return;
   const style = getStageStyle(progress, enterStart, enterEnd, exitStart, exitEnd);
@@ -89,19 +108,63 @@ export default function HomePage({ onNavigateToAuth }) {
   // FAQ open item
   const [openFaq, setOpenFaq] = useState(0);
 
-  // Scroll-linked hero image sequence (zero-re-render ref-driven architecture)
+  // Zero-re-render ref-driven 3D scroll architecture
   const heroTrackRef = useRef(null);
   const heroProgressRef = useRef(0);
   const chapter1Ref = useRef(null);
   const chapter2Ref = useRef(null);
   const chapter3Ref = useRef(null);
+  const scrollCueRef = useRef(null);
+  const progressBarRef = useRef(null);
+  const chapterPipRefs = useRef([]);
+  const isProgrammaticScrollRef = useRef(false);
 
-  const chapter1InitialStyle = getStageStyle(0, -0.1, 0.0, 0.16, 0.23);
-  const chapter2InitialStyle = getStageStyle(0, 0.40, 0.46, 0.58, 0.64);
-  const chapter3InitialStyle = getStageStyle(0, 0.77, 0.83, 0.92, 0.98);
+  const chapter1InitialStyle = getStageStyle(0, -0.1, 0.0, 0.16, 0.21);
+  const chapter2InitialStyle = getStageStyle(0, 0.39, 0.44, 0.56, 0.61);
+  const chapter3InitialStyle = getStageStyle(0, 0.73, 0.78, 0.90, 0.96);
+
+  const jumpToHeroProgress = (targetProgress) => {
+    const el = heroTrackRef.current;
+    if (!el) return;
+    const totalScrollable = el.offsetHeight - window.innerHeight;
+    if (totalScrollable <= 0) return;
+
+    isProgrammaticScrollRef.current = true;
+    const rect = el.getBoundingClientRect();
+    const trackTop = rect.top + window.scrollY;
+    window.scrollTo({
+      top: Math.max(0, Math.round(trackTop + totalScrollable * targetProgress)),
+      behavior: 'smooth'
+    });
+    setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 950);
+  };
 
   useEffect(() => {
     let ticking = false;
+    let settleTimeout = null;
+    let isTouchActive = false;
+
+    const updateActivePips = (progress) => {
+      let activeIdx = 0;
+      let minDist = Infinity;
+      for (let i = 0; i < HERO_CHAPTERS.length; i++) {
+        const d = Math.abs(HERO_CHAPTERS[i].targetProgress - progress);
+        if (d < minDist) {
+          minDist = d;
+          activeIdx = i;
+        }
+      }
+      for (let i = 0; i < HERO_CHAPTERS.length; i++) {
+        const pip = chapterPipRefs.current[i];
+        if (!pip) continue;
+        const isActive = i === activeIdx;
+        pip.style.transform = isActive ? 'scale(1.35)' : 'scale(1)';
+        pip.style.backgroundColor = isActive ? '#FDE047' : 'rgba(212, 175, 55, 0.35)';
+        pip.style.boxShadow = isActive ? '0 0 12px rgba(253, 224, 71, 0.85)' : 'none';
+      }
+    };
 
     const updateScrollStages = () => {
       const el = heroTrackRef.current;
@@ -112,12 +175,63 @@ export default function HomePage({ onNavigateToAuth }) {
           const scrolled = -rect.top;
           const progress = Math.max(0, Math.min(1, scrolled / totalScrollable));
           heroProgressRef.current = progress;
-          applyStageStyleToElement(chapter1Ref.current, progress, -0.1, 0.0, 0.16, 0.23);
-          applyStageStyleToElement(chapter2Ref.current, progress, 0.40, 0.46, 0.58, 0.64);
-          applyStageStyleToElement(chapter3Ref.current, progress, 0.77, 0.83, 0.92, 0.98);
+
+          // 1. Update hero chapter overlays directly via GPU transforms
+          applyStageStyleToElement(chapter1Ref.current, progress, -0.1, 0.0, 0.16, 0.21);
+          applyStageStyleToElement(chapter2Ref.current, progress, 0.39, 0.44, 0.56, 0.61);
+          applyStageStyleToElement(chapter3Ref.current, progress, 0.73, 0.78, 0.90, 0.96);
+
+          // 2. Fade out the bottom "Scroll to Explore" prompt once user begins scrolling
+          if (scrollCueRef.current) {
+            const cueOpacity = Math.max(0, 1 - progress / 0.055);
+            scrollCueRef.current.style.opacity = cueOpacity.toFixed(3);
+            scrollCueRef.current.style.visibility = cueOpacity > 0.01 ? 'visible' : 'hidden';
+          }
+
+          // 3. Update hairline gold progress bar across the top edge
+          if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${progress.toFixed(4)})`;
+            progressBarRef.current.style.opacity = progress > 0.005 && progress < 0.995 ? '1' : '0';
+          }
+
+          // 4. Update right-edge chapter indicator dots
+          updateActivePips(progress);
         }
       }
       ticking = false;
+    };
+
+    // Gently nudge out ONLY if scroll stops inside an ambiguous half-faded transition zone
+    const evaluateTransitionSettle = () => {
+      if (isTouchActive || isProgrammaticScrollRef.current) return;
+      const el = heroTrackRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const totalScrollable = el.offsetHeight - window.innerHeight;
+      if (totalScrollable <= 0) return;
+
+      const scrolled = -rect.top;
+      const progress = scrolled / totalScrollable;
+      if (progress <= 0.01 || progress >= 0.985) return;
+
+      for (const zone of TRANSITION_ZONES) {
+        if (progress > zone.start && progress < zone.end) {
+          const mid = (zone.start + zone.end) / 2;
+          const target = progress >= mid ? zone.snapHigh : zone.snapLow;
+          const targetScrolled = totalScrollable * target;
+          const deltaY = targetScrolled - scrolled;
+          if (Math.abs(deltaY) > 6) {
+            window.scrollBy({ top: deltaY, behavior: 'smooth' });
+          }
+          break;
+        }
+      }
+    };
+
+    const scheduleSettle = () => {
+      clearTimeout(settleTimeout);
+      settleTimeout = setTimeout(evaluateTransitionSettle, 160);
     };
 
     const handleScroll = () => {
@@ -125,16 +239,33 @@ export default function HomePage({ onNavigateToAuth }) {
         ticking = true;
         requestAnimationFrame(updateScrollStages);
       }
+      scheduleSettle();
+    };
+
+    const onTouchStart = () => {
+      isTouchActive = true;
+      clearTimeout(settleTimeout);
+    };
+    const onTouchEnd = () => {
+      isTouchActive = false;
+      scheduleSettle();
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
     updateScrollStages();
 
     return () => {
+      clearTimeout(settleTimeout);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
     };
   }, []);
 
@@ -203,33 +334,43 @@ export default function HomePage({ onNavigateToAuth }) {
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
+    isProgrammaticScrollRef.current = true;
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+    setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 950);
+  };
+
+  const scrollToTop = () => {
+    setMobileMenuOpen(false);
+    isProgrammaticScrollRef.current = true;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 950);
   };
 
   return (
-    <div className="min-h-screen bg-[#080C16] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-clip">
+    <div className="min-h-screen bg-[#060911] text-white flex flex-col selection:bg-[#D4AF37] selection:text-slate-950 relative overflow-x-clip">
 
       {/* ========================================================= */}
-      {/* 1. TOP NAVIGATION BAR (EXACT SCREENSHOT DESIGN)           */}
+      {/* 1. TOP NAVIGATION BAR (GLASS OBSIDIAN & BRUSHED GOLD)     */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-50 bg-[#080C16]/80 backdrop-blur-md border-b border-[#D4AF37]/20 transition-all">
+      <header className="sticky top-0 z-50 bg-[#060911]/75 backdrop-blur-xl border-b border-[#D4AF37]/20 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           {/* Left: Official NIA Crest & Brand Identity with Divider */}
           <div className="flex items-center">
             <ApexBrandLogo size="md" subtitle="GROUP OF COMPANY" lightText showAllianceTag />
-            <div className="hidden lg:block h-7 w-px bg-[#D4AF37]/40 ml-4" />
+            <div className="hidden lg:block h-7 w-px bg-[#D4AF37]/35 ml-4" />
           </div>
 
-          {/* Center Navigation Links (Exact from Screenshot) */}
+          {/* Center Navigation Links */}
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-200">
-            {/* Active Link: Home with Gold Underline */}
             <button
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onClick={scrollToTop}
               className="text-[#FDE047] font-bold cursor-pointer relative pb-1 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#FDE047] transition-all"
             >
               Home
@@ -261,11 +402,11 @@ export default function HomePage({ onNavigateToAuth }) {
           </nav>
 
           {/* Right Action: Sign In to Portal Pill Button */}
-          <div className="hidden sm:flex items-center">
+          <div className="hidden lg:flex items-center">
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="group px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 text-xs font-extrabold shadow-[0_4px_20px_rgba(212,175,55,0.4)] flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="group px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 text-xs font-extrabold shadow-[0_4px_24px_rgba(212,175,55,0.38)] flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
             >
               <span>Sign In to Portal</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-slate-950 font-bold" />
@@ -273,11 +414,11 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="lg:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onNavigateToAuth('signin')}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#FDE047] text-slate-950 text-xs font-extrabold cursor-pointer whitespace-nowrap shrink-0"
             >
               Sign In
             </button>
@@ -292,17 +433,23 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         </div>
 
+        {/* Hairline Scroll Progress Ribbon along Header Bottom */}
+        <div className="h-[2px] w-full bg-transparent overflow-hidden pointer-events-none">
+          <div
+            ref={progressBarRef}
+            className="h-full w-full origin-left bg-gradient-to-r from-[#B8860B] via-[#FDE047] to-[#D4AF37] transition-opacity duration-300"
+            style={{ transform: 'scaleX(0)', opacity: 0, willChange: 'transform, opacity' }}
+          />
+        </div>
+
         {/* Mobile Navigation Dropdown Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#080C16] border-b border-[#D4AF37]/30 px-6 py-5 space-y-4 shadow-2xl">
+          <div className="lg:hidden bg-[#060911]/95 backdrop-blur-2xl border-b border-[#D4AF37]/30 px-6 py-5 space-y-4 shadow-2xl">
             <div className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
               NIA Group Navigation
             </div>
             <div className="flex flex-col space-y-3 text-sm font-medium text-slate-200">
-              <button
-                onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="text-left py-1 text-[#FDE047] font-bold"
-              >
+              <button onClick={scrollToTop} className="text-left py-1 text-[#FDE047] font-bold">
                 Home
               </button>
               <button
@@ -343,192 +490,211 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         )}
       </header>
-      {/* ========================================================= */}
-      {/* 2. HERO SECTION (400vh SCROLL-LINKED SEQUENCE TRACK)       */}
-      {/* ========================================================= */}
-      <div ref={heroTrackRef} className="relative h-[400vh] w-full -mt-20">
-        {/* Sticky Viewport Container directly below sticky header */}
-        <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-center">
-          {/* Scroll-Linked Image Sequence Canvas (Behind the UI) */}
-          <ScrollImageSequenceCanvas
-            progressRef={heroProgressRef}
-            totalFrames={70}
-          />
 
-          {/* Ambient Gold Spotlight Glows (Preserved from existing) */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[700px] pointer-events-none overflow-hidden z-0">
-            <div className="absolute -top-32 left-1/4 w-[520px] h-[520px] bg-gradient-to-br from-[#D4AF37]/20 via-[#F59E0B]/12 to-transparent rounded-full blur-3xl opacity-80 animate-pulse-subtle" />
-            <div className="absolute top-24 right-10 w-[440px] h-[440px] bg-gradient-to-bl from-[#FDE047]/15 via-[#B8860B]/15 to-transparent rounded-full blur-3xl opacity-70" />
+      {/* ========================================================= */}
+      {/* 2. REAL-TIME 3D KINETIC OBSIDIAN HERO TRACK (420vh)       */}
+      {/* ========================================================= */}
+      <div ref={heroTrackRef} className="relative h-[420vh] w-full -mt-20">
+        {/* Sticky Full-Viewport 3D Stage */}
+        <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-center">
+          {/* Live Hardware-Accelerated Three.js 3D Kinetic Obsidian & Gold Sculpture */}
+          <KineticObsidian3DCanvas progressRef={heroProgressRef} />
+
+          {/* Desktop Right-Edge Minimal Chapter Navigation Rail */}
+          <div className="hidden xl:flex absolute right-6 top-1/2 -translate-y-1/2 z-30 flex-col items-end gap-3 pointer-events-auto">
+            {HERO_CHAPTERS.map((ch, idx) => (
+              <button
+                key={ch.id}
+                type="button"
+                onClick={() => jumpToHeroProgress(ch.targetProgress)}
+                className="group flex items-center gap-2.5 cursor-pointer py-0.5 focus:outline-none"
+                aria-label={`Jump to ${ch.label}`}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F3E5AB]/0 group-hover:text-[#FDE047] transition-colors">
+                  {ch.label}
+                </span>
+                <span
+                  ref={(el) => {
+                    chapterPipRefs.current[idx] = el;
+                  }}
+                  className="block w-2 h-2 rounded-full transition-all duration-200"
+                  style={{
+                    backgroundColor: idx === 0 ? '#FDE047' : 'rgba(212, 175, 55, 0.35)',
+                    transform: idx === 0 ? 'scale(1.35)' : 'scale(1)',
+                    boxShadow: idx === 0 ? '0 0 12px rgba(253, 224, 71, 0.85)' : 'none'
+                  }}
+                />
+              </button>
+            ))}
           </div>
 
           {/* ========================================================= */}
-          {/* STAGE 1: EXACT SCREENSHOT DESIGN (HERO & DIGITAL NETWORK) */}
+          {/* STAGE 1: HERO OVERVIEW & NIA DIGITAL NETWORK              */}
           {/* ========================================================= */}
           <div
             ref={chapter1Ref}
-            className="absolute inset-0 flex flex-col justify-center"
+            className="absolute inset-0 flex flex-col justify-center z-10"
             style={chapter1InitialStyle}
           >
-            <div className="relative z-10 w-full pt-16 lg:pt-20 my-auto">
-              <section className="relative z-10 py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
-                  {/* Left Column: Exact Screenshot Typography, Buttons & Badges */}
-                  <div className="w-full lg:w-6/12 text-center lg:text-left space-y-5">
-                    {/* Top Pill Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-[#D4AF37]/60 backdrop-blur-md text-xs font-semibold text-[#FDE047] tracking-[0.16em] uppercase shadow-lg">
+            <div className="relative z-10 w-full pt-20 pb-3 sm:pt-22 sm:pb-4 lg:pt-20 lg:pb-8 my-auto">
+              <section className="relative z-10 py-1 sm:py-3 lg:py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 lg:gap-14">
+                  {/* Left Column: Crisp Typography, CTAs & Trust Badges */}
+                  <div className="w-full lg:w-6/12 text-center lg:text-left space-y-2.5 sm:space-y-4 lg:space-y-5">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-[#060911]/80 border border-[#D4AF37]/55 backdrop-blur-xl text-[10px] sm:text-xs font-semibold text-[#FDE047] tracking-[0.16em] uppercase shadow-[0_8px_24px_rgba(0,0,0,0.65)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FDE047] animate-pulse" />
                       <span>NEXUS INTERNATIONAL ALLIANCE • EST. 2022</span>
                     </div>
 
-                    {/* Motto */}
-                    <div className="space-y-2">
-                      <p className="text-xs sm:text-sm font-extrabold tracking-[0.25em] uppercase text-[#D4AF37] drop-shadow-md">
+                    <div className="space-y-1 sm:space-y-2">
+                      <p className="text-[10px] sm:text-xs lg:text-sm font-extrabold tracking-[0.22em] sm:tracking-[0.26em] uppercase text-[#D4AF37] drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                         — CONNECTING PEOPLE. BUILDING THE FUTURE. —
                       </p>
                       <h1
-                        className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                        className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.06] drop-shadow-[0_6px_26px_rgba(0,0,0,0.95)]"
                         style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
                       >
                         NIA GROUP
                         <br />
-                        <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">
+                        <span className="bg-gradient-to-r from-[#FFF0A8] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent drop-shadow-[0_2px_18px_rgba(0,0,0,0.92)]">
                           SHAREHOLDER PORTAL
                         </span>
                       </h1>
                     </div>
 
-                    {/* Exact Description Text from Screenshot */}
-                    <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                      Your secure gateway to shareholdings, investment insights, and corporate governance.
+                    <p className="text-xs sm:text-sm lg:text-base text-slate-200/95 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                      Your secure digital gateway to verified shareholdings, stepped valuations,
+                      and institutional corporate governance across Sri Lanka.
                     </p>
 
-                    {/* Exact CTA Buttons from Screenshot */}
-                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
+                    <div className="pt-1 sm:pt-2 flex flex-row items-center justify-center lg:justify-start gap-2.5 sm:gap-3.5">
                       <button
                         type="button"
                         onClick={() => onNavigateToAuth('signin')}
-                        className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#E6C65B] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 font-extrabold text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        className="flex-1 sm:flex-none px-4 sm:px-7 py-2.5 sm:py-3.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#E8C864] to-[#FDE047] hover:from-[#FDE047] hover:to-[#D4AF37] text-slate-950 font-extrabold text-xs sm:text-sm shadow-[0_12px_34px_rgba(212,175,55,0.42)] flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
                       >
-                        <span>Access Your Dashboard</span>
-                        <ArrowRight className="w-4 h-4 text-slate-950 font-bold" />
+                        <span>Access Dashboard</span>
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 font-bold shrink-0" />
                       </button>
 
                       <button
                         type="button"
                         onClick={() => scrollToSection('official-announcement')}
-                        className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-black/40 hover:bg-black/60 border border-[#D4AF37]/60 hover:border-[#FDE047] text-white font-bold text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                        className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl bg-[#060911]/80 hover:bg-[#0D1322]/90 border border-[#D4AF37]/60 hover:border-[#FDE047] text-white font-bold text-xs sm:text-sm backdrop-blur-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg whitespace-nowrap"
                       >
-                        <span>Explore Our Network</span>
-                        <ArrowRight className="w-4 h-4 text-[#FDE047]" />
+                        <span>Explore Network</span>
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FDE047] shrink-0" />
                       </button>
                     </div>
 
-                    {/* Exact 3 Badges from Screenshot */}
-                    <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-200">
-                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
-                        <ShieldCheck className="w-4 h-4 text-[#FDE047]" />
+                    <div className="pt-0.5 sm:pt-2 inline-flex flex-wrap items-center justify-center lg:justify-start gap-2.5 sm:gap-4 px-3 py-1 sm:px-0 sm:py-0 rounded-full bg-[#060911]/60 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none text-[11px] sm:text-xs font-semibold text-slate-200">
+                      <span className="inline-flex items-center gap-1.5 text-[#F3E5AB]">
+                        <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FDE047]" />
                         <span>Secure Access</span>
                       </span>
-                      <span className="text-[#D4AF37]/40 hidden sm:inline">|</span>
-                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
-                        <Share2 className="w-4 h-4 text-[#FDE047]" />
+                      <span className="text-[#D4AF37]/40">|</span>
+                      <span className="inline-flex items-center gap-1.5 text-[#F3E5AB]">
+                        <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FDE047]" />
                         <span>Digital Network</span>
                       </span>
                       <span className="text-[#D4AF37]/40 hidden sm:inline">|</span>
-                      <span className="inline-flex items-center gap-2 text-[#F3E5AB]">
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-[#F3E5AB]">
                         <BarChart3 className="w-4 h-4 text-[#FDE047]" />
                         <span>Equity Insights</span>
                       </span>
                     </div>
                   </div>
 
-                  {/* Right Column: Exact "NIA DIGITAL NETWORK" Card from Screenshot */}
+                  {/* Right Column: Translucent Obsidian-Gold "NIA DIGITAL NETWORK" Glass Card */}
                   <div className="w-full lg:w-6/12 relative">
-                    <div className="relative mx-auto max-w-lg rounded-3xl bg-[#0B101E]/40 border border-[#D4AF37]/45 p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.65)] backdrop-blur-xl">
-                      {/* Top Header: Layers Icon & Title */}
-                      <div className="flex items-center gap-3 pb-5">
-                        <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] shadow-[0_0_15px_rgba(212,175,55,0.3)]">
-                          <Layers className="w-5 h-5" />
+                    <div className="relative mx-auto max-w-lg rounded-2xl sm:rounded-3xl bg-[#060911]/75 border border-[#D4AF37]/45 p-3.5 sm:p-6 lg:p-7 shadow-[0_28px_80px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+                      {/* Top Header */}
+                      <div className="flex items-center justify-between pb-3 sm:pb-4 lg:pb-5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/45 flex items-center justify-center text-[#FDE047] shadow-[0_0_18px_rgba(212,175,55,0.28)]">
+                            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </div>
+                          <h2
+                            className="text-sm sm:text-lg lg:text-xl font-extrabold text-[#FDE047] tracking-wider uppercase drop-shadow-md"
+                            style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
+                          >
+                            NIA DIGITAL NETWORK
+                          </h2>
                         </div>
-                        <h2
-                          className="text-lg sm:text-xl font-extrabold text-[#FDE047] tracking-wider uppercase drop-shadow-md"
-                          style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
-                        >
-                          NIA DIGITAL NETWORK
-                        </h2>
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#F3E5AB]/85 px-2.5 py-0.5 sm:py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          Active
+                        </span>
                       </div>
 
-                      {/* 4 Exact Grid Tiles (2x2) */}
-                      <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
-                        {/* Tile 1: 60 Digital Locations */}
-                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
-                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
-                            <MapPin className="w-4 h-4" />
+                      {/* 2x2 Key Network Metrics */}
+                      <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:gap-4">
+                        <div className="relative p-2.5 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-[#080C16]/85 border border-[#D4AF37]/30 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1 sm:mb-2">
+                            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </div>
-                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-num">
                             60
                           </div>
-                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                          <div className="text-[10px] sm:text-xs font-semibold text-slate-300 mt-0.5 sm:mt-1">
                             Digital Locations
                           </div>
                           <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
                         </div>
 
-                        {/* Tile 2: 25 Districts Covered */}
-                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
-                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
-                            <Layers className="w-4 h-4" />
+                        <div className="relative p-2.5 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-[#080C16]/85 border border-[#D4AF37]/30 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1 sm:mb-2">
+                            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </div>
-                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-num">
                             25
                           </div>
-                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                          <div className="text-[10px] sm:text-xs font-semibold text-slate-300 mt-0.5 sm:mt-1">
                             Districts Covered
                           </div>
                           <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
                         </div>
 
-                        {/* Tile 3: 05 Capital Hubs */}
-                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
-                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
-                            <Building2 className="w-4 h-4" />
+                        <div className="relative p-2.5 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-[#080C16]/85 border border-[#D4AF37]/30 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1 sm:mb-2">
+                            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </div>
-                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-num">
                             05
                           </div>
-                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                          <div className="text-[10px] sm:text-xs font-semibold text-slate-300 mt-0.5 sm:mt-1">
                             Capital Hubs
                           </div>
                           <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
                         </div>
 
-                        {/* Tile 4: 100% Digital Operations */}
-                        <div className="relative p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#D4AF37]/35 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
-                          <div className="w-7 h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-2 shadow-[0_0_10px_rgba(212,175,55,0.25)]">
-                            <Monitor className="w-4 h-4" />
+                        <div className="relative p-2.5 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-[#080C16]/85 border border-[#D4AF37]/30 backdrop-blur-md text-center group hover:border-[#FDE047]/70 transition-all shadow-lg overflow-hidden">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 mx-auto rounded-lg bg-[#D4AF37]/15 flex items-center justify-center text-[#FDE047] mb-1 sm:mb-2">
+                            <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </div>
-                          <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono-num drop-shadow-md">
+                          <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white font-mono-num">
                             100%
                           </div>
-                          <div className="text-xs font-semibold text-slate-300 mt-1">
+                          <div className="text-[10px] sm:text-xs font-semibold text-slate-300 mt-0.5 sm:mt-1">
                             Digital Operations
                           </div>
                           <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
                         </div>
                       </div>
 
-                      {/* Bottom Footer inside Card (Exact 3 Badges from Screenshot) */}
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/25 flex items-center justify-between text-xs text-[#F3E5AB]">
-                        <div className="flex items-center gap-1.5">
-                          <Lock className="w-3.5 h-3.5 text-[#FDE047]" />
-                          <span className="font-medium text-[11px] sm:text-xs">256-Bit Security</span>
+                      {/* Card Footer Badges */}
+                      <div className="mt-3 sm:mt-4 lg:mt-5 pt-2.5 sm:pt-3.5 lg:pt-4 border-t border-[#D4AF37]/25 flex items-center justify-between text-[10px] sm:text-xs text-[#F3E5AB]">
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FDE047]" />
+                          <span className="font-medium">256-Bit Security</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-[#FDE047]" />
-                          <span className="font-medium text-[11px] sm:text-xs">Dual Control</span>
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FDE047]" />
+                          <span className="font-medium">Dual Control</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5 text-[#FDE047]" />
-                          <span className="font-medium text-[11px] sm:text-xs">Instant SSO</span>
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FDE047]" />
+                          <span className="font-medium">Instant SSO</span>
                         </div>
                       </div>
                     </div>
@@ -543,62 +709,60 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* ========================================================= */}
           <div
             ref={chapter2Ref}
-            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
+            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 z-10 pointer-events-none"
             style={chapter2InitialStyle}
           >
             <div className="relative z-10 w-full max-w-6xl mx-auto text-center pt-16 lg:pt-20 my-auto">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/85 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg mb-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#060911]/80 border border-[#D4AF37]/50 backdrop-blur-xl text-xs font-bold text-[#FDE047] shadow-lg mb-3">
                 <Sparkles className="w-3.5 h-3.5 text-[#FDE047]" />
                 <span className="tracking-wider uppercase">Nationwide Digital Network • 25 Districts</span>
               </div>
 
-              {/* Cinematic Headline */}
               <h2
-                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_6px_26px_rgba(0,0,0,0.95)]"
                 style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
                 THE DIGITAL TRANSFORMATION OF <br />
-                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#FFF0A8] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
                   SHAREHOLDER OPERATIONS
                 </span>
               </h2>
 
-              <p className="text-xs sm:text-sm lg:text-base text-slate-200 font-medium max-w-2xl mx-auto mt-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <p className="text-xs sm:text-sm lg:text-base text-slate-200 font-medium max-w-2xl mx-auto mt-3 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 Connecting 60 planned digital branch locations across all 25 administrative districts of Sri Lanka under our unified institutional governance network.
               </p>
 
-              {/* 3 Luxury Frosted Glass Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 max-w-5xl mx-auto mt-6">
-                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+              {/* 3 Obsidian & Gold Frosted Pillar Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 max-w-5xl mx-auto mt-5 sm:mt-6">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#060911]/82 border border-[#D4AF37]/45 backdrop-blur-xl shadow-[0_22px_55px_rgba(0,0,0,0.85)] text-left hover:border-[#FDE047]/80 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/45 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <Globe className="w-4 h-4" />
                   </div>
                   <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Islandwide Access</div>
                   <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">60 Digital Locations</h3>
-                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-slate-200/90 mt-1.5 leading-relaxed">
                     Islandwide coverage across all 25 districts, with 5 specialized digital hubs in the capital city.
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#060911]/82 border border-[#D4AF37]/45 backdrop-blur-xl shadow-[0_22px_55px_rgba(0,0,0,0.85)] text-left hover:border-[#FDE047]/80 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/45 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Dual-Control Security</div>
                   <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">Maker-Checker Protocol</h3>
-                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-slate-200/90 mt-1.5 leading-relaxed">
                     Institutional security with 256-bit encryption, role-based governance, and immutable ledger audit logging.
                   </p>
                 </div>
 
-                <div className="p-4 sm:p-5 rounded-2xl bg-black/25 border border-[#D4AF37]/35 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-left hover:border-[#FDE047]/60 transition-all">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#FDE047] mb-2.5">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#060911]/82 border border-[#D4AF37]/45 backdrop-blur-xl shadow-[0_22px_55px_rgba(0,0,0,0.85)] text-left hover:border-[#FDE047]/80 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37]/25 to-[#F59E0B]/10 border border-[#D4AF37]/45 flex items-center justify-center text-[#FDE047] mb-2.5">
                     <BarChart3 className="w-4 h-4" />
                   </div>
                   <div className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider">Real-Time Holdings</div>
                   <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">Verified Equity Ledger</h3>
-                  <p className="text-[11px] text-slate-300 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-slate-200/90 mt-1.5 leading-relaxed">
                     Instant digital certificate issuance, stepped share valuations, and transparent shareholder communication.
                   </p>
                 </div>
@@ -611,37 +775,35 @@ export default function HomePage({ onNavigateToAuth }) {
           {/* ========================================================= */}
           <div
             ref={chapter3Ref}
-            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 pointer-events-none"
+            className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 lg:px-8 z-10 pointer-events-none"
             style={chapter3InitialStyle}
           >
             <div className="relative z-10 w-full max-w-5xl mx-auto text-center pt-16 lg:pt-20 my-auto">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#080C16]/85 border border-[#D4AF37]/50 backdrop-blur-md text-xs font-bold text-[#FDE047] shadow-lg mb-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#060911]/80 border border-[#D4AF37]/50 backdrop-blur-xl text-xs font-bold text-[#FDE047] shadow-lg mb-3">
                 <Building2 className="w-3.5 h-3.5 text-[#FDE047]" />
                 <span className="tracking-wider uppercase">Nexus International Alliance • 6 Diversified Sectors</span>
               </div>
 
-              {/* Headline */}
               <h2
-                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight drop-shadow-[0_6px_26px_rgba(0,0,0,0.95)]"
                 style={{ fontFamily: "'Cinzel', 'Plus Jakarta Sans', serif" }}
               >
                 DRIVING INSTITUTIONAL GROWTH <br />
-                <span className="bg-gradient-to-r from-[#FDE047] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#FFF0A8] via-[#D4AF37] to-[#F59E0B] bg-clip-text text-transparent">
                   FOR ALL SHAREHOLDERS
                 </span>
               </h2>
 
-              <p className="text-xs sm:text-sm text-slate-200 font-medium max-w-xl mx-auto mt-2.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <p className="text-xs sm:text-sm text-slate-200 font-medium max-w-xl mx-auto mt-2.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
                 Real Estate • Construction • Investment • Trading • Consultancy • Integrated Services
               </p>
 
-              {/* 6 Sector Chips */}
-              <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto mt-5">
+              {/* 6 Sector Chips (Balanced single row on desktop, 3x2 tablet, 2x3 mobile) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap items-center justify-center gap-2 max-w-4xl mx-auto mt-5">
                 {['REAL ESTATE', 'CONSTRUCTION', 'INVESTMENT', 'TRADING', 'CONSULTANCY', 'SERVICES'].map((sector) => (
                   <span
                     key={sector}
-                    className="px-3 py-1 rounded-xl bg-black/25 border border-[#D4AF37]/35 text-[#F3E5AB] text-[11px] font-extrabold backdrop-blur-md shadow-md tracking-wider"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#060911]/82 border border-[#D4AF37]/45 text-[#F3E5AB] text-[11px] font-extrabold backdrop-blur-xl shadow-md tracking-wider whitespace-nowrap"
                   >
                     {sector}
                   </span>
@@ -653,7 +815,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 <button
                   type="button"
                   onClick={() => onNavigateToAuth('signin')}
-                  className="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-xs sm:text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#FDE047] hover:from-[#D4AF37] hover:to-[#F59E0B] text-slate-950 font-extrabold text-xs sm:text-sm shadow-[0_12px_34px_rgba(212,175,55,0.42)] flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <span>Enter Shareholder Portal</span>
                   <ArrowRight className="w-4 h-4" />
@@ -661,7 +823,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 <button
                   type="button"
                   onClick={() => scrollToSection('official-announcement')}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#080C16]/85 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-xs sm:text-sm backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#060911]/80 hover:bg-[#111827] border border-[#D4AF37]/50 text-[#F3E5AB] font-bold text-xs sm:text-sm backdrop-blur-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
                 >
                   <Bell className="w-4 h-4 text-[#FDE047]" />
                   <span>60 Digital Branches Notice</span>
@@ -669,9 +831,22 @@ export default function HomePage({ onNavigateToAuth }) {
               </div>
             </div>
           </div>
+
+          {/* Minimal Scroll Cue at Bottom (desktop only so it never overlaps stacked mobile/tablet cards) */}
+          <div
+            ref={scrollCueRef}
+            className="hidden lg:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex-col items-center gap-2 pointer-events-none"
+            style={{ opacity: 1, willChange: 'opacity' }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#F3E5AB]/75">
+              Scroll to Explore 3D
+            </span>
+            <div className="w-[1px] h-7 bg-[#D4AF37]/25 overflow-hidden relative">
+              <div className="w-full h-3.5 bg-gradient-to-b from-transparent via-[#FDE047] to-transparent animate-scroll-hairline" />
+            </div>
+          </div>
         </div>
       </div>
-
 
       {/* ========================================================= */}
       {/* 3. INSTITUTIONAL METRICS STRIP (GOLD & OBSIDIAN)          */}
@@ -725,7 +900,7 @@ export default function HomePage({ onNavigateToAuth }) {
         id="official-announcement"
         className="relative z-10 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
-        <div className="rounded-3xl bg-gradient-to-b from-[#0D1322] via-[#0B101E] to-[#080C16] border-2 border-[#D4AF37]/55 p-6 sm:p-10 lg:p-12 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-8">
+        <div className="rounded-3xl bg-gradient-to-b from-[#0D1322] via-[#0B101E] to-[#080C16] border-2 border-[#D4AF37]/50 p-6 sm:p-10 lg:p-12 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-8">
           {/* Announcement Header */}
           <div className="border-b border-[#D4AF37]/30 pb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-2">
@@ -880,7 +1055,6 @@ export default function HomePage({ onNavigateToAuth }) {
 
       {/* ========================================================= */}
       {/* 4. ARCHITECTURAL SHOWCASE: NIA GROUP 6 CORE DIVISIONS     */}
-      {/* (Modeled directly after the NIA Group Building Facade)     */}
       {/* ========================================================= */}
       <section id="divisions" className="relative z-10 py-16 sm:py-22 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-12">
@@ -895,7 +1069,7 @@ export default function HomePage({ onNavigateToAuth }) {
             NIA Group of Company Pillars
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2">
-            Every ordinary share represents ownership across NIA Group’s six core operational
+            Every ordinary share represents ownership across NIA Group&apos;s six core operational
             divisions connected through our islandwide digital branch operating system across all 25
             administrative districts of Sri Lanka.
           </p>
@@ -943,14 +1117,14 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
           </div>
 
-          {/* Right 6-Division Architectural Grid matching Building Facade Panels (7 Columns) */}
+          {/* Right 6-Division Architectural Grid (7 Columns) */}
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {niaDivisions.map((div) => {
               const IconComponent = div.icon;
               return (
                 <div
                   key={div.title}
-                  className="p-5 rounded-2xl bg-[#0D1322] border-b-2 border border-[#D4AF37]/35 hover:border-[#FDE047] transition-all group flex flex-col justify-between shadow-lg"
+                  className="p-5 rounded-2xl bg-[#0B101D] border-b-2 border border-[#D4AF37]/35 hover:border-[#FDE047] transition-all group flex flex-col justify-between shadow-lg"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -1002,10 +1176,10 @@ export default function HomePage({ onNavigateToAuth }) {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto p-6 sm:p-9 rounded-3xl bg-[#0D1322]/95 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto p-6 sm:p-9 rounded-3xl bg-[#0B101D]/95 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4 text-xs sm:text-sm text-slate-200">
-              <div className="p-4 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-2">
+              <div className="p-4 rounded-2xl bg-[#060911] border border-[#D4AF37]/30 space-y-2">
                 <div className="font-extrabold text-[#FDE047] uppercase tracking-wider">
                   Islandwide Service Coverage
                 </div>
@@ -1016,7 +1190,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-2">
+              <div className="p-4 rounded-2xl bg-[#060911] border border-[#D4AF37]/30 space-y-2">
                 <div className="font-extrabold text-[#FDE047] uppercase tracking-wider">
                   Digital Departmental Access
                 </div>
@@ -1028,7 +1202,7 @@ export default function HomePage({ onNavigateToAuth }) {
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 via-[#131B2E] to-[#080C16] border border-[#D4AF37]/50 space-y-4">
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 via-[#131B2E] to-[#060911] border border-[#D4AF37]/50 space-y-4">
               <div className="text-xs font-extrabold text-[#FDE047] uppercase tracking-wider">
                 Official Verification &amp; Communication Policy
               </div>
@@ -1053,7 +1227,7 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ========================================================= */}
       {/* 6. CORE PORTAL CAPABILITIES (GOLD & OBSIDIAN CARDS)       */}
       {/* ========================================================= */}
-      <section id="features" className="relative z-10 py-16 bg-[#060911]/80 border-t border-[#D4AF37]/25">
+      <section id="features" className="relative z-10 py-16 bg-[#05070E]/90 border-t border-[#D4AF37]/25">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2
@@ -1069,18 +1243,18 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <BarChart3 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Real-Time Holdings & Ledger</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Real-Time Holdings &amp; Ledger</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Inspect your opening shares, newly allocated blocks, share transfers, and net
                 cumulative equity position in real time.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <TrendingUp className="w-6 h-6" />
               </div>
@@ -1091,7 +1265,7 @@ export default function HomePage({ onNavigateToAuth }) {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <FileCheck2 className="w-6 h-6" />
               </div>
@@ -1102,7 +1276,7 @@ export default function HomePage({ onNavigateToAuth }) {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <ShieldCheck className="w-6 h-6" />
               </div>
@@ -1113,18 +1287,18 @@ export default function HomePage({ onNavigateToAuth }) {
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <Bell className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Investor Updates & AGMs</h3>
+              <h3 className="text-lg font-bold text-[#F3E5AB] mb-2">Investor Updates &amp; AGMs</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Receive official company announcements, Annual General Meeting notices, and
                 executive project updates across all six NIA sectors.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0D1322] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
+            <div className="p-6 rounded-3xl bg-[#0B101D] border border-[#D4AF37]/30 hover:border-[#FDE047] transition-all hover:-translate-y-1 group">
               <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#FDE047] flex items-center justify-center mb-5">
                 <Lock className="w-6 h-6" />
               </div>
@@ -1156,7 +1330,7 @@ export default function HomePage({ onNavigateToAuth }) {
         </div>
 
         <div className="flex justify-center mb-8">
-          <div className="p-1.5 rounded-2xl bg-[#0D1322] border border-[#D4AF37]/35 inline-flex flex-wrap justify-center gap-1.5">
+          <div className="p-1.5 rounded-2xl bg-[#0B101D] border border-[#D4AF37]/35 inline-flex flex-wrap justify-center gap-1.5">
             {[
               { id: 'shareholder', label: 'Shareholder Portal' },
               { id: 'governance', label: 'Administration & Registry' },
@@ -1178,7 +1352,7 @@ export default function HomePage({ onNavigateToAuth }) {
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-[#0D1322]/95 border border-[#D4AF37]/35 shadow-2xl">
+        <div className="max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-[#0B101D]/95 border border-[#D4AF37]/35 shadow-2xl">
           {activeTab === 'shareholder' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
@@ -1209,7 +1383,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#060911] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
                   <span className="font-bold text-[#F3E5AB]">Shareholder Portal Access</span>
                   <span className="text-[#FDE047] font-bold">Verified Account</span>
@@ -1263,7 +1437,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#060911] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
                   <span className="font-bold text-[#F3E5AB]">Governance Controls</span>
                   <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#FDE047] text-[10px] font-bold">
@@ -1321,7 +1495,7 @@ export default function HomePage({ onNavigateToAuth }) {
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#080C16] border border-[#D4AF37]/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-[#060911] border border-[#D4AF37]/30 space-y-3">
                 <div className="flex justify-between items-center text-xs pb-2 border-b border-[#D4AF37]/20">
                   <span className="font-bold text-[#F3E5AB]">Digital Document Vault</span>
                   <span className="text-[#D4AF37]">Record-Level Privacy</span>
@@ -1367,7 +1541,7 @@ export default function HomePage({ onNavigateToAuth }) {
           {faqs.map((faq, idx) => (
             <div
               key={idx}
-              className="rounded-2xl bg-[#0D1322] border border-[#D4AF37]/30 overflow-hidden transition-all"
+              className="rounded-2xl bg-[#0B101D] border border-[#D4AF37]/30 overflow-hidden transition-all"
             >
               <button
                 type="button"
@@ -1441,7 +1615,7 @@ export default function HomePage({ onNavigateToAuth }) {
             </div>
 
             {/* Official Digital Transformation & Disclaimer Box */}
-            <div className="lg:col-span-5 p-6 rounded-2xl bg-[#080C16]/90 border border-[#D4AF37]/40 space-y-3.5 text-xs">
+            <div className="lg:col-span-5 p-6 rounded-2xl bg-[#060911]/90 border border-[#D4AF37]/40 space-y-3.5 text-xs">
               <div className="flex items-center gap-3 pb-3 border-b border-[#D4AF37]/25">
                 <img
                   src="/nia-logo.png"
@@ -1488,7 +1662,7 @@ export default function HomePage({ onNavigateToAuth }) {
       {/* ========================================================= */}
       {/* 10. ENTERPRISE FOOTER                                     */}
       {/* ========================================================= */}
-      <footer className="relative z-10 border-t border-[#D4AF37]/25 bg-[#050810] py-10 text-xs text-slate-400">
+      <footer className="relative z-10 border-t border-[#D4AF37]/25 bg-[#04060C] py-10 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
