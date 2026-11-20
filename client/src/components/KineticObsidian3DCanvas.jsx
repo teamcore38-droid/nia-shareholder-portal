@@ -1189,22 +1189,7 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
       slabs.push(slabGroup);
     }
 
-    // 7. Delicate Precision Orbital Gold Halo Ring behind the Slabs (1 draw call)
-    const orbitalRingGeo = new THREE.TorusGeometry(3.25, 0.011, 8, 96);
-    const orbitalRingMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0xf2cf72),
-      metalness: 0.95,
-      roughness: 0.18,
-      emissive: new THREE.Color(0xb88422),
-      emissiveIntensity: 0.4,
-      transparent: true,
-      opacity: 0.28
-    });
-    const orbitalRing = new THREE.Mesh(orbitalRingGeo, orbitalRingMat);
-    orbitalRing.position.set(0, 0, -1.65);
-    sculptureGroup.add(orbitalRing);
-
-    // 8. Warm Golden Volumetric Core Aura Sprite
+    // 7. Warm Golden Volumetric Core Aura Sprite
     const coreGlowTex = createRadialGlowTexture([
       [0.0, 'rgba(255, 206, 112, 0.70)'],
       [0.28, 'rgba(218, 148, 42, 0.40)'],
@@ -1361,13 +1346,6 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
       sculptureGroup.rotation.y = pointerCurrent.x * 0.14 + Math.sin(elapsed * 0.35) * 0.04;
       sculptureGroup.rotation.x = pointerCurrent.y * 0.10 + Math.cos(elapsed * 0.28) * 0.028;
 
-      // Keep the golden orbital halo gracefully inclined (never slicing vertically through headlines)
-      orbitalRing.rotation.x = 1.18 + Math.sin(smoothProgress * Math.PI) * 0.22 + Math.sin(elapsed * 0.4) * 0.06;
-      orbitalRing.rotation.y = Math.cos(smoothProgress * Math.PI) * 0.22;
-      orbitalRing.rotation.z = elapsed * 0.14 + smoothProgress * 1.8;
-      const ringScale = 0.90 + smoothstep(0.1, 0.3, smoothProgress) * 0.22;
-      orbitalRing.scale.setScalar(ringScale);
-
       // Cinematic camera dolly across pure 3D motion interludes
       const zoomIn1 =
         smoothstep(0.08, 0.28, smoothProgress) * (1 - smoothstep(0.36, 0.52, smoothProgress));
@@ -1408,8 +1386,6 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
 
       goldGeo.dispose();
       tileCoreGeos.forEach((g) => g.dispose());
-      orbitalRingGeo.dispose();
-      orbitalRingMat.dispose();
       goldMat.dispose();
       obsidianMat.dispose();
       niaAtlas.dispose();
