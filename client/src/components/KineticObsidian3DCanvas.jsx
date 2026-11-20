@@ -718,6 +718,154 @@ function createRadialGlowTexture(stops) {
   return tex;
 }
 
+/**
+ * Creates a single-draw-call GPU shader starfield with stratified jitter placement
+ * so the outer obsidian background has refined, naturally blinking champagne-gold &
+ * starlight-white stars with zero blank black voids and zero visual clutter.
+ */
+function createBlinkingStarfield(isMobile) {
+  const cols = isMobile ? 10 : 15;
+  const rows = isMobile ? 9 : 10;
+  const count = cols * rows; // 90 mobile / 150 desktop: airy, luxury balance
+
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const phases = new Float32Array(count);
+  const speeds = new Float32Array(count);
+  const colors = new Float32Array(count * 3);
+  const flares = new Float32Array(count);
+
+  const palette = [
+    new THREE.Color(0xf2f6ff), // Crisp starlight white
+    new THREE.Color(0xffe7a0), // Warm champagne gold
+    new THREE.Color(0xdcb043)  // Deep imperial gold
+  ];
+
+  const spreadX = isMobile ? 16.5 : 27.0;
+  const spreadY = isMobile ? 19.5 : 16.5;
+
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // Stratified cell + organic jitter prevents giant blank holes AND messy clusters
+      const nx = (c + 0.12 + Math.random() * 0.76) / cols - 0.5;
+      const ny = (r + 0.12 + Math.random() * 0.76) / rows - 0.5;
+      const z = -5.2 - Math.random() * 8.8; // Behind the 3D slabs (-5.2 to -14.0)
+
+      // Perspective compensation so deeper stars still span full outer viewport edges
+      const depthScale = 1 + Math.abs(z) * 0.048;
+      positions[idx * 3] = nx * spreadX * depthScale;
+      positions[idx * 3 + 1] = ny * spreadY * depthScale;
+      positions[idx * 3 + 2] = z;
+
+      const isHeroStar = Math.random() < 0.28;
+      sizes[idx] = isHeroStar
+        ? 13.0 + Math.random() * 7.5
+        : 4.8 + Math.random() * 4.5;
+      phases[idx] = Math.random() * Math.PI * 2;
+      speeds[idx] = 1.1 + Math.random() * 2.3; // Clear, organic individual blink rate
+      flares[idx] = isHeroStar ? 1.0 : 0.0;
+
+      const roll = Math.random();
+      const colChoice = roll < 0.46 ? palette[0] : roll < 0.82 ? palette[1] : palette[2];
+      colors[idx * 3] = colChoice.r;
+      colors[idx * 3 + 1] = colChoice.g;
+      colors[idx * 3 + 2] = colChoice.b;
+
+      idx++;
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+  geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+  geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
+  geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute('aFlare', new THREE.BufferAttribute(flares, 1));
+
+  const uniforms = {
+    uTime: { value: 0 },
+    uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2) }
+  };
+
+  const material = new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+    vertexShader: `
+      attribute float aSize;
+      attribute float aPhase;
+      attribute float aSpeed;
+      attribute vec3 aColor;
+      attribute float aFlare;
+
+      uniform float uTime;
+      uniform float uPixelRatio;
+
+      varying vec3 vColor;
+      varying float vAlpha;
+      varying float vFlare;
+
+      void main() {
+        vColor = aColor;
+        vFlare = aFlare;
+
+        // Smooth individual blinking curve (clearly dims down and blinks back crisp)
+        float wave = 0.5 + 0.5 * sin(uTime * aSpeed + aPhase);
+        float twinkle = 0.12 + 0.88 * pow(wave, 2.2);
+        vAlpha = twinkle * (aFlare > 0.5 ? 1.0 : 0.88);
+
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+
+        float distScale = 20.0 / max(1.0, -mvPosition.z);
+        gl_PointSize = aSize * uPixelRatio * distScale * (0.80 + 0.34 * wave);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      varying float vFlare;
+
+      void main() {
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float d = length(uv);
+        if (d > 0.5) discard;
+
+        // Crisp luminous star pinpoint core + soft atmospheric halo
+        float core = exp(-d * d * 24.0);
+        float halo = exp(-d * 5.2) * 0.52;
+
+        // Delicate 4-point diamond star cross-glint for hero stars
+        float glint = 0.0;
+        if (vFlare > 0.5) {
+          float hRay = exp(-abs(uv.y) * 19.0) * exp(-abs(uv.x) * 3.8);
+          float vRay = exp(-abs(uv.x) * 19.0) * exp(-abs(uv.y) * 3.8);
+          glint = (hRay + vRay) * 0.92;
+        }
+
+        float intensity = clamp(core + halo + glint, 0.0, 1.0);
+        gl_FragColor = vec4(vColor, intensity * vAlpha);
+      }
+    `
+  });
+
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+
+  return {
+    points,
+    uniforms,
+    dispose: () => {
+      geometry.dispose();
+      material.dispose();
+    }
+  };
+}
+
 function createRoundedRectShape(width, height, radius) {
   const shape = new THREE.Shape();
   const x = -width / 2;
@@ -1104,6 +1252,10 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
     const dustPoints = new THREE.Points(dustGeo, dustMat);
     scene.add(dustPoints);
 
+    // 9B. Refined Blinking Background Starfield (1 GPU shader draw call, zero CPU updates)
+    const starfield = createBlinkingStarfield(initialMobile);
+    scene.add(starfield.points);
+
     // 10. Responsive Viewport Resize & Aspect Framing
     let isMobile = initialMobile;
     let baseCameraZ = 9.7;
@@ -1116,8 +1268,10 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
 
       isMobile = width < 768;
       const maxDpr = isMobile ? 1.5 : 2;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+      const appliedDpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      renderer.setPixelRatio(appliedDpr);
       renderer.setSize(width, height, false);
+      starfield.uniforms.uPixelRatio.value = appliedDpr;
 
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
@@ -1234,6 +1388,11 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
       dustPoints.rotation.y = elapsed * 0.035 + smoothProgress * 1.1;
       dustPoints.rotation.x = smoothProgress * 0.35;
 
+      // Update blinking starfield GPU time uniform + gentle parallax drift
+      starfield.uniforms.uTime.value = elapsed;
+      starfield.points.position.x = -pointerCurrent.x * 0.28;
+      starfield.points.position.y = pointerCurrent.y * 0.22 + smoothProgress * 0.65;
+
       renderer.render(scene, camera);
     };
 
@@ -1259,6 +1418,7 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
       dustGeo.dispose();
       dustTex.dispose();
       dustMat.dispose();
+      starfield.dispose();
       envRT.dispose();
       renderer.dispose();
 
@@ -1290,13 +1450,13 @@ export default function KineticObsidian3DCanvas({ progressRef }) {
         />
       )}
 
-      {/* Subtle cinematic vignette for crisp UI typography contrast */}
+      {/* Subtle cinematic vignette keeping outer blinking stars clearly visible */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(circle at 50% 48%, rgba(6, 9, 17, 0.05) 0%, rgba(6, 9, 17, 0.40) 68%, rgba(6, 9, 17, 0.78) 100%)',
+            'radial-gradient(circle at 50% 48%, rgba(6, 9, 17, 0.04) 0%, rgba(6, 9, 17, 0.22) 70%, rgba(6, 9, 17, 0.44) 100%)',
           pointerEvents: 'none',
           zIndex: 1
         }}
